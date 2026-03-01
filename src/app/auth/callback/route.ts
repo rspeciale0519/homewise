@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
+  const inviteCode = searchParams.get("inviteCode");
 
   if (code) {
     const supabase = await createClient();
@@ -18,6 +19,10 @@ export async function GET(request: NextRequest) {
 
       if (!existing) {
         const meta = data.user.user_metadata;
+        const isAgent =
+          inviteCode === process.env.AGENT_INVITE_CODE ||
+          (meta?.invite_code as string) === process.env.AGENT_INVITE_CODE;
+
         await prisma.userProfile.create({
           data: {
             id: data.user.id,
@@ -25,6 +30,7 @@ export async function GET(request: NextRequest) {
             firstName: (meta?.first_name as string) ?? (meta?.full_name as string)?.split(" ")[0] ?? "",
             lastName: (meta?.last_name as string) ?? (meta?.full_name as string)?.split(" ").slice(1).join(" ") ?? "",
             avatarUrl: (meta?.avatar_url as string) ?? null,
+            role: isAgent ? "agent" : "user",
           },
         });
       }

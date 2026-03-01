@@ -9,7 +9,14 @@ export const metadata: Metadata = {
     "Register for free MLS access, saved searches, property alerts, and more with Home Wise Realty Group.",
 };
 
-export default function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string }>;
+}) {
+  const { code } = await searchParams;
+  const isAgentRegistration = !!code && code === process.env.AGENT_INVITE_CODE;
+
   return (
     <section className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center py-12 px-4">
       {/* Decorative background */}
@@ -20,6 +27,18 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-md animate-fade-in">
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 p-8 sm:p-10">
+          {/* Agent badge */}
+          {isAgentRegistration && (
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-navy-50 border border-navy-200">
+                <svg className="h-3.5 w-3.5 text-navy-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+                <span className="text-xs font-semibold text-navy-600">Agent Registration</span>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-navy-600 mb-4">
@@ -34,7 +53,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Google OAuth */}
-          <SocialAuthButton />
+          <SocialAuthButton inviteCode={code} />
 
           {/* Divider */}
           <div className="relative my-6">
@@ -47,7 +66,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Register form */}
-          <RegisterForm />
+          <RegisterForm inviteCode={code} />
 
           {/* Footer */}
           <p className="mt-6 text-center text-sm text-slate-500">
