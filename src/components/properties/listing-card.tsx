@@ -1,11 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { FavoriteButton } from "@/components/properties/favorite-button";
 import type { Property } from "@/providers/property-provider";
 import { formatPrice } from "@/data/mock/listings";
 
 interface ListingCardProps {
   property: Property;
+  isFavorited?: boolean;
+  showFavorite?: boolean;
 }
 
 const statusVariant: Record<string, "success" | "crimson" | "gold"> = {
@@ -14,7 +17,7 @@ const statusVariant: Record<string, "success" | "crimson" | "gold"> = {
   "Pending": "gold",
 };
 
-export function ListingCard({ property }: ListingCardProps) {
+export function ListingCard({ property, isFavorited = false, showFavorite = true }: ListingCardProps) {
   return (
     <article className="group relative bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden transition-all duration-300 hover:shadow-elevated hover:-translate-y-0.5">
       {/* Image */}
@@ -42,13 +45,18 @@ export function ListingCard({ property }: ListingCardProps) {
         </div>
 
         {/* Days on market */}
-        {property.daysOnMarket <= 7 && (
+        {property.daysOnMarket <= 7 && !showFavorite && (
           <div className="absolute top-3 right-3">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-xs font-semibold text-navy-700 shadow-sm">
               <span className="h-1.5 w-1.5 rounded-full bg-crimson-500 animate-pulse" />
               New
             </span>
           </div>
+        )}
+
+        {/* Favorite button */}
+        {showFavorite && (
+          <FavoriteButton propertyId={property.id} isFavorited={isFavorited} />
         )}
 
         {/* Price overlay on hover */}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME, DESCRIPTION, SITE_URL } from "@/lib/constants";
+import { SupabaseProvider } from "@/components/providers/supabase-provider";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -44,7 +45,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${cormorant.variable}`}>
-      <body className="font-sans antialiased min-h-screen">{children}</body>
+      <body className="font-sans antialiased min-h-screen">
+        <SupabaseProvider>{children}</SupabaseProvider>
+      </body>
     </html>
   );
 }

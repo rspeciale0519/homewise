@@ -3,7 +3,7 @@ import { SearchWidget } from "./search-widget";
 
 export function HeroSection() {
   return (
-    <section className="relative h-screen min-h-[640px] flex flex-col overflow-hidden">
+    <section className="relative h-[calc(100svh-5rem)] md:h-[calc(100svh-6rem)] min-h-[560px] flex flex-col overflow-hidden">
       {/* Background image */}
       <div className="absolute inset-0">
         <Image

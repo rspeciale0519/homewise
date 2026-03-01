@@ -14,9 +14,9 @@ const sizeMap = {
   full: "max-w-full",
 };
 
-export function Container({ children, className, size = "xl" }: ContainerProps) {
+export function Container({ children, className, size = "full" }: ContainerProps) {
   return (
-    <div className={cn("mx-auto w-full px-4 sm:px-6 lg:px-8", sizeMap[size], className)}>
+    <div className={cn("mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24", sizeMap[size], className)}>
       {children}
     </div>
   );
