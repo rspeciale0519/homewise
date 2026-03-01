@@ -31,15 +31,14 @@
 - [x] Verify build passes
 
 ## Phase 3: Homepage
-- [ ] Build hero section with gradient overlay
-- [ ] Build search widget with glassmorphism
-- [ ] Build promotional cards (3-card grid)
-- [ ] Create mock listings data (12 properties)
-- [ ] Build featured listings carousel (Embla)
-- [ ] Build company description section
-- [ ] Assemble homepage
-- [ ] Create metadata helper
-- [ ] Verify responsive design
+- [x] Build hero section with cinematic vignette overlay and staggered CSS animations
+- [x] Build search widget with frosted glass design (location, price, beds, baths)
+- [x] Build promotional cards (3-card grid with hover lift + accent bar)
+- [x] Create mock listings data (12 Florida properties)
+- [x] Build featured listings carousel (Embla, auto-advance, dot pagination)
+- [x] Build company description section with stats grid
+- [x] Assemble homepage with CtaBanner
+- [x] Verify build passes
 
 ## Phase 4: Content Pages (Sellers, Buyers, Articles)
 - [ ] Create 10 content data files with modernized copy
