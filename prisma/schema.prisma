@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model Agent {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  slug         String   @unique
+  email        String?
+  phone        String?
+  photoUrl     String?
+  languages    String[]
+  designations String[]
+  bio          String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([lastName])
+  @@index([active])
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model HomeEvaluation {
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  phone          String
+  streetAddress  String
+  city           String
+  state          String   @default("FL")
+  zip            String
+  bedrooms       Int?
+  bathrooms      Float?
+  sqft           Int?
+  garageSpaces   Int?
+  propertyType   String?
+  sellTimeline   String?
+  listingStatus  String?
+  comments       String?
+  createdAt      DateTime @default(now())
+}
