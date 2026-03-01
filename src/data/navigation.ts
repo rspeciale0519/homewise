@@ -94,30 +94,4 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Communities",
     href: "/communities",
   },
-  {
-    label: "Agent Resources",
-    href: "/agent-resources",
-    children: [
-      {
-        label: "All Resources",
-        href: "/agent-resources",
-        description: "Company info, quick access documents, and form libraries",
-      },
-      {
-        label: "Office Forms",
-        href: "/agent-resources/office-forms",
-        description: "Business cards, letterhead, checklists, and compliance",
-      },
-      {
-        label: "Listing Forms",
-        href: "/agent-resources/listing-forms",
-        description: "Data entry, listing agreements, and disclosures",
-      },
-      {
-        label: "Sales Forms",
-        href: "/agent-resources/sales-forms",
-        description: "Contracts, buyer disclosures, and riders",
-      },
-    ],
-  },
 ];
