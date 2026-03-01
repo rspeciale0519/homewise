@@ -63,19 +63,19 @@
 - [x] Verify filters, pagination, profiles, type-check, and build
 
 ## Phase 6: Forms, API Routes, Property Search, and Validation
-- [ ] Create Zod schemas (contact, home-evaluation)
-- [ ] Write schema tests (TDD)
-- [ ] Build contact API route
-- [ ] Build home evaluation API route
-- [ ] Write API tests
-- [ ] Build form components (contact-form, home-eval-form, form-success)
-- [ ] Build home evaluation page
-- [ ] Integrate contact form into about page
-- [ ] Create property search provider interface + mock implementation
-- [ ] Build property search components (filters, listing-card, listing-grid)
-- [ ] Build property search API route
-- [ ] Build property search page
-- [ ] Verify forms, validation, persistence, and search
+- [x] Create Zod schemas (contact, home-evaluation, property-filter)
+- [x] Write schema tests (TDD — 9 contact + 11 home-eval = 20 tests)
+- [x] Build contact API route
+- [x] Build home evaluation API route
+- [x] Write API tests
+- [x] Build form components (contact-form, home-eval-form, form-success)
+- [x] Build home evaluation page with real multi-step form
+- [x] Integrate contact form into about page
+- [x] Create property search provider interface + mock implementation
+- [x] Build property search components (search-filters, listing-card, listing-grid)
+- [x] Build property search API route
+- [x] Build property search page with hero, filters, grid, pagination
+- [x] Verify forms, validation, persistence, and search (40 tests passing, build clean)
 
 ## Phase 7: SEO, Performance, Polish, and Launch Prep
 - [ ] Generate sitemap

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Container } from "@/components/ui/container";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { createMetadata } from "@/lib/metadata";
+import { ContactForm } from "@/components/forms/contact-form";
 import { PHONE, EMAIL, ADDRESS, SERVICE_AREAS, AGENT_COUNT, YEARS_IN_BUSINESS } from "@/lib/constants";
 
 export const metadata: Metadata = createMetadata({
@@ -319,23 +320,10 @@ export default function AboutPage() {
             ))}
           </div>
 
-          {/* Contact form placeholder — Phase 6 */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-card p-8 text-center">
-            <div className="h-12 w-12 rounded-xl bg-cream-100 text-navy-400 flex items-center justify-center mx-auto mb-4">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
-            </div>
-            <h3 className="font-serif text-xl font-semibold text-navy-700 mb-2">Send a Message</h3>
-            <p className="text-slate-500 text-sm mb-4">
-              Contact form coming soon. In the meantime, call or email us directly.
-            </p>
-            <a
-              href={`tel:${PHONE.replace(/\D/g, "")}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-crimson-600 text-white text-sm font-semibold hover:bg-crimson-700 transition-colors"
-            >
-              Call {PHONE}
-            </a>
+          {/* Contact form */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-card p-8">
+            <h3 className="font-serif text-xl font-semibold text-navy-700 mb-6">Send a Message</h3>
+            <ContactForm />
           </div>
         </Container>
       </section>

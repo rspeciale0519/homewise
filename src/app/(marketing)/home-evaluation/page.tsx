@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { CtaBanner } from "@/components/shared/cta-banner";
+import { HomeEvalForm } from "@/components/forms/home-eval-form";
 import { createMetadata } from "@/lib/metadata";
-import { PHONE } from "@/lib/constants";
 
 export const metadata: Metadata = createMetadata({
   title: "Free Home Evaluation",
@@ -89,28 +89,7 @@ export default function HomeEvaluationPage() {
               <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-3">Get Started</p>
               <h2 className="font-serif text-display-md font-semibold text-navy-700 mb-6">Request Your Free CMA</h2>
 
-              {/* Form placeholder — Phase 6 */}
-              <div className="bg-cream-50 rounded-2xl border border-cream-200 p-8 text-center">
-                <div className="h-16 w-16 rounded-2xl bg-navy-100 text-navy-500 flex items-center justify-center mx-auto mb-4">
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                <h3 className="font-serif text-xl font-semibold text-navy-700 mb-2">Evaluation Form Coming Soon</h3>
-                <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                  Our full home evaluation form is under construction. In the meantime, call us directly and we&apos;ll
-                  get your CMA started right away — no wait, no forms.
-                </p>
-                <a
-                  href={`tel:${PHONE.replace(/\D/g, "")}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-crimson-600 text-white font-semibold hover:bg-crimson-700 transition-colors shadow-soft"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  Call {PHONE}
-                </a>
-              </div>
+              <HomeEvalForm />
             </div>
 
             {/* Right: What it includes */}
