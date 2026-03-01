@@ -52,16 +52,15 @@
 - [x] Verify all pages render and links work
 
 ## Phase 5: Agent Directory
-- [ ] Create mock agent data (15 agents)
-- [ ] Create Prisma seed script
-- [ ] Run database seed
-- [ ] Create agent types and filter schema
-- [ ] Build agent API route with pagination
-- [ ] Build agent components (card, grid, filters)
-- [ ] Build agent directory page
-- [ ] Build agent profile page
-- [ ] Write API tests
-- [ ] Verify filters, pagination, and profiles
+- [x] Create mock agent data (15 agents)
+- [x] Create Prisma seed script
+- [x] Create agent types and filter schema (Zod validation)
+- [x] Build agent API route with pagination
+- [x] Build agent components (card, grid, filters with A-Z bar)
+- [x] Build agent directory page with search, language, and letter filters
+- [x] Build agent profile page with editorial layout
+- [x] Write API tests (20 tests passing)
+- [x] Verify filters, pagination, profiles, type-check, and build
 
 ## Phase 6: Forms, API Routes, Property Search, and Validation
 - [ ] Create Zod schemas (contact, home-evaluation)
