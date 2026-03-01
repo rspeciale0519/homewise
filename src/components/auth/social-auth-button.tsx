@@ -4,16 +4,22 @@ import { useSupabase } from "@/components/providers/supabase-provider";
 
 interface SocialAuthButtonProps {
   redirectTo?: string;
+  inviteCode?: string;
 }
 
-export function SocialAuthButton({ redirectTo }: SocialAuthButtonProps) {
+export function SocialAuthButton({ redirectTo, inviteCode }: SocialAuthButtonProps) {
   const { supabase } = useSupabase();
 
   const handleGoogleAuth = async () => {
+    const params = new URLSearchParams();
+    if (redirectTo) params.set("redirectTo", redirectTo);
+    if (inviteCode) params.set("inviteCode", inviteCode);
+    const qs = params.toString();
+
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`,
+        redirectTo: `${window.location.origin}/auth/callback${qs ? `?${qs}` : ""}`,
       },
     });
   };

@@ -21,7 +21,11 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/settings", label: "Settings", icon: "settings" },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  role?: string;
+}
+
+export function Sidebar({ role: _role }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string, exact?: boolean) =>

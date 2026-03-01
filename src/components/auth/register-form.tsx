@@ -9,7 +9,11 @@ import { cn } from "@/lib/utils";
 
 type FieldErrors = Partial<Record<keyof RegisterInput, string>>;
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  inviteCode?: string;
+}
+
+export function RegisterForm({ inviteCode }: RegisterFormProps) {
   const router = useRouter();
   const { supabase } = useSupabase();
   const [form, setForm] = useState<RegisterInput>({
@@ -75,6 +79,7 @@ export function RegisterForm() {
         data: {
           first_name: result.data.firstName,
           last_name: result.data.lastName,
+          invite_code: inviteCode ?? "",
         },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
