@@ -152,8 +152,12 @@ export function Footer() {
               <span className="hidden md:inline text-navy-500">•</span>
               <span>Licensed Real Estate Brokerage · Florida</span>
             </div>
+            <div className="flex items-center gap-4 flex-wrap justify-center">
+              <Link href="/terms-of-service" className="text-slate-400 hover:text-slate-300 transition-colors">Terms of Service</Link>
+              <span className="text-navy-500">·</span>
+              <Link href="/privacy-policy" className="text-slate-400 hover:text-slate-300 transition-colors">Privacy Policy</Link>
+            </div>
             <div className="flex items-center gap-5">
-              {/* REALTOR® Logo text fallback */}
               <span className="text-slate-400 font-medium">REALTOR<sup>®</sup></span>
               <span className="text-slate-400">Equal Housing Opportunity</span>
               <span className="text-slate-400">MLS Member</span>
