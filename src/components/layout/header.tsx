@@ -56,7 +56,7 @@ export function Header() {
           <div
             className={cn(
               "flex items-center justify-between gap-4 transition-all duration-500",
-              scrolled ? "h-16 md:h-[72px]" : "h-20 md:h-24"
+              scrolled ? "h-14 md:h-16" : "h-[72px] md:h-20"
             )}
           >
 
@@ -69,7 +69,7 @@ export function Header() {
                 height={72}
                 className={cn(
                   "w-auto transition-all duration-500",
-                  scrolled ? "h-10 md:h-12" : "h-14 md:h-16"
+                  scrolled ? "h-12 md:h-14" : "h-16 md:h-[72px]"
                 )}
                 priority
               />

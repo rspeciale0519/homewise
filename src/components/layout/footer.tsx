@@ -40,13 +40,13 @@ export function Footer() {
 
           {/* Column 1: Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="inline-block mb-5">
+            <Link href="/" className="inline-block mb-4">
               <Image
                 src="/images/logo.png"
                 alt={SITE_NAME}
                 width={160}
                 height={54}
-                className="h-10 w-auto brightness-0 invert"
+                className="h-12 w-auto brightness-0 invert"
               />
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed mb-5 max-w-xs">

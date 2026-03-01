@@ -59,13 +59,13 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
         aria-label="Navigation menu"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
           <Image
             src="/images/logo.png"
             alt="Home Wise Realty Group"
-            width={140}
-            height={48}
-            className="h-9 w-auto"
+            width={160}
+            height={54}
+            className="h-10 w-auto"
           />
           <button
             onClick={onClose}
