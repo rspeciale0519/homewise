@@ -77,6 +77,19 @@
 - [x] Build property search page with hero, filters, grid, pagination
 - [x] Verify forms, validation, persistence, and search (40 tests passing, build clean)
 
+## Phase 6.5: Missing Pages from Original Site
+- [x] Build Home Inspection buyer article (/buyers/home-inspection)
+- [x] Build Buyer Request lead-gen form (/buyers/request) with Zod + Prisma
+- [x] Build Property Updates/Alerts sign-up (/property-updates) with Zod + Prisma
+- [x] Build Property Detail page (/properties/[id]) with stats, overview, mortgage estimate
+- [x] Build Community index page (/communities) with 8 Central Florida cities
+- [x] Build Community detail pages (/communities/[slug]) with stats, highlights, sidebar CTAs
+- [x] Add Prisma models (BuyerRequest, PropertyAlert)
+- [x] Add API routes (buyer-request, property-alerts)
+- [x] Update navigation with Home Inspection and Communities links
+- [x] Update buyers-resources data with Home Inspection card
+- [x] Verify type-check, 40 tests passing, build clean (50 routes)
+
 ## Phase 7: SEO, Performance, Polish, and Launch Prep
 - [ ] Generate sitemap
 - [ ] Generate robots.txt

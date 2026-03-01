@@ -55,3 +55,33 @@ model HomeEvaluation {
   comments       String?
   createdAt      DateTime @default(now())
 }
+
+model BuyerRequest {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  phone           String?
+  areasOfInterest String?
+  minPrice        Int?
+  maxPrice        Int?
+  beds            Int?
+  baths           Int?
+  propertyTypes   String[]
+  timeline        String?
+  comments        String?
+  createdAt       DateTime @default(now())
+}
+
+model PropertyAlert {
+  id        String   @id @default(cuid())
+  email     String
+  name      String?
+  cities    String[]
+  minPrice  Int?
+  maxPrice  Int?
+  beds      Int?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([email])
+}

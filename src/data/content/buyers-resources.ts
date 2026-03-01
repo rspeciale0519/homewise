@@ -9,6 +9,15 @@ export const BUYERS_RESOURCES = [
     tag: "Start Here",
   },
   {
+    title: "Home Inspection Guide",
+    description:
+      "A comprehensive self-inspection checklist for Central Florida buyers. Know what to look for — foundation to roof — before hiring a professional.",
+    href: "/buyers/home-inspection",
+    imageUrl:
+      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=75",
+    tag: "Essential",
+  },
+  {
     title: "Choosing a Location",
     description:
       "Six essential criteria to evaluate any Central Florida neighborhood — from school districts and commute times to future development.",

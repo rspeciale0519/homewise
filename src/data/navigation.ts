@@ -65,6 +65,11 @@ export const NAV_ITEMS: NavItem[] = [
         description: "What you need before you start searching",
       },
       {
+        label: "Home Inspection Guide",
+        href: "/buyers/home-inspection",
+        description: "What to look for before hiring a pro",
+      },
+      {
         label: "Choosing a Location",
         href: "/buyers/location",
         description: "Find the right community for your lifestyle",
@@ -84,5 +89,9 @@ export const NAV_ITEMS: NavItem[] = [
   {
     label: "Properties",
     href: "/properties",
+  },
+  {
+    label: "Communities",
+    href: "/communities",
   },
 ];
