@@ -18,17 +18,17 @@
 - [x] Verify build passes
 
 ## Phase 2: Layout System, Navigation, and UI Primitives
-- [ ] Configure Inter + Playfair Display fonts
-- [ ] Build root layout with global metadata
-- [ ] Create navigation data structure
-- [ ] Build sticky header with glass-morphism and dropdowns
-- [ ] Build mobile navigation drawer
-- [ ] Build footer with 4-column grid
-- [ ] Build UI primitives (button, card, input, select, textarea, badge, pagination, skeleton, container)
-- [ ] Build shared components (social-links, section-heading, cta-banner)
-- [ ] Create marketing route group layout
-- [ ] Create not-found and loading pages
-- [ ] Verify responsive layout at all breakpoints
+- [x] Configure Cormorant Garamond + DM Sans fonts (exact logo colors #2E276D navy, #DB2526 crimson)
+- [x] Build root layout with global metadata
+- [x] Create navigation data structure
+- [x] Build sticky header with glass-morphism and dropdowns
+- [x] Build mobile navigation drawer
+- [x] Build footer with 4-column grid
+- [x] Build UI primitives (button, card, input, select, textarea, badge, pagination, skeleton, container)
+- [x] Build shared components (social-links, section-heading, cta-banner)
+- [x] Create marketing route group layout
+- [x] Create not-found and loading pages
+- [x] Verify build passes
 
 ## Phase 3: Homepage
 - [ ] Build hero section with gradient overlay
