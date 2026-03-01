@@ -41,14 +41,15 @@
 - [x] Verify build passes
 
 ## Phase 4: Content Pages (Sellers, Buyers, Articles)
-- [ ] Create 10 content data files with modernized copy
-- [ ] Build content components (service-card, service-grid, article-layout)
-- [ ] Build sellers landing page with 5 service cards
-- [ ] Build 4 seller article pages (staging, sell-fast, sounds-smells, seller-advice)
-- [ ] Build buyers landing page
-- [ ] Build 4 buyer article pages (preparing, location, moving-tips, condo-vs-house)
-- [ ] Build about page
-- [ ] Verify all pages render and links work
+- [x] Create 10 content data files with modernized copy
+- [x] Build content components (service-card, service-grid, article-layout)
+- [x] Build sellers landing page with 5 service cards
+- [x] Build 4 seller article pages (staging, sell-fast, sounds-smells, seller-advice)
+- [x] Build buyers landing page
+- [x] Build 4 buyer article pages (preparing, location, moving-tips, condo-vs-house)
+- [x] Build about page
+- [x] Build home evaluation placeholder page
+- [x] Verify all pages render and links work
 
 ## Phase 5: Agent Directory
 - [ ] Create mock agent data (15 agents)
