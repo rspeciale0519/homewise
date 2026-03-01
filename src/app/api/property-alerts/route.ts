@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { propertyAlertSchema } from "@/schemas/property-alert.schema";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
     await prisma.propertyAlert.upsert({
       where: { email: parsed.data.email },
       update: {
@@ -23,6 +27,7 @@ export async function POST(request: NextRequest) {
         maxPrice: parsed.data.maxPrice ?? null,
         beds: parsed.data.beds ?? null,
         active: true,
+        userId: user?.id ?? undefined,
       },
       create: {
         email: parsed.data.email,
@@ -31,6 +36,7 @@ export async function POST(request: NextRequest) {
         minPrice: parsed.data.minPrice ?? null,
         maxPrice: parsed.data.maxPrice ?? null,
         beds: parsed.data.beds ?? null,
+        userId: user?.id ?? null,
       },
     });
 

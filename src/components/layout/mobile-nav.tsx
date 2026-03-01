@@ -5,7 +5,10 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/data/navigation";
+import { useRouter } from "next/navigation";
 import { PHONE, EMAIL } from "@/lib/constants";
+import { SocialLinks } from "@/components/shared/social-links";
+import { useSupabase } from "@/components/providers/supabase-provider";
 import { cn } from "@/lib/utils";
 
 interface MobileNavProps {
@@ -16,6 +19,8 @@ interface MobileNavProps {
 export function MobileNav({ open, onClose }: MobileNavProps) {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, supabase, loading } = useSupabase();
 
   useEffect(() => {
     if (open) {
@@ -149,6 +154,49 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
 
         {/* Footer */}
         <div className="px-5 py-5 border-t border-slate-100 space-y-4 bg-cream-50">
+          {/* Auth section */}
+          {!loading && (
+            user ? (
+              <div className="space-y-3 pb-3 border-b border-slate-200/60">
+                <p className="text-sm font-medium text-navy-700">
+                  Hi, {user.user_metadata?.first_name || "there"}
+                </p>
+                <Link
+                  href="/dashboard"
+                  className="flex items-center justify-center w-full h-11 rounded-md bg-navy-600 text-white text-sm font-medium tracking-wide hover:bg-navy-700 transition-colors"
+                >
+                  My Dashboard
+                </Link>
+                <button
+                  onClick={async () => {
+                    onClose();
+                    await supabase.auth.signOut();
+                    router.push("/");
+                    router.refresh();
+                  }}
+                  className="flex items-center justify-center w-full h-10 rounded-md border border-slate-200 text-sm font-medium text-slate-600 hover:bg-white hover:text-crimson-600 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2 pb-3 border-b border-slate-200/60">
+                <Link
+                  href="/login"
+                  className="flex-1 flex items-center justify-center h-11 rounded-md border border-navy-600 text-navy-600 text-sm font-medium tracking-wide hover:bg-navy-600 hover:text-white transition-all"
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/register"
+                  className="flex-1 flex items-center justify-center h-11 rounded-md bg-navy-600 text-white text-sm font-medium tracking-wide hover:bg-navy-700 transition-colors"
+                >
+                  Register
+                </Link>
+              </div>
+            )
+          )}
+
           <Link
             href="/home-evaluation"
             className="flex items-center justify-center w-full h-11 rounded-md bg-crimson-600 text-white text-sm font-medium tracking-wide hover:bg-crimson-700 transition-colors"
@@ -175,6 +223,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
               {EMAIL}
             </a>
           </div>
+          <SocialLinks size="sm" className="pt-2" />
         </div>
       </div>
     </>

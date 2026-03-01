@@ -135,7 +135,7 @@ export function AgentFilters({
         >
           All
         </button>
-        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />
         {ALPHABET.map((letter) => {
           const isActive = currentLetter?.toUpperCase() === letter;
           const hasAgents = activeLetters.includes(letter);

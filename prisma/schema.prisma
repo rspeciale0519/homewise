@@ -9,19 +9,20 @@ datasource db {
 }
 
 model Agent {
-  id           String   @id @default(cuid())
-  firstName    String
-  lastName     String
-  slug         String   @unique
-  email        String?
-  phone        String?
-  photoUrl     String?
-  languages    String[]
-  designations String[]
-  bio          String?
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String        @id @default(cuid())
+  firstName        String
+  lastName         String
+  slug             String        @unique
+  email            String?
+  phone            String?
+  photoUrl         String?
+  languages        String[]
+  designations     String[]
+  bio              String?
+  active           Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  preferredByUsers UserProfile[]
 
   @@index([lastName])
   @@index([active])
@@ -73,15 +74,80 @@ model BuyerRequest {
 }
 
 model PropertyAlert {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   email     String
   name      String?
   cities    String[]
   minPrice  Int?
   maxPrice  Int?
   beds      Int?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  active    Boolean      @default(true)
+  userId    String?
+  createdAt DateTime     @default(now())
+
+  user      UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([email])
+  @@index([userId])
+}
+
+model UserProfile {
+  id             String   @id
+  email          String   @unique
+  firstName      String
+  lastName       String
+  phone          String?
+  avatarUrl      String?
+  role           String   @default("user")
+  preferredAgent String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  favorites      FavoriteProperty[]
+  savedSearches  SavedSearch[]
+  recentlyViewed RecentlyViewed[]
+  propertyAlerts PropertyAlert[]
+  agent          Agent?   @relation(fields: [preferredAgent], references: [id])
+
+  @@index([email])
+}
+
+model FavoriteProperty {
+  id         String      @id @default(cuid())
+  userId     String
+  propertyId String
+  notes      String?
+  savedAt    DateTime    @default(now())
+
+  user       UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+}
+
+model SavedSearch {
+  id           String      @id @default(cuid())
+  userId       String
+  name         String
+  filters      Json
+  alertEnabled Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user         UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RecentlyViewed {
+  id         String      @id @default(cuid())
+  userId     String
+  propertyId String
+  viewedAt   DateTime    @default(now())
+
+  user       UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@index([viewedAt])
 }

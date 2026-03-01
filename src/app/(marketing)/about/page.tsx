@@ -5,6 +5,7 @@ import { Container } from "@/components/ui/container";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { createMetadata } from "@/lib/metadata";
 import { ContactForm } from "@/components/forms/contact-form";
+import { SocialLinks } from "@/components/shared/social-links";
 import { PHONE, EMAIL, ADDRESS, SERVICE_AREAS, AGENT_COUNT, YEARS_IN_BUSINESS } from "@/lib/constants";
 
 export const metadata: Metadata = createMetadata({
@@ -155,7 +156,7 @@ export default function AboutPage() {
                 relocating to Orlando for work — we have a specialist who lives and breathes your target market.
               </p>
             </div>
-            <div className="relative">
+            <div className="relative overflow-visible">
               <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-elevated">
                 <Image
                   src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=800&q=75"
@@ -165,7 +166,7 @@ export default function AboutPage() {
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
               </div>
-              <div className="absolute -bottom-4 -left-4 bg-navy-700 text-white rounded-xl p-4 shadow-elevated">
+              <div className="absolute -bottom-3 -left-3 md:-bottom-4 md:-left-4 bg-navy-700 text-white rounded-xl p-3 md:p-4 shadow-elevated">
                 <p className="font-serif text-3xl font-bold mb-0.5">{AGENT_COUNT}</p>
                 <p className="text-slate-300 text-xs">Licensed Agents</p>
               </div>
@@ -318,6 +319,12 @@ export default function AboutPage() {
                 <p className="text-sm text-navy-700 font-medium">{item.value}</p>
               </a>
             ))}
+          </div>
+
+          {/* Social links */}
+          <div className="flex flex-col items-center gap-2 mb-10">
+            <p className="text-xs font-semibold tracking-wider uppercase text-slate-400">Follow Us</p>
+            <SocialLinks size="md" />
           </div>
 
           {/* Contact form */}

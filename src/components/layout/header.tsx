@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/data/navigation";
 import { PHONE } from "@/lib/constants";
 import { MobileNav } from "./mobile-nav";
+import { AuthButtons } from "./auth-buttons";
+import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -18,7 +20,7 @@ export function Header() {
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -44,30 +46,38 @@ export function Header() {
     <>
       <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+          "sticky top-0 z-50 transition-all duration-500 ease-out",
           scrolled
-            ? "bg-white shadow-soft border-b border-slate-100"
-            : "bg-white/95 backdrop-blur-sm"
+            ? "bg-white/80 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),0_8px_24px_rgba(0,0,0,0.04)] border-b border-slate-200/60"
+            : "bg-white border-b border-slate-100"
         )}
       >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 md:h-[70px] items-center justify-between gap-4">
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24">
+          <div
+            className={cn(
+              "flex items-center justify-between gap-4 transition-all duration-500",
+              scrolled ? "h-16 md:h-[72px]" : "h-20 md:h-24"
+            )}
+          >
 
             {/* Logo */}
             <Link href="/" className="shrink-0 flex items-center" aria-label="Home Wise Realty Group — Home">
               <Image
                 src="/images/logo.png"
                 alt="Home Wise Realty Group"
-                width={180}
-                height={60}
-                className="h-10 md:h-12 w-auto"
+                width={220}
+                height={72}
+                className={cn(
+                  "w-auto transition-all duration-500",
+                  scrolled ? "h-10 md:h-12" : "h-14 md:h-16"
+                )}
                 priority
               />
             </Link>
 
             {/* Desktop Navigation */}
             <nav
-              className="hidden lg:flex items-center gap-1"
+              className="hidden lg:flex items-center gap-0.5"
               ref={dropdownRef}
               aria-label="Main navigation"
             >
@@ -111,8 +121,7 @@ export function Header() {
                       onMouseEnter={() => handleMouseEnter(item.label)}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <div className="bg-white rounded-xl shadow-dropdown border border-slate-100 p-2 min-w-[240px]">
-                        {/* Crimson accent bar */}
+                      <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-dropdown border border-slate-100 p-2 min-w-[240px]">
                         <div className="h-0.5 w-8 bg-crimson-600 rounded-full mx-3 mb-2" />
                         {item.children.map((child) => (
                           <Link
@@ -147,7 +156,7 @@ export function Header() {
               ))}
             </nav>
 
-            {/* Right Side: Phone + CTA */}
+            {/* Right Side: Phone + CTA + Auth */}
             <div className="hidden lg:flex items-center gap-4">
               <a
                 href={`tel:${PHONE.replace(/\D/g, "")}`}
@@ -164,6 +173,9 @@ export function Header() {
               >
                 Free Home Evaluation
               </Link>
+              <div className="h-6 w-px bg-slate-200" />
+              <AuthButtons />
+              <UserMenu />
             </div>
 
             {/* Mobile hamburger */}
@@ -178,11 +190,6 @@ export function Header() {
               </svg>
             </button>
           </div>
-        </div>
-
-        {/* Active page indicator bar */}
-        <div className="h-0.5 bg-slate-100">
-          <div className="h-full w-full bg-gradient-to-r from-navy-600 via-crimson-600 to-navy-600 opacity-0 transition-opacity duration-300" />
         </div>
       </header>
 
