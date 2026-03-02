@@ -34,7 +34,11 @@ model ContactSubmission {
   email     String
   phone     String?
   message   String
+  status    String   @default("new")
   createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model HomeEvaluation {
@@ -54,7 +58,11 @@ model HomeEvaluation {
   sellTimeline   String?
   listingStatus  String?
   comments       String?
+  status         String   @default("new")
   createdAt      DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model BuyerRequest {
@@ -70,7 +78,11 @@ model BuyerRequest {
   propertyTypes   String[]
   timeline        String?
   comments        String?
+  status          String   @default("new")
   createdAt       DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model PropertyAlert {
