@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { agentFilterSchema } from "@/schemas/agent-filter.schema";
-import { filterAgents } from "@/data/mock/agents";
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -20,19 +21,46 @@ export async function GET(request: NextRequest) {
   }
 
   const { language, letter, search, page } = parsed.data;
+  const perPage = 12;
 
-  const result = filterAgents({
-    language,
-    letter,
-    search,
-    page,
-    perPage: 12,
-  });
+  const where: Prisma.AgentWhereInput = { active: true };
 
-  return NextResponse.json({
-    agents: result.agents,
-    total: result.total,
-    totalPages: result.totalPages,
-    currentPage: page,
-  });
+  if (language) {
+    where.languages = { has: language };
+  }
+
+  if (letter) {
+    where.lastName = { startsWith: letter, mode: "insensitive" };
+  }
+
+  if (search) {
+    where.OR = [
+      { firstName: { contains: search, mode: "insensitive" } },
+      { lastName: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  try {
+    const [agents, total] = await Promise.all([
+      prisma.agent.findMany({
+        where,
+        orderBy: { lastName: "asc" },
+        skip: (page - 1) * perPage,
+        take: perPage,
+      }),
+      prisma.agent.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      agents,
+      total,
+      totalPages: Math.ceil(total / perPage),
+      currentPage: page,
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "An unexpected error occurred." },
+      { status: 500 }
+    );
+  }
 }

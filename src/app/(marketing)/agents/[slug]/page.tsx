@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Container } from "@/components/ui/container";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { createMetadata } from "@/lib/metadata";
-import { MOCK_AGENTS, getAgentBySlug } from "@/data/mock/agents";
+import { prisma } from "@/lib/prisma";
 import { PHONE } from "@/lib/constants";
 
 interface AgentProfileProps {
@@ -13,16 +13,21 @@ interface AgentProfileProps {
 }
 
 export async function generateStaticParams() {
-  return MOCK_AGENTS.filter((a) => a.active).map((a) => ({
-    slug: a.slug,
-  }));
+  const agents = await prisma.agent.findMany({
+    where: { active: true },
+    select: { slug: true },
+  });
+  return agents.map((a) => ({ slug: a.slug }));
 }
 
 export async function generateMetadata({
   params,
 }: AgentProfileProps): Promise<Metadata> {
   const { slug } = await params;
-  const agent = getAgentBySlug(slug);
+  const agent = await prisma.agent.findFirst({
+    where: { slug, active: true },
+    select: { firstName: true, lastName: true },
+  });
 
   if (!agent) {
     return createMetadata({
@@ -41,7 +46,9 @@ export async function generateMetadata({
 
 export default async function AgentProfilePage({ params }: AgentProfileProps) {
   const { slug } = await params;
-  const agent = getAgentBySlug(slug);
+  const agent = await prisma.agent.findFirst({
+    where: { slug, active: true },
+  });
 
   if (!agent) {
     notFound();

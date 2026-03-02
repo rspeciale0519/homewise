@@ -6,26 +6,14 @@ import { Pagination } from "@/components/ui/pagination";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { createMetadata } from "@/lib/metadata";
 import { AGENT_COUNT } from "@/lib/constants";
-import {
-  MOCK_AGENTS,
-  AVAILABLE_LANGUAGES,
-  filterAgents,
-} from "@/data/mock/agents";
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export const metadata: Metadata = createMetadata({
   title: "Find an Agent",
   description: `Browse our directory of ${AGENT_COUNT} licensed real estate agents serving Central Florida. Filter by language, name, or specialty.`,
   path: "/agents",
 });
-
-function getActiveLetters(): string[] {
-  const letters = new Set(
-    MOCK_AGENTS.filter((a) => a.active).map((a) =>
-      a.lastName.charAt(0).toUpperCase()
-    )
-  );
-  return [...letters].sort();
-}
 
 interface AgentsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -42,16 +30,48 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
     typeof params.search === "string" ? params.search : undefined;
   const page =
     typeof params.page === "string" ? Math.max(1, parseInt(params.page, 10)) : 1;
+  const perPage = 12;
 
-  const { agents, total, totalPages } = filterAgents({
-    language,
-    letter,
-    search,
-    page,
-    perPage: 12,
-  });
+  const where: Prisma.AgentWhereInput = { active: true };
 
-  const activeLetters = getActiveLetters();
+  if (language) {
+    where.languages = { has: language };
+  }
+
+  if (letter) {
+    where.lastName = { startsWith: letter, mode: "insensitive" };
+  }
+
+  if (search) {
+    where.OR = [
+      { firstName: { contains: search, mode: "insensitive" } },
+      { lastName: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const [agents, total, allActiveAgents] = await Promise.all([
+    prisma.agent.findMany({
+      where,
+      orderBy: { lastName: "asc" },
+      skip: (page - 1) * perPage,
+      take: perPage,
+    }),
+    prisma.agent.count({ where }),
+    prisma.agent.findMany({
+      where: { active: true },
+      select: { lastName: true, languages: true },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / perPage);
+
+  const activeLetters = [...new Set(
+    allActiveAgents.map((a) => a.lastName.charAt(0).toUpperCase())
+  )].sort();
+
+  const availableLanguages = [...new Set(
+    allActiveAgents.flatMap((a) => a.languages)
+  )].sort();
 
   return (
     <>
@@ -94,7 +114,7 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
       <section className="section-padding bg-cream-50">
         <Container>
           <AgentFilters
-            availableLanguages={AVAILABLE_LANGUAGES}
+            availableLanguages={availableLanguages}
             activeLetters={activeLetters}
             currentLanguage={language}
             currentLetter={letter}

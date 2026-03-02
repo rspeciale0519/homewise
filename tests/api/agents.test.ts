@@ -4,7 +4,7 @@ import {
   getAgentBySlug,
   MOCK_AGENTS,
   AVAILABLE_LANGUAGES,
-} from "../../src/data/mock/agents";
+} from "../../archive/data-mock-agents";
 import { agentFilterSchema } from "../../src/schemas/agent-filter.schema";
 
 describe("Mock Agent Data", () => {
