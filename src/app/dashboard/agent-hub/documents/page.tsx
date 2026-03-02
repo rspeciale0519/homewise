@@ -43,7 +43,7 @@ export default async function DocumentLibraryPage() {
   ];
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">

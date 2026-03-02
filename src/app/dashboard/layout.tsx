@@ -22,7 +22,6 @@ export default async function DashboardLayout({
 
   if (!existing) {
     const meta = user.user_metadata;
-    const isAgent = (meta?.invite_code as string) === process.env.AGENT_INVITE_CODE;
 
     existing = await prisma.userProfile.create({
       data: {
@@ -31,7 +30,7 @@ export default async function DashboardLayout({
         firstName: (meta?.first_name as string) ?? "",
         lastName: (meta?.last_name as string) ?? "",
         avatarUrl: (meta?.avatar_url as string) ?? null,
-        role: isAgent ? "agent" : "user",
+        role: "user",
       },
     });
   }

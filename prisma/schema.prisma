@@ -20,9 +20,14 @@ model Agent {
   designations     String[]
   bio              String?
   active           Boolean       @default(true)
+  inviteCode       String?       @unique
+  inviteExpiresAt  DateTime?
+  inviteUsed       Boolean       @default(false)
+  userId           String?       @unique
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   preferredByUsers UserProfile[]
+  user             UserProfile?  @relation("AgentUser", fields: [userId], references: [id])
 
   @@index([lastName])
   @@index([active])
@@ -120,6 +125,7 @@ model UserProfile {
   recentlyViewed RecentlyViewed[]
   propertyAlerts PropertyAlert[]
   agent          Agent?   @relation(fields: [preferredAgent], references: [id])
+  agentProfile   Agent?   @relation("AgentUser")
 
   @@index([email])
 }

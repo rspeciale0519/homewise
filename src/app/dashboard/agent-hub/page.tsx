@@ -25,7 +25,7 @@ export default async function AgentHubPage() {
   }
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
       {/* Header */}
       <div className="mb-8">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-crimson-600 mb-2">

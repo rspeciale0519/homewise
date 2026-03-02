@@ -15,7 +15,7 @@ export default async function EvaluationDetailPage({
   if (!submission) notFound();
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-3xl">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
       <SubmissionDetail
         type="evaluation"
         id={submission.id}

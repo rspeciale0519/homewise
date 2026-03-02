@@ -15,7 +15,7 @@ export default async function SavedSearchesPage() {
   });
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-3xl">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
       <div className="flex items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="font-serif text-display-sm text-navy-700">Saved Searches</h1>

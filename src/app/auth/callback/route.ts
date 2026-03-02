@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { validateInviteCode, consumeInviteCode } from "@/lib/invite-codes";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -12,6 +13,10 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
+    if (error) {
+      console.error("[auth/callback] exchangeCodeForSession error:", error.message);
+    }
+
     if (!error && data.user) {
       const existing = await prisma.userProfile.findUnique({
         where: { id: data.user.id },
@@ -19,9 +24,17 @@ export async function GET(request: NextRequest) {
 
       if (!existing) {
         const meta = data.user.user_metadata;
-        const isAgent =
-          inviteCode === process.env.AGENT_INVITE_CODE ||
-          (meta?.invite_code as string) === process.env.AGENT_INVITE_CODE;
+        const rawInvite = inviteCode ?? (meta?.invite_code as string) ?? "";
+
+        // Check per-agent invite code first
+        const agentInvite = rawInvite ? await validateInviteCode(rawInvite) : null;
+        const isPerAgentInvite = agentInvite?.valid === true;
+
+        // Fall back to legacy shared code
+        const legacyCode = process.env.AGENT_INVITE_CODE;
+        const isLegacyAgent = !isPerAgentInvite && !!legacyCode && rawInvite === legacyCode;
+
+        const isAgent = isPerAgentInvite || isLegacyAgent;
 
         await prisma.userProfile.create({
           data: {
@@ -33,11 +46,17 @@ export async function GET(request: NextRequest) {
             role: isAgent ? "agent" : "user",
           },
         });
+
+        // Link agent record to user profile if per-agent invite
+        if (isPerAgentInvite) {
+          await consumeInviteCode(rawInvite, data.user.id);
+        }
       }
 
       return NextResponse.redirect(`${origin}${redirectTo}`);
     }
   }
 
+  console.error("[auth/callback] Auth failed — code present:", !!code);
   return NextResponse.redirect(`${origin}/login?error=auth`);
 }

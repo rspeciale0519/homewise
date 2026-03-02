@@ -18,7 +18,7 @@ export default async function DashboardOverview() {
   const firstName = profile?.firstName || "there";
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
       {/* Greeting */}
       <div className="mb-8">
         <h1 className="font-serif text-display-sm sm:text-display-md text-navy-700">

@@ -12,10 +12,11 @@ export const metadata: Metadata = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string }>;
+  searchParams: Promise<{ code?: string; invite?: string }>;
 }) {
-  const { code } = await searchParams;
-  const isAgentRegistration = !!code && code === process.env.AGENT_INVITE_CODE;
+  const { code, invite } = await searchParams;
+  const isLegacyAgent = !!code && code === process.env.AGENT_INVITE_CODE;
+  const isAgentRegistration = isLegacyAgent || !!invite;
 
   return (
     <section className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center py-12 px-4">
@@ -53,7 +54,7 @@ export default async function RegisterPage({
           </div>
 
           {/* Google OAuth */}
-          <SocialAuthButton inviteCode={code} />
+          <SocialAuthButton inviteCode={invite ?? code} />
 
           {/* Divider */}
           <div className="relative my-6">
@@ -66,7 +67,7 @@ export default async function RegisterPage({
           </div>
 
           {/* Register form */}
-          <RegisterForm inviteCode={code} />
+          <RegisterForm inviteCode={invite ?? code} />
 
           {/* Footer */}
           <p className="mt-6 text-center text-sm text-slate-500">

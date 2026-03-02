@@ -10,7 +10,7 @@ export default async function SettingsPage() {
   const hasPasswordProvider = user.app_metadata?.providers?.includes("email") ?? false;
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-2xl">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
       <div className="mb-8">
         <h1 className="font-serif text-display-sm text-navy-700">Settings</h1>
         <p className="mt-2 text-sm text-slate-500">

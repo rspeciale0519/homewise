@@ -38,7 +38,6 @@ export async function POST() {
   }
 
   const meta = user.user_metadata;
-  const isAgent = (meta?.invite_code as string) === process.env.AGENT_INVITE_CODE;
   const profile = await prisma.userProfile.create({
     data: {
       id: user.id,
@@ -46,7 +45,7 @@ export async function POST() {
       firstName: (meta?.first_name as string) ?? (meta?.full_name as string)?.split(" ")[0] ?? "",
       lastName: (meta?.last_name as string) ?? (meta?.full_name as string)?.split(" ").slice(1).join(" ") ?? "",
       avatarUrl: (meta?.avatar_url as string) ?? null,
-      role: isAgent ? "agent" : "user",
+      role: "user",
     },
   });
 
