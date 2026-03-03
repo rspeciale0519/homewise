@@ -110,12 +110,12 @@
 - [x] Verify type-check and build pass (84 routes)
 
 ## Phase 7: SEO, Performance, Polish, and Launch Prep
-- [ ] Generate sitemap
-- [ ] Generate robots.txt
+- [x] Generate sitemap
+- [x] Generate robots.txt
 - [ ] Add JSON-LD structured data
 - [ ] Add OG image generation
 - [ ] Add scroll animations (Framer Motion)
 - [ ] Configure URL redirects from old site
-- [ ] Add favicon and app icons
+- [x] Add favicon and app icons
 - [ ] Performance optimization pass
 - [ ] Final verification (type-check, lint, test, build, visual)
