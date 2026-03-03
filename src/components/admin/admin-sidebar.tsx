@@ -17,6 +17,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: "/admin/agents", label: "Agents", icon: "agent" },
   { href: "/admin/submissions", label: "Submissions", icon: "inbox" },
   { href: "/admin/alerts", label: "Property Alerts", icon: "bell" },
+  { href: "/admin/sync", label: "MLS Sync", icon: "sync" },
 ];
 
 export function AdminSidebar() {
@@ -120,6 +121,12 @@ function AdminSidebarIcon({ type, active, mobile }: { type: string; active: bool
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+        </svg>
+      );
+    case "sync":
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M20.016 4.66v4.993" />
         </svg>
       );
     default:

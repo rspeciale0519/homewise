@@ -14,6 +14,7 @@ import { formatPrice } from "@/lib/format";
 import { getWalkScore } from "@/lib/walk-score";
 import { getNearbySchools } from "@/lib/great-schools";
 import { createMetadata } from "@/lib/metadata";
+import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
 import { PHONE } from "@/lib/constants";
 
 interface PropertyDetailPageProps {
@@ -185,6 +186,12 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
           </div>
         </Container>
       </section>
+
+      <div className="bg-cream-50">
+        <Container>
+          <IdxDisclaimer />
+        </Container>
+      </div>
 
       <CtaBanner
         eyebrow="Keep Searching"

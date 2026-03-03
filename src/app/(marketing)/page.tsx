@@ -5,18 +5,44 @@ import { PromoCards } from "@/components/home/promo-cards";
 import { FeaturedListings } from "@/components/home/featured-listings";
 import { CompanyDescription } from "@/components/home/company-description";
 import { CtaBanner } from "@/components/shared/cta-banner";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: SITE_NAME,
   description: DESCRIPTION,
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const featuredListings = await prisma.listing.findMany({
+    where: { featured: true, status: { in: ["Active", "Pending"] } },
+    orderBy: { price: "desc" },
+    take: 12,
+    select: {
+      id: true,
+      imageUrl: true,
+      address: true,
+      city: true,
+      state: true,
+      zip: true,
+      price: true,
+      beds: true,
+      baths: true,
+      sqft: true,
+      status: true,
+      daysOnMarket: true,
+    },
+  });
+
+  const mappedListings = featuredListings.map((l) => ({
+    ...l,
+    imageUrl: l.imageUrl ?? "",
+  }));
+
   return (
     <>
       <HeroSection />
       <PromoCards />
-      <FeaturedListings />
+      <FeaturedListings listings={mappedListings.length > 0 ? mappedListings : undefined} />
       <CompanyDescription />
       <CtaBanner
         eyebrow="Get Started Today"

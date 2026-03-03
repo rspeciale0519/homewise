@@ -6,7 +6,9 @@ import { Container } from "@/components/ui/container";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { createMetadata } from "@/lib/metadata";
 import { prisma } from "@/lib/prisma";
+import { Suspense } from "react";
 import { PHONE } from "@/lib/constants";
+import { AgentListingsWidget } from "@/components/agents/agent-listings-widget";
 
 interface AgentProfileProps {
   params: Promise<{ slug: string }>;
@@ -274,6 +276,20 @@ export default async function AgentProfilePage({ params }: AgentProfileProps) {
           </div>
         </Container>
       </section>
+
+      {/* MLS Listings */}
+      {agent.mlsAgentId && (
+        <section className="section-padding bg-cream-50">
+          <Container>
+            <Suspense fallback={null}>
+              <AgentListingsWidget
+                mlsAgentId={agent.mlsAgentId}
+                agentSlug={agent.slug}
+              />
+            </Suspense>
+          </Container>
+        </section>
+      )}
 
       <CtaBanner
         eyebrow="Looking for a Different Specialist?"

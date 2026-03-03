@@ -10,6 +10,7 @@ import { OpenHouseWidget } from "@/components/properties/open-house-widget";
 import { propertyProvider } from "@/providers";
 import type { PropertyFilters } from "@/providers/property-provider";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
+import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
@@ -161,6 +162,8 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
           <div className="mt-8">
             <OpenHouseWidget properties={result.properties} />
           </div>
+
+          <IdxDisclaimer />
         </Container>
       </section>
 
