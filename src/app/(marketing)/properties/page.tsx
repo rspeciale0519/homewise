@@ -6,6 +6,7 @@ import { CtaBanner } from "@/components/shared/cta-banner";
 import { SearchFilters } from "@/components/properties/search-filters";
 import { ListingGrid } from "@/components/properties/listing-grid";
 import { PropertySearchShell } from "@/components/properties/property-search-shell";
+import { OpenHouseWidget } from "@/components/properties/open-house-widget";
 import { propertyProvider } from "@/providers";
 import type { PropertyFilters } from "@/providers/property-provider";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
@@ -155,6 +156,10 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
                 className="mt-10"
               />
             </PropertySearchShell>
+          </div>
+
+          <div className="mt-8">
+            <OpenHouseWidget properties={result.properties} />
           </div>
         </Container>
       </section>
