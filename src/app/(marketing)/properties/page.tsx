@@ -5,6 +5,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { SearchFilters } from "@/components/properties/search-filters";
 import { ListingGrid } from "@/components/properties/listing-grid";
+import { PropertySearchShell } from "@/components/properties/property-search-shell";
 import { propertyProvider } from "@/providers";
 import type { PropertyFilters } from "@/providers/property-provider";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
@@ -134,14 +135,15 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
           />
 
           <div className="mt-8">
-            <ListingGrid properties={result.properties} />
+            <PropertySearchShell properties={result.properties}>
+              <ListingGrid properties={result.properties} />
+              <Pagination
+                currentPage={result.currentPage}
+                totalPages={result.totalPages}
+                className="mt-10"
+              />
+            </PropertySearchShell>
           </div>
-
-          <Pagination
-            currentPage={result.currentPage}
-            totalPages={result.totalPages}
-            className="mt-10"
-          />
         </Container>
       </section>
 

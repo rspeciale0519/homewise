@@ -16,6 +16,18 @@ const nextConfig: NextConfig = {
         hostname: "fkwkjlsftlkjpiyspdbm.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "**.mlsgrid.com",
+      },
+      {
+        protocol: "https",
+        hostname: "photos.stellarmls.com",
+      },
+      {
+        protocol: "https",
+        hostname: "api.mapbox.com",
+      },
     ],
   },
   async redirects() {
