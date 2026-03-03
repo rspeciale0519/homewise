@@ -113,7 +113,7 @@
 - [x] Generate sitemap
 - [x] Generate robots.txt
 - [x] Add JSON-LD structured data
-- [ ] Add OG image generation
+- [x] Add OG image generation
 - [ ] Add scroll animations (Framer Motion)
 - [ ] Configure URL redirects from old site
 - [x] Add favicon and app icons
