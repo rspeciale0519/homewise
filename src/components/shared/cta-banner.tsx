@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
+import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
 
 interface CtaBannerProps {
   eyebrow?: string;
@@ -46,6 +47,7 @@ export function CtaBanner({
   return (
     <section className={bgMap[variant]}>
       <Container className="py-16 md:py-20">
+        <AnimateOnScroll>
         <div className="flex flex-col items-center text-center gap-6 md:flex-row md:text-left md:justify-between md:items-center">
           <div className="max-w-xl">
             {eyebrow && (
@@ -87,6 +89,7 @@ export function CtaBanner({
             )}
           </div>
         </div>
+        </AnimateOnScroll>
       </Container>
     </section>
   );

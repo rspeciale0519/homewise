@@ -90,13 +90,32 @@
 - [x] Update buyers-resources data with Home Inspection card
 - [x] Verify type-check, 40 tests passing, build clean (50 routes)
 
+## Phase 6.75: MLS Foundation (Property Data Infrastructure)
+- [x] Add Listing, WalkScoreCache, SchoolCache, SyncState Prisma models
+- [x] Extend Property interface and PropertyFilters with 25+ optional fields
+- [x] Create provider factory pattern (mock/stellar via PROPERTY_PROVIDER env var)
+- [x] Create StellarMlsProvider reading from Prisma Listing table
+- [x] Create seed script with 12 Central FL listings
+- [x] Create Inngest MLS Grid sync infrastructure (15-min cron, OAuth2, RESO upsert)
+- [x] Add Mapbox GL map-based search with clusters, bounds, and polygon draw
+- [x] Add advanced filters (year built, lot size, HOA, amenities, open houses, school district)
+- [x] Add sort selector and sold status badges with close price
+- [x] Integrate Walk Score API with 30-day DB cache
+- [x] Integrate GreatSchools API with 7-day DB cache
+- [x] Add photo gallery, open house widget, and detail page sub-components
+- [x] Add featured listings from Prisma on homepage
+- [x] Add agent MLS listings widget and paginated agent listings page
+- [x] Add IDX/Stellar MLS compliance disclaimer
+- [x] Add admin MLS sync dashboard with manual trigger
+- [x] Verify type-check and build pass (84 routes)
+
 ## Phase 7: SEO, Performance, Polish, and Launch Prep
-- [ ] Generate sitemap
-- [ ] Generate robots.txt
-- [ ] Add JSON-LD structured data
-- [ ] Add OG image generation
-- [ ] Add scroll animations (Framer Motion)
-- [ ] Configure URL redirects from old site
-- [ ] Add favicon and app icons
-- [ ] Performance optimization pass
-- [ ] Final verification (type-check, lint, test, build, visual)
+- [x] Generate sitemap
+- [x] Generate robots.txt
+- [x] Add JSON-LD structured data
+- [x] Add OG image generation
+- [x] Add scroll animations (Framer Motion)
+- [x] Configure URL redirects from old site
+- [x] Add favicon and app icons
+- [x] Performance optimization pass
+- [x] Final verification (type-check, lint, test, build, visual)

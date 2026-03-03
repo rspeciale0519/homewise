@@ -8,7 +8,9 @@ import {
   LISTING_STATUSES,
   BED_OPTIONS,
   BATH_OPTIONS,
+  SORT_OPTIONS,
 } from "@/schemas/property-filter.schema";
+import { SearchFiltersAdvanced } from "./search-filters-advanced";
 
 interface SearchFiltersProps {
   currentLocation?: string;
@@ -18,6 +20,20 @@ interface SearchFiltersProps {
   currentBaths?: number;
   currentPropertyType?: string;
   currentStatus?: string;
+  currentSortBy?: string;
+  currentMinYearBuilt?: number;
+  currentMaxYearBuilt?: number;
+  currentMinLotSize?: number;
+  currentMaxLotSize?: number;
+  currentMaxHoa?: number;
+  currentMaxDom?: number;
+  currentHasPool?: boolean;
+  currentHasWaterfront?: boolean;
+  currentHasGarage?: boolean;
+  currentIsNewConstruction?: boolean;
+  currentHasGatedCommunity?: boolean;
+  currentOpenHousesOnly?: boolean;
+  currentSchoolDistrict?: string;
   totalResults: number;
 }
 
@@ -37,6 +53,20 @@ export function SearchFilters({
   currentBaths,
   currentPropertyType,
   currentStatus,
+  currentSortBy,
+  currentMinYearBuilt,
+  currentMaxYearBuilt,
+  currentMinLotSize,
+  currentMaxLotSize,
+  currentMaxHoa,
+  currentMaxDom,
+  currentHasPool,
+  currentHasWaterfront,
+  currentHasGarage,
+  currentIsNewConstruction,
+  currentHasGatedCommunity,
+  currentOpenHousesOnly,
+  currentSchoolDistrict,
   totalResults,
 }: SearchFiltersProps) {
   const router = useRouter();
@@ -220,24 +250,51 @@ export function SearchFilters({
 
       {/* Row 3: Advanced filters (collapsible) */}
       {showAdvanced && (
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <FilterSelect
-            label="Property Type"
-            value={currentPropertyType ?? ""}
-            onChange={(val) => updateParams({ propertyType: val || undefined })}
-            options={[
-              { value: "", label: "All Types" },
-              ...PROPERTY_TYPES.map((t) => ({ value: t, label: t })),
-            ]}
-          />
-          <FilterSelect
-            label="Status"
-            value={currentStatus ?? ""}
-            onChange={(val) => updateParams({ status: val || undefined })}
-            options={[
-              { value: "", label: "All Statuses" },
-              ...LISTING_STATUSES.map((s) => ({ value: s, label: s })),
-            ]}
+        <div className="space-y-3 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <FilterSelect
+              label="Property Type"
+              value={currentPropertyType ?? ""}
+              onChange={(val) => updateParams({ propertyType: val || undefined })}
+              options={[
+                { value: "", label: "All Types" },
+                ...PROPERTY_TYPES.map((t) => ({ value: t, label: t })),
+              ]}
+            />
+            <FilterSelect
+              label="Status"
+              value={currentStatus ?? ""}
+              onChange={(val) => updateParams({ status: val || undefined })}
+              options={[
+                { value: "", label: "All Statuses" },
+                ...LISTING_STATUSES.map((s) => ({ value: s, label: s })),
+              ]}
+            />
+            <FilterSelect
+              label="Sort By"
+              value={currentSortBy ?? ""}
+              onChange={(val) => updateParams({ sortBy: val || undefined })}
+              options={[
+                { value: "", label: "Default" },
+                ...SORT_OPTIONS.map((s) => ({ value: s.value, label: s.label })),
+              ]}
+            />
+          </div>
+          <SearchFiltersAdvanced
+            currentMinYearBuilt={currentMinYearBuilt}
+            currentMaxYearBuilt={currentMaxYearBuilt}
+            currentMinLotSize={currentMinLotSize}
+            currentMaxLotSize={currentMaxLotSize}
+            currentMaxHoa={currentMaxHoa}
+            currentMaxDom={currentMaxDom}
+            currentHasPool={currentHasPool}
+            currentHasWaterfront={currentHasWaterfront}
+            currentHasGarage={currentHasGarage}
+            currentIsNewConstruction={currentIsNewConstruction}
+            currentHasGatedCommunity={currentHasGatedCommunity}
+            currentOpenHousesOnly={currentOpenHousesOnly}
+            currentSchoolDistrict={currentSchoolDistrict}
+            onUpdate={updateParams}
           />
         </div>
       )}

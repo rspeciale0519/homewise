@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
-import { propertyProvider } from "@/providers/mock-property-provider";
+import { propertyProvider } from "@/providers";
+import type { PropertyFilters } from "@/providers/property-provider";
 
 export async function GET(request: NextRequest) {
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
@@ -13,7 +14,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const result = await propertyProvider.search(parsed.data);
+  const { north, south, east, west, polygon: polygonStr, ...rest } = parsed.data;
+
+  const filters: PropertyFilters = { ...rest };
+
+  if (north !== undefined && south !== undefined && east !== undefined && west !== undefined) {
+    filters.bounds = { north, south, east, west };
+  }
+
+  if (polygonStr) {
+    try {
+      const coords = JSON.parse(polygonStr) as [number, number][];
+      if (Array.isArray(coords) && coords.length >= 3) {
+        filters.polygon = coords;
+      }
+    } catch {
+      // ignore invalid polygon JSON
+    }
+  }
+
+  const result = await propertyProvider.search(filters);
 
   return NextResponse.json(result);
 }

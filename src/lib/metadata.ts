@@ -12,27 +12,28 @@ export function createMetadata({
   title,
   description = DESCRIPTION,
   path = "",
-  image = "/images/og/default.jpg",
+  image,
 }: MetadataParams): Metadata {
   const url = `${SITE_URL}${path}`;
+  const ogTitle = `${title} | ${SITE_NAME}`;
 
   return {
     title,
     description,
     openGraph: {
-      title: `${title} | ${SITE_NAME}`,
+      title: ogTitle,
       description,
       url,
       siteName: SITE_NAME,
-      images: [{ url: image, width: 1200, height: 630, alt: title }],
+      ...(image && { images: [{ url: image, width: 1200, height: 630, alt: title }] }),
       type: "website",
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | ${SITE_NAME}`,
+      title: ogTitle,
       description,
-      images: [image],
+      ...(image && { images: [image] }),
     },
     alternates: {
       canonical: url,

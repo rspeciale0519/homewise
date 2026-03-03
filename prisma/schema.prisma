@@ -23,6 +23,8 @@ model Agent {
   inviteCode       String?       @unique
   inviteExpiresAt  DateTime?
   inviteUsed       Boolean       @default(false)
+  mlsAgentId       String?
+  mlsOfficeId      String?
   userId           String?       @unique
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -168,4 +170,117 @@ model RecentlyViewed {
   @@unique([userId, propertyId])
   @@index([userId])
   @@index([viewedAt])
+}
+
+model Listing {
+  id                  String   @id @default(cuid())
+  mlsId               String   @unique
+  mlsSource           String   @default("stellar")
+  status              String   @default("Active")
+  price               Float
+  closePrice          Float?
+  originalListPrice   Float?
+  address             String
+  city                String
+  state               String   @default("FL")
+  zip                 String
+  county              String?
+  subdivision         String?
+  beds                Int
+  bathsFull           Int
+  bathsHalf           Int
+  baths               Float
+  sqft                Int
+  lotSize             Float?
+  yearBuilt           Int?
+  propertyType        String
+  propertySubType     String?
+  description         String?
+  photos              String[]
+  imageUrl            String?
+  latitude            Float?
+  longitude           Float?
+  hoaFee              Float?
+  hoaFrequency        String?
+  taxAmount           Float?
+  taxYear             Int?
+  hasPool             Boolean  @default(false)
+  hasWaterfront       Boolean  @default(false)
+  hasGarage           Boolean  @default(false)
+  garageSpaces        Int      @default(0)
+  isNewConstruction   Boolean  @default(false)
+  hasGatedCommunity   Boolean  @default(false)
+  daysOnMarket        Int      @default(0)
+  listDate            DateTime?
+  closeDate           DateTime?
+  openHouseSchedule   Json?
+  schoolDistrict      String?
+  elementarySchool    String?
+  middleSchool        String?
+  highSchool          String?
+  listingAgentName    String?
+  listingAgentMlsId   String?
+  listingAgentPhone   String?
+  listingAgentEmail   String?
+  listingOfficeName   String?
+  listingOfficeMlsId  String?
+  walkScore           Int?
+  transitScore        Int?
+  bikeScore           Int?
+  walkScoreUpdatedAt  DateTime?
+  featured            Boolean  @default(false)
+  virtualTourUrl      String?
+  remarks             String?
+  mlsLastModified     DateTime?
+  syncedAt            DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([city])
+  @@index([status])
+  @@index([price])
+  @@index([propertyType])
+  @@index([mlsId])
+  @@index([listingAgentMlsId])
+  @@index([listingOfficeMlsId])
+  @@index([featured])
+  @@index([latitude, longitude])
+  @@index([beds])
+  @@index([daysOnMarket])
+}
+
+model WalkScoreCache {
+  id           String   @id @default(cuid())
+  addressKey   String   @unique
+  walkScore    Int?
+  transitScore Int?
+  bikeScore    Int?
+  description  String?
+  rawResponse  Json?
+  fetchedAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@index([expiresAt])
+}
+
+model SchoolCache {
+  id        String   @id @default(cuid())
+  latLngKey String   @unique
+  schools   Json
+  fetchedAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model SyncState {
+  id           String   @id @default(cuid())
+  provider     String   @unique @default("stellar")
+  lastSyncAt   DateTime?
+  totalSynced  Int      @default(0)
+  lastError    String?
+  status       String   @default("idle")
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

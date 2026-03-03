@@ -4,18 +4,35 @@ import { useEffect, useCallback, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
 import Link from "next/link";
-import { MOCK_LISTINGS, formatPrice, type MockListing } from "@/data/mock/listings";
+import { MOCK_LISTINGS } from "@/data/mock/listings";
+import { formatPrice } from "@/lib/format";
 import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { cn } from "@/lib/utils";
 
-const STATUS_STYLES: Record<MockListing["status"], string> = {
+interface FeaturedListing {
+  id: string;
+  imageUrl: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  price: number;
+  beds: number;
+  baths: number;
+  sqft: number;
+  status: string;
+  daysOnMarket: number;
+}
+
+const STATUS_STYLES: Record<string, string> = {
   "New Listing": "bg-crimson-600 text-white",
   "For Sale": "bg-navy-600 text-white",
+  Active: "bg-navy-600 text-white",
   Pending: "bg-amber-500 text-white",
 };
 
-function ListingCard({ listing }: { listing: MockListing }) {
+function ListingCard({ listing }: { listing: FeaturedListing }) {
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-card border border-slate-100 group h-full flex flex-col">
       {/* Image */}
@@ -29,7 +46,7 @@ function ListingCard({ listing }: { listing: MockListing }) {
         />
         {/* Status badge */}
         <div className="absolute top-3 left-3">
-          <span className={cn("text-xs font-semibold tracking-wide px-2.5 py-1 rounded-full", STATUS_STYLES[listing.status])}>
+          <span className={cn("text-xs font-semibold tracking-wide px-2.5 py-1 rounded-full", STATUS_STYLES[listing.status] ?? "bg-navy-600 text-white")}>
             {listing.status}
           </span>
         </div>
@@ -79,7 +96,12 @@ function ListingCard({ listing }: { listing: MockListing }) {
   );
 }
 
-export function FeaturedListings() {
+interface FeaturedListingsProps {
+  listings?: FeaturedListing[];
+}
+
+export function FeaturedListings({ listings }: FeaturedListingsProps) {
+  const items: FeaturedListing[] = listings ?? MOCK_LISTINGS;
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "start",
@@ -146,12 +168,12 @@ export function FeaturedListings() {
         {/* Carousel */}
         <div ref={emblaRef} className="overflow-hidden -mx-2">
           <div className="flex">
-            {MOCK_LISTINGS.map((listing) => (
+            {items.map((listing) => (
               <div
                 key={listing.id}
                 className="flex-[0_0_100%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] px-2 min-w-0"
               >
-                <Link href={`/properties`} className="block h-full">
+                <Link href={`/properties/${listing.id}`} className="block h-full">
                   <ListingCard listing={listing} />
                 </Link>
               </div>

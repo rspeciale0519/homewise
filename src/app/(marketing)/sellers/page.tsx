@@ -6,6 +6,8 @@ import { ServiceGrid } from "@/components/content/service-grid";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { SELLERS_SERVICES } from "@/data/content/sellers-services";
 import { createMetadata } from "@/lib/metadata";
+import { JsonLdScript } from "@/components/shared/json-ld-script";
+import { articleJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = createMetadata({
   title: "Seller Resources",
@@ -17,6 +19,17 @@ export const metadata: Metadata = createMetadata({
 export default function SellersPage() {
   return (
     <>
+      <JsonLdScript data={[
+        articleJsonLd({
+          title: "Seller Resources",
+          description: "Expert tools and guides to help you sell your Central Florida home faster and for more money.",
+          path: "/sellers",
+        }),
+        breadcrumbJsonLd([
+          { name: "Home", href: "/" },
+          { name: "Sellers", href: "/sellers" },
+        ]),
+      ]} />
       {/* Hero */}
       <div className="relative h-[480px] md:h-[560px] overflow-hidden">
         <Image

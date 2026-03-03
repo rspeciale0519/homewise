@@ -5,8 +5,12 @@ import { Pagination } from "@/components/ui/pagination";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { SearchFilters } from "@/components/properties/search-filters";
 import { ListingGrid } from "@/components/properties/listing-grid";
-import { propertyProvider } from "@/providers/mock-property-provider";
+import { PropertySearchShell } from "@/components/properties/property-search-shell";
+import { OpenHouseWidget } from "@/components/properties/open-house-widget";
+import { propertyProvider } from "@/providers";
+import type { PropertyFilters } from "@/providers/property-provider";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
+import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
@@ -31,7 +35,19 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 
   const parsed = propertyFilterSchema.safeParse(flat);
 
-  const filters = parsed.success ? parsed.data : { page: 1, perPage: 12 };
+  const rawFilters = parsed.success ? parsed.data : { page: 1, perPage: 12 };
+  const { north, south, east, west, polygon: polygonStr, ...rest } = rawFilters;
+  const filters: PropertyFilters = { ...rest };
+
+  if (north !== undefined && south !== undefined && east !== undefined && west !== undefined) {
+    filters.bounds = { north, south, east, west };
+  }
+  if (typeof polygonStr === "string" && polygonStr) {
+    try {
+      const coords = JSON.parse(polygonStr) as [number, number][];
+      if (Array.isArray(coords) && coords.length >= 3) filters.polygon = coords;
+    } catch { /* ignore */ }
+  }
 
   const result = await propertyProvider.search(filters);
 
@@ -113,22 +129,41 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
             currentMaxPrice={parsed.success ? parsed.data.maxPrice : undefined}
             currentBeds={parsed.success ? parsed.data.beds : undefined}
             currentBaths={parsed.success ? parsed.data.baths : undefined}
-            currentPropertyType={
-              parsed.success ? parsed.data.propertyType : undefined
-            }
+            currentPropertyType={parsed.success ? parsed.data.propertyType : undefined}
             currentStatus={parsed.success ? parsed.data.status : undefined}
+            currentSortBy={parsed.success ? parsed.data.sortBy : undefined}
+            currentMinYearBuilt={parsed.success ? parsed.data.minYearBuilt : undefined}
+            currentMaxYearBuilt={parsed.success ? parsed.data.maxYearBuilt : undefined}
+            currentMinLotSize={parsed.success ? parsed.data.minLotSize : undefined}
+            currentMaxLotSize={parsed.success ? parsed.data.maxLotSize : undefined}
+            currentMaxHoa={parsed.success ? parsed.data.maxHoa : undefined}
+            currentMaxDom={parsed.success ? parsed.data.maxDom : undefined}
+            currentHasPool={parsed.success ? parsed.data.hasPool : undefined}
+            currentHasWaterfront={parsed.success ? parsed.data.hasWaterfront : undefined}
+            currentHasGarage={parsed.success ? parsed.data.hasGarage : undefined}
+            currentIsNewConstruction={parsed.success ? parsed.data.isNewConstruction : undefined}
+            currentHasGatedCommunity={parsed.success ? parsed.data.hasGatedCommunity : undefined}
+            currentOpenHousesOnly={parsed.success ? parsed.data.openHousesOnly : undefined}
+            currentSchoolDistrict={parsed.success ? parsed.data.schoolDistrict : undefined}
             totalResults={result.total}
           />
 
           <div className="mt-8">
-            <ListingGrid properties={result.properties} />
+            <PropertySearchShell properties={result.properties}>
+              <ListingGrid properties={result.properties} />
+              <Pagination
+                currentPage={result.currentPage}
+                totalPages={result.totalPages}
+                className="mt-10"
+              />
+            </PropertySearchShell>
           </div>
 
-          <Pagination
-            currentPage={result.currentPage}
-            totalPages={result.totalPages}
-            className="mt-10"
-          />
+          <div className="mt-8">
+            <OpenHouseWidget properties={result.properties} />
+          </div>
+
+          <IdxDisclaimer />
         </Container>
       </section>
 
