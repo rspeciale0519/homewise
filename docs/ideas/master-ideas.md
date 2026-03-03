@@ -164,4 +164,55 @@ One extra closing pays for years of the Pro subscription — strong ROI argument
 
 ---
 
+## Buyer & Seller Tools
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| Mortgage Affordability Calculator | Inputs income, down payment, debt → shows real price range and monthly payment estimates | One of the highest-engagement tools on any real estate site |
+| Rent vs. Buy Calculator | "Here's what you're paying in rent vs. what a mortgage on a comparable home would cost you" | Great lead gen — catches people on the fence |
+| Home Value Tracker | After closing, buyers can log in and track what their home is worth month over month using MLS comp data | Keeps them engaged with Homewise long after the sale |
+| Moving Concierge Directory | Curated list of Homewise-vetted local services: movers, inspectors, title companies, lenders, contractors | Potential affiliate revenue stream |
+| Listing Performance Dashboard | Sellers can log in and see views, saves, inquiries, and showing requests on their listing | Reduces "how is my listing doing?" calls to agents |
+| Virtual Consultation Booking | Calendly-style booking flow for buyers/sellers to schedule a 30-min video call with an available agent | Removes the biggest friction point in converting a visitor to a client |
+
+---
+
+## Community & Content
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| Neighborhood Guides | Deep-dive pages for each major central Florida neighborhood: schools, commute times, restaurants, parks, median prices, market trends | Excellent for SEO and invaluable for relocating buyers |
+| Monthly Market Reports | Auto-generated PDF reports from MLS data (median price, days on market, inventory levels by county) — agents can share, visitors can subscribe | Positions Homewise as the local market authority |
+| Testimonials & Reviews System | Structured reviews tied to specific agents, pulled from Google Reviews or submitted directly — displayed on agent profiles and main site | Social proof is one of the biggest conversion drivers in real estate |
+
+---
+
+## Agent Recruiting & Growth
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| "Join Our Team" Funnel | Dedicated recruiting section targeting agents at other brokerages — includes a commission split calculator showing what they'd earn at Homewise vs. their current brokerage | 186+ agents means a strong culture story to tell |
+| Agent Referral Program | Existing agents refer new agents — tracked in the dashboard, rewarded when the referred agent closes their first deal | Incentivizes organic growth |
+| Agent Production Showcase | Public-facing "Top Producers" section or leaderboard | Agents love recognition; buyers trust agents with a track record |
+
+---
+
+## Partnerships & Revenue
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| Preferred Lender Integration | Partner with 2–3 local mortgage lenders — surface them contextually throughout the site (calculator results, property detail pages, buyer resources) | Referral fee arrangement |
+| Home Warranty & Insurance Affiliates | Surface trusted partners at the right moment in the buyer journey (after making an offer) | Pure revenue with zero friction to the user experience |
+
+---
+
+## Engagement & Retention
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| Home Anniversary Emails | One year after closing, client gets a personalized email from their agent: "Happy one year in your home! Here's what it's worth today." | Keeps the relationship warm for eventual re-list or referral |
+| Email Newsletter & Drip Campaigns | Monthly market updates, seasonal home tips, local events — keeps Homewise top-of-mind for people 6–18 months away from being ready | Builds a long-term audience the brokerage owns |
+
+---
+
 *Last updated: 2026-03-03*
