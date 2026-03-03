@@ -9,6 +9,7 @@ import { SocialLinks } from "@/components/shared/social-links";
 import { PHONE, EMAIL, ADDRESS, SERVICE_AREAS, AGENT_COUNT, YEARS_IN_BUSINESS } from "@/lib/constants";
 import { JsonLdScript } from "@/components/shared/json-ld-script";
 import { organizationJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
+import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
 
 export const metadata: Metadata = createMetadata({
   title: "About Home Wise Realty Group",
@@ -145,6 +146,7 @@ export default function AboutPage() {
       {/* Mission */}
       <section className="section-padding bg-white">
         <Container size="md">
+          <AnimateOnScroll>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-3">Our Mission</p>
@@ -181,12 +183,14 @@ export default function AboutPage() {
               </div>
             </div>
           </div>
+          </AnimateOnScroll>
         </Container>
       </section>
 
       {/* Service Areas */}
       <section className="section-padding bg-cream-50">
         <Container>
+          <AnimateOnScroll>
           <div className="text-center mb-10">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-3">Where We Work</p>
             <h2 className="font-serif text-display-md font-semibold text-navy-700 mb-4">Serving All of Central Florida</h2>
@@ -205,12 +209,14 @@ export default function AboutPage() {
               </span>
             ))}
           </div>
+          </AnimateOnScroll>
         </Container>
       </section>
 
       {/* Values */}
       <section className="section-padding bg-white">
         <Container>
+          <AnimateOnScroll>
           <div className="text-center mb-12">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-3">What We Stand For</p>
             <h2 className="font-serif text-display-md font-semibold text-navy-700 mb-4">Our Core Values</h2>
@@ -226,6 +232,7 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
+          </AnimateOnScroll>
         </Container>
       </section>
 

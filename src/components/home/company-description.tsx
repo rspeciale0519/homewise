@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { SERVICE_AREAS, AGENT_COUNT, YEARS_IN_BUSINESS } from "@/lib/constants";
+import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
+import { StaggerChildren, StaggerItem } from "@/components/shared/stagger-children";
 
 const STATS = [
   { value: AGENT_COUNT, label: "Licensed Agents", icon: "👥" },
@@ -17,6 +19,7 @@ export function CompanyDescription() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
           {/* Left: Text content */}
+          <AnimateOnScroll>
           <div>
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-400 mb-4">
               About Us
@@ -71,12 +74,13 @@ export function CompanyDescription() {
               </Link>
             </div>
           </div>
+          </AnimateOnScroll>
 
           {/* Right: Stats grid */}
-          <div className="grid grid-cols-2 gap-4">
+          <StaggerChildren className="grid grid-cols-2 gap-4">
             {STATS.map((stat) => (
+              <StaggerItem key={stat.label}>
               <div
-                key={stat.label}
                 className="bg-navy-600/50 border border-navy-500 rounded-2xl p-6 text-center hover:bg-navy-600/80 transition-colors duration-300 group"
               >
                 <div className="text-3xl mb-2">{stat.icon}</div>
@@ -87,8 +91,9 @@ export function CompanyDescription() {
                   {stat.label}
                 </p>
               </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerChildren>
 
         </div>
       </Container>

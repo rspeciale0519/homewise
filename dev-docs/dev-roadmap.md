@@ -114,7 +114,7 @@
 - [x] Generate robots.txt
 - [x] Add JSON-LD structured data
 - [x] Add OG image generation
-- [ ] Add scroll animations (Framer Motion)
+- [x] Add scroll animations (Framer Motion)
 - [ ] Configure URL redirects from old site
 - [x] Add favicon and app icons
 - [ ] Performance optimization pass

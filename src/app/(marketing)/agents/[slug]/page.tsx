@@ -11,6 +11,7 @@ import { PHONE } from "@/lib/constants";
 import { AgentListingsWidget } from "@/components/agents/agent-listings-widget";
 import { JsonLdScript } from "@/components/shared/json-ld-script";
 import { agentPersonJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
+import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
 
 interface AgentProfileProps {
   params: Promise<{ slug: string }>;
@@ -211,6 +212,7 @@ export default async function AgentProfilePage({ params }: AgentProfileProps) {
       {/* Bio section */}
       <section className="section-padding bg-white">
         <Container size="md">
+          <AnimateOnScroll>
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-10 xl:gap-16 items-start">
             {/* Bio */}
             <div>
@@ -284,6 +286,7 @@ export default async function AgentProfilePage({ params }: AgentProfileProps) {
               </Link>
             </aside>
           </div>
+          </AnimateOnScroll>
         </Container>
       </section>
 
