@@ -6,6 +6,8 @@ import { ServiceGrid } from "@/components/content/service-grid";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { BUYERS_RESOURCES } from "@/data/content/buyers-resources";
 import { createMetadata } from "@/lib/metadata";
+import { JsonLdScript } from "@/components/shared/json-ld-script";
+import { articleJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = createMetadata({
   title: "Buyer Resources",
@@ -16,6 +18,17 @@ export const metadata: Metadata = createMetadata({
 export default function BuyersPage() {
   return (
     <>
+      <JsonLdScript data={[
+        articleJsonLd({
+          title: "Buyer Resources",
+          description: "Everything you need to buy your first — or next — home in Central Florida.",
+          path: "/buyers",
+        }),
+        breadcrumbJsonLd([
+          { name: "Home", href: "/" },
+          { name: "Buyers", href: "/buyers" },
+        ]),
+      ]} />
       {/* Hero */}
       <div className="relative h-[480px] md:h-[560px] overflow-hidden">
         <Image

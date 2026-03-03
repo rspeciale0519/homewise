@@ -5,6 +5,8 @@ import { PromoCards } from "@/components/home/promo-cards";
 import { FeaturedListings } from "@/components/home/featured-listings";
 import { CompanyDescription } from "@/components/home/company-description";
 import { CtaBanner } from "@/components/shared/cta-banner";
+import { JsonLdScript } from "@/components/shared/json-ld-script";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/json-ld";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -40,6 +42,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
       <HeroSection />
       <PromoCards />
       <FeaturedListings listings={mappedListings.length > 0 ? mappedListings : undefined} />

@@ -6,6 +6,9 @@ import { Container } from "@/components/ui/container";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { COMMUNITIES, getCommunityBySlug } from "@/data/content/communities";
 import { createMetadata } from "@/lib/metadata";
+import { JsonLdScript } from "@/components/shared/json-ld-script";
+import { communityPlaceJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
+import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
 
 interface CommunityPageProps {
   params: Promise<{ slug: string }>;
@@ -37,6 +40,14 @@ export default async function CommunityDetailPage({ params }: CommunityPageProps
 
   return (
     <>
+      <JsonLdScript data={[
+        communityPlaceJsonLd(community),
+        breadcrumbJsonLd([
+          { name: "Home", href: "/" },
+          { name: "Communities", href: "/communities" },
+          { name: community.name, href: `/communities/${slug}` },
+        ]),
+      ]} />
       {/* Hero */}
       <div className="relative h-[400px] md:h-[480px] overflow-hidden">
         <Image
@@ -99,6 +110,7 @@ export default async function CommunityDetailPage({ params }: CommunityPageProps
       {/* Main content */}
       <section className="section-padding bg-cream-50">
         <Container>
+          <AnimateOnScroll>
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10 xl:gap-14 items-start">
             <div className="space-y-8">
               {/* About */}
@@ -200,6 +212,7 @@ export default async function CommunityDetailPage({ params }: CommunityPageProps
               </div>
             </aside>
           </div>
+          </AnimateOnScroll>
         </Container>
       </section>
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
+import { StaggerChildren, StaggerItem } from "@/components/shared/stagger-children";
 
 const PROMO_CARDS = [
   {
@@ -71,12 +72,12 @@ export function PromoCards() {
   return (
     <section className="section-padding bg-cream-50">
       <Container>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <StaggerChildren className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {PROMO_CARDS.map((card, i) => {
             const colors = colorMap[card.color];
             return (
+              <StaggerItem key={card.title}>
               <Link
-                key={card.title}
                 href={card.href}
                 className={`group relative bg-white rounded-2xl p-8 border border-slate-100 shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-elevated ${colors.border} flex flex-col`}
                 style={{ animationDelay: `${i * 0.1}s` }}
@@ -117,9 +118,10 @@ export function PromoCards() {
                   </svg>
                 </div>
               </Link>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerChildren>
       </Container>
     </section>
   );
