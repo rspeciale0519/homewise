@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   const timestamp = Date.now();
   const safeName = `agent-${timestamp}.${ext}`;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error: uploadError } = await supabase.storage
