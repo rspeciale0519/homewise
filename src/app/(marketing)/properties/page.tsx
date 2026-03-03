@@ -127,10 +127,22 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
             currentMaxPrice={parsed.success ? parsed.data.maxPrice : undefined}
             currentBeds={parsed.success ? parsed.data.beds : undefined}
             currentBaths={parsed.success ? parsed.data.baths : undefined}
-            currentPropertyType={
-              parsed.success ? parsed.data.propertyType : undefined
-            }
+            currentPropertyType={parsed.success ? parsed.data.propertyType : undefined}
             currentStatus={parsed.success ? parsed.data.status : undefined}
+            currentSortBy={parsed.success ? parsed.data.sortBy : undefined}
+            currentMinYearBuilt={parsed.success ? parsed.data.minYearBuilt : undefined}
+            currentMaxYearBuilt={parsed.success ? parsed.data.maxYearBuilt : undefined}
+            currentMinLotSize={parsed.success ? parsed.data.minLotSize : undefined}
+            currentMaxLotSize={parsed.success ? parsed.data.maxLotSize : undefined}
+            currentMaxHoa={parsed.success ? parsed.data.maxHoa : undefined}
+            currentMaxDom={parsed.success ? parsed.data.maxDom : undefined}
+            currentHasPool={parsed.success ? parsed.data.hasPool : undefined}
+            currentHasWaterfront={parsed.success ? parsed.data.hasWaterfront : undefined}
+            currentHasGarage={parsed.success ? parsed.data.hasGarage : undefined}
+            currentIsNewConstruction={parsed.success ? parsed.data.isNewConstruction : undefined}
+            currentHasGatedCommunity={parsed.success ? parsed.data.hasGatedCommunity : undefined}
+            currentOpenHousesOnly={parsed.success ? parsed.data.openHousesOnly : undefined}
+            currentSchoolDistrict={parsed.success ? parsed.data.schoolDistrict : undefined}
             totalResults={result.total}
           />
 

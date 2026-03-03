@@ -11,10 +11,12 @@ interface ListingCardProps {
   showFavorite?: boolean;
 }
 
-const statusVariant: Record<string, "success" | "crimson" | "gold"> = {
+const statusVariant: Record<string, "success" | "crimson" | "gold" | "default"> = {
+  "Active": "success",
   "For Sale": "success",
   "New Listing": "crimson",
   "Pending": "gold",
+  "Sold": "default",
 };
 
 export function ListingCard({ property, isFavorited = false, showFavorite = true }: ListingCardProps) {
@@ -71,9 +73,16 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
       <div className="p-4 sm:p-5">
         {/* Price (visible when not hovering) */}
         <div className="flex items-baseline justify-between gap-2 mb-1.5">
-          <span className="font-serif text-xl sm:text-2xl font-bold text-navy-700 group-hover:text-crimson-600 transition-colors">
-            {formatPrice(property.price)}
-          </span>
+          <div>
+            <span className="font-serif text-xl sm:text-2xl font-bold text-navy-700 group-hover:text-crimson-600 transition-colors">
+              {formatPrice(property.closePrice ?? property.price)}
+            </span>
+            {property.status === "Sold" && property.closePrice && (
+              <span className="ml-2 text-xs text-slate-400 line-through">
+                {formatPrice(property.price)}
+              </span>
+            )}
+          </div>
           <span className="text-xs text-slate-400 whitespace-nowrap">
             {property.daysOnMarket}d on market
           </span>
