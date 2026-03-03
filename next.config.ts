@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { OLD_SITE_REDIRECTS } from "./src/config/redirects";
 
 const nextConfig: NextConfig = {
   images: {
@@ -31,33 +32,7 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
-    return [
-      {
-        source: "/Prepping-Your-Home",
-        destination: "/sellers/staging",
-        permanent: true,
-      },
-      {
-        source: "/Sell-Your-Home-FAST",
-        destination: "/sellers/sell-fast",
-        permanent: true,
-      },
-      {
-        source: "/Moving-Assistance",
-        destination: "/buyers/moving-tips",
-        permanent: true,
-      },
-      {
-        source: "/preparing-to-buy",
-        destination: "/buyers/preparing",
-        permanent: true,
-      },
-      {
-        source: "/sounds-and-smells",
-        destination: "/sellers/sounds-and-smells",
-        permanent: true,
-      },
-    ];
+    return OLD_SITE_REDIRECTS;
   },
   async headers() {
     return [

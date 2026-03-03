@@ -115,7 +115,7 @@
 - [x] Add JSON-LD structured data
 - [x] Add OG image generation
 - [x] Add scroll animations (Framer Motion)
-- [ ] Configure URL redirects from old site
+- [x] Configure URL redirects from old site
 - [x] Add favicon and app icons
 - [ ] Performance optimization pass
 - [ ] Final verification (type-check, lint, test, build, visual)
