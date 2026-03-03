@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/properties/favorite-button";
 import type { Property } from "@/providers/property-provider";
-import { formatPrice } from "@/data/mock/listings";
+import { formatPrice } from "@/lib/format";
 
 interface ListingCardProps {
   property: Property;

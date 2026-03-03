@@ -5,7 +5,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { SearchFilters } from "@/components/properties/search-filters";
 import { ListingGrid } from "@/components/properties/listing-grid";
-import { propertyProvider } from "@/providers/mock-property-provider";
+import { propertyProvider } from "@/providers";
+import type { PropertyFilters } from "@/providers/property-provider";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
 import { createMetadata } from "@/lib/metadata";
 
@@ -31,7 +32,19 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 
   const parsed = propertyFilterSchema.safeParse(flat);
 
-  const filters = parsed.success ? parsed.data : { page: 1, perPage: 12 };
+  const rawFilters = parsed.success ? parsed.data : { page: 1, perPage: 12 };
+  const { north, south, east, west, polygon: polygonStr, ...rest } = rawFilters;
+  const filters: PropertyFilters = { ...rest };
+
+  if (north !== undefined && south !== undefined && east !== undefined && west !== undefined) {
+    filters.bounds = { north, south, east, west };
+  }
+  if (typeof polygonStr === "string" && polygonStr) {
+    try {
+      const coords = JSON.parse(polygonStr) as [number, number][];
+      if (Array.isArray(coords) && coords.length >= 3) filters.polygon = coords;
+    } catch { /* ignore */ }
+  }
 
   const result = await propertyProvider.search(filters);
 

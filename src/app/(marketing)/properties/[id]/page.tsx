@@ -6,8 +6,8 @@ import { Container } from "@/components/ui/container";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CtaBanner } from "@/components/shared/cta-banner";
-import { propertyProvider } from "@/providers/mock-property-provider";
-import { formatPrice } from "@/data/mock/listings";
+import { propertyProvider } from "@/providers";
+import { formatPrice } from "@/lib/format";
 import { createMetadata } from "@/lib/metadata";
 import { PHONE } from "@/lib/constants";
 
