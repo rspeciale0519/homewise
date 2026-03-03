@@ -215,4 +215,66 @@ One extra closing pays for years of the Pro subscription — strong ROI argument
 
 ---
 
+## Training & Education Hub
+
+### Agent Training Hub (Private — Dashboard Only)
+
+A private knowledge base managed by Homewise admins, accessible only to logged-in agents.
+
+| Feature | Description |
+|---------|-------------|
+| Video library | Training videos organized by category — onboarding, contracts, compliance, platform how-tos, market knowledge |
+| Document vault | Scripts, forms, checklists, marketing templates, compliance docs — all searchable |
+| Onboarding track | New agents follow a required sequence of modules to complete before going active |
+| Progress tracking | Admin can see exactly which agents have completed which content — nothing falls through the cracks |
+| Admin content management | Admins upload, organize, tag, and update content from the admin dashboard at any time |
+
+---
+
+### Public Learning Center (Buyer & Seller Facing)
+
+A public-facing education section that goes well beyond the basic buyer/seller articles already on the site.
+
+| Feature | Description |
+|---------|-------------|
+| Buying 101 course | Step-by-step guided journey from "thinking about buying" to closing day — short, digestible lessons |
+| Selling 101 course | Same guided format for sellers |
+| Video explainers | Short videos on common questions: "What is earnest money?", "How does the inspection process work?", etc. |
+| Downloadable guides | First-time buyer checklist, moving timeline, what to expect at closing |
+| Progress tracking | Buyers and sellers track completed lessons when logged in |
+| SEO asset | Educational real estate content ranks extremely well on Google — brings in buyers/sellers in research mode |
+
+---
+
+### Shared Content Layer
+
+Some content serves both audiences. A "What happens at closing?" video is useful for a first-time buyer *and* a new agent. Admins tag content for one or both audiences on upload — no duplication of work.
+
+---
+
+## Dashboard Assistant Chatbot (Agent-Facing, Internal)
+
+A second, entirely separate AI chatbot that lives inside the agent dashboard. Distinct from the public-facing chatbot on the agent's personal website — this one faces *inward*, helping agents navigate and get the most out of the Homewise platform.
+
+### As a Platform Guide
+Agents ask questions instead of clicking through menus:
+- "How do I connect my Google Calendar?"
+- "How many new leads do I have this week?"
+- "Show me the contact form submissions I haven't responded to"
+- "How do I update my bio and profile photo?"
+
+### As a Training Hub Tutor
+The chatbot integrates with the Training Hub so agents can access learning content conversationally:
+- "Show me the videos about writing a buyer agreement"
+- "I haven't finished my onboarding — where did I leave off?"
+- "Find me the home inspection checklist"
+- "Walk me through how to use the CMA report generator"
+
+Instead of browsing menus to find training content, the agent just asks. The bot surfaces the right video, document, or lesson instantly and can guide them through it step by step.
+
+### Key Principle
+One assistant that knows the entire platform inside and out — so agents spend less time figuring out the tool and more time selling.
+
+---
+
 *Last updated: 2026-03-03*
