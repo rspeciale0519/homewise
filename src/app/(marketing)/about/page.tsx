@@ -7,6 +7,8 @@ import { createMetadata } from "@/lib/metadata";
 import { ContactForm } from "@/components/forms/contact-form";
 import { SocialLinks } from "@/components/shared/social-links";
 import { PHONE, EMAIL, ADDRESS, SERVICE_AREAS, AGENT_COUNT, YEARS_IN_BUSINESS } from "@/lib/constants";
+import { JsonLdScript } from "@/components/shared/json-ld-script";
+import { organizationJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = createMetadata({
   title: "About Home Wise Realty Group",
@@ -83,6 +85,13 @@ const SERVICES = {
 export default function AboutPage() {
   return (
     <>
+      <JsonLdScript data={[
+        organizationJsonLd(),
+        breadcrumbJsonLd([
+          { name: "Home", href: "/" },
+          { name: "About", href: "/about" },
+        ]),
+      ]} />
       {/* Hero */}
       <div className="relative h-[400px] md:h-[480px] overflow-hidden">
         <Image

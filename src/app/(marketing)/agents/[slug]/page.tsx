@@ -9,6 +9,8 @@ import { prisma } from "@/lib/prisma";
 import { Suspense } from "react";
 import { PHONE } from "@/lib/constants";
 import { AgentListingsWidget } from "@/components/agents/agent-listings-widget";
+import { JsonLdScript } from "@/components/shared/json-ld-script";
+import { agentPersonJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
 
 interface AgentProfileProps {
   params: Promise<{ slug: string }>;
@@ -61,6 +63,14 @@ export default async function AgentProfilePage({ params }: AgentProfileProps) {
 
   return (
     <>
+      <JsonLdScript data={[
+        agentPersonJsonLd(agent),
+        breadcrumbJsonLd([
+          { name: "Home", href: "/" },
+          { name: "Agents", href: "/agents" },
+          { name: fullName, href: `/agents/${slug}` },
+        ]),
+      ]} />
       {/* Hero — split layout */}
       <div className="relative bg-gradient-to-br from-navy-800 via-navy-700 to-navy-950 overflow-hidden">
         {/* Background texture */}

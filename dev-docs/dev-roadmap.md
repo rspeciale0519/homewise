@@ -112,7 +112,7 @@
 ## Phase 7: SEO, Performance, Polish, and Launch Prep
 - [x] Generate sitemap
 - [x] Generate robots.txt
-- [ ] Add JSON-LD structured data
+- [x] Add JSON-LD structured data
 - [ ] Add OG image generation
 - [ ] Add scroll animations (Framer Motion)
 - [ ] Configure URL redirects from old site

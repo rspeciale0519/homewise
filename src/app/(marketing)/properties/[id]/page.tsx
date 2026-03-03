@@ -16,6 +16,8 @@ import { getNearbySchools } from "@/lib/great-schools";
 import { createMetadata } from "@/lib/metadata";
 import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
 import { PHONE } from "@/lib/constants";
+import { JsonLdScript } from "@/components/shared/json-ld-script";
+import { realEstateListingJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
 
 interface PropertyDetailPageProps {
   params: Promise<{ id: string }>;
@@ -69,6 +71,14 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
 
   return (
     <>
+      <JsonLdScript data={[
+        realEstateListingJsonLd(property),
+        breadcrumbJsonLd([
+          { name: "Home", href: "/" },
+          { name: "Properties", href: "/properties" },
+          { name: property.address, href: `/properties/${id}` },
+        ]),
+      ]} />
       {/* Breadcrumb bar */}
       <div className="bg-cream-50 border-b border-cream-200">
         <Container className="py-3">
