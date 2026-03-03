@@ -45,6 +45,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${cormorant.variable}`}>
+      <head>
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://api.mapbox.com" />
+        <link rel="preconnect" href="https://fkwkjlsftlkjpiyspdbm.supabase.co" crossOrigin="anonymous" />
+      </head>
       <body className="font-sans antialiased min-h-screen">
         <SupabaseProvider>{children}</SupabaseProvider>
       </body>

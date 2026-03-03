@@ -117,5 +117,5 @@
 - [x] Add scroll animations (Framer Motion)
 - [x] Configure URL redirects from old site
 - [x] Add favicon and app icons
-- [ ] Performance optimization pass
-- [ ] Final verification (type-check, lint, test, build, visual)
+- [x] Performance optimization pass
+- [x] Final verification (type-check, lint, test, build, visual)
