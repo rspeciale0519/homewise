@@ -184,9 +184,10 @@
 ## Future (Deferred — Do Not Build Yet)
 
 > Spec ref: "Future (Deferred)" section in `ai-platform-spec.md`
+>
+> Note: AI Neighborhood Guide, AI Listing Recommendations, and third-party CRM integrations
+> were previously listed here but are already addressed within the current plan (G4/H1, G3/G1,
+> and J Config 2 Pro tier respectively). Only genuinely unaddressed work remains below.
 
-- [ ] AI Neighborhood Guide
-- [ ] AI Listing Recommendations based on behavior
-- [ ] Mobile app (React Native)
-- [ ] Third-party CRM integrations (Follow Up Boss, Zapier)
-- [ ] Social media direct posting (Facebook Graph API)
+- [ ] **Mobile app (React Native)** — the site will be responsive but a native app is separate work
+- [ ] **Social media direct posting (Facebook Graph API)** — F7 generates post copy but one-click publish to Facebook/Instagram requires Facebook app approval and OAuth; this is the remaining gap

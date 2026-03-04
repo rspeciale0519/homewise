@@ -593,11 +593,13 @@ Market stats pages, custom market reports, monthly market stats emails, embeddab
 Team performance dashboard, agent-branded nurturing. *(Lead routing built in Phase 2 as part of B10/I1.)*
 
 ### Future (Deferred)
-- AI Neighborhood Guide (feature #2)
-- AI Listing Recommendations based on behavior (feature #3)
-- Mobile app (React Native)
-- Third-party CRM integrations (Follow Up Boss, Zapier)
-- Social media direct posting (Facebook Graph API)
+- **Mobile app (React Native)** — site will be responsive; native app is separate future work
+- **Social media direct posting (Facebook Graph API)** — F7 covers copy generation; direct one-click publish to Facebook/Instagram requires Facebook app approval and OAuth; deferred until post-launch
+
+> Previously deferred items now covered in the plan:
+> - AI Neighborhood Guide → G4 (AI SEO content generation) + H1 (neighborhood pages)
+> - AI Listing Recommendations → G3 (rigidity slider) + G1 (semantic search)
+> - Third-party CRM integrations → J Config 2 Pro tier (HubSpot, Follow Up Boss, kvCORE)
 
 ---
 
