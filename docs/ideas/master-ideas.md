@@ -277,4 +277,57 @@ One assistant that knows the entire platform inside and out — so agents spend 
 
 ---
 
-*Last updated: 2026-03-03*
+## Buyer Experience — Additional Ideas
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| Commute-Time Search | Search properties by drive/transit time to a specific workplace address — not just city or zip | Central Florida traffic makes this a buying decision; Mapbox foundation already in place |
+| Property Comparison Tool | Side-by-side comparison of 2–4 saved properties: beds, baths, HOA fees, price/sqft, school ratings, walk score | Favorites model already tracks the data — this surfaces it comparatively |
+| Open House RSVP | Buyers click "I'll be there" on a listing page; agent gets a heads-up list of attendees | `openHouseSchedule` already exists on the Listing model; generates warm leads |
+| Price History Timeline | Visual chart on each listing showing original list price, reductions, and days on market over time | Builds buyer trust and reduces "why is this sitting?" questions |
+| Total Cost of Ownership View | Breakdown panel on each listing: estimated mortgage + HOA + property taxes + insurance + utilities | Most buyers budget only on purchase price — this sets accurate expectations |
+
+---
+
+## Seller Experience — Additional Ideas
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| Showing Scheduler | Sellers set availability windows; buyers/agents request showings; sellers confirm or decline — all in-platform | Currently all showing coordination goes off-platform via phone/text |
+| Pre-Listing Checklist | Interactive checklist (repairs, disclosures, staging, photos) sellers work through before going live | Reduces "what do I do next?" calls to agents and sets expectations early |
+| Offer Comparison Tool | Side-by-side view of multiple offers: price, financing type, contingencies, closing timeline | Agents currently do this manually in spreadsheets |
+
+---
+
+## Agent Dashboard — Additional Ideas
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| Deal Pipeline / Transaction Tracker | Kanban board: Leads → Consultation Booked → Under Contract → Closed | The existing dashboard covers lead capture only — no visibility once a deal is in motion |
+| Social Media Content Generator | AI generates ready-to-post Instagram/Facebook content from a listing: headline, caption, hashtags, suggested photo order | Agents currently write this manually or skip it entirely |
+| Market Update Mailer | Agent selects a neighborhood or zip → platform generates a branded one-page market summary to send to their sphere | Agents who do this consistently get re-listings; almost none do it without tooling |
+| Commission Calculator | Enter sale price → see net commission after split, fees, and costs | Agents calculate this constantly; currently done manually |
+
+---
+
+## Admin Dashboard — Additional Ideas
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| Brokerage Performance Dashboard | Volume closed, average days to close, top producers by month, geographic heat map of where Homewise is winning deals | Admin currently sees leads/submissions only — no closed-deal business intelligence |
+| Agent Compliance Tracker | Which agents have completed required training, license renewal dates, E&O insurance expiry | Real compliance exposure for a 186-agent brokerage |
+| Recruitment Pipeline CRM | Track prospective agents from first contact through onboarding | Pairs with the "Join Our Team" funnel idea — without a backend to manage those conversations, leads fall through |
+
+---
+
+## Platform-Level Ideas
+
+| Idea | Description | Notes |
+|------|-------------|-------|
+| In-Platform Messaging | Persistent chat thread between buyer/seller and their agent, within Homewise | Contact forms are one-shot today — no ongoing thread; keeps relationships inside the platform rather than drifting to personal text/email |
+| Push Notifications (PWA) | Browser push for new matching listings and price drops on saved searches | Property alert model exists but delivery is email-only; push is faster and higher-engagement for active buyers |
+| Document Signing Integration | Embedded DocuSign or HelloSign for offers and buyer agreements | Removes the need to leave the platform for one of the most critical steps in the transaction |
+
+---
+
+*Last updated: 2026-03-04*
