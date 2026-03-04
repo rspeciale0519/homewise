@@ -123,19 +123,19 @@
 
 > Spec ref: Section F (`F1`–`F8`)
 
-- [ ] **F1 — AI Lead Scoring & Prioritization:** Point-based scoring model with time-decay; AI-generated 2-sentence priority brief per lead; scoring cron via Inngest; dashboard sorted by score. *Done when: CRM contact list orders by score and each contact shows an AI-written priority brief.*
-- [ ] **F2 — AI Follow-Up Draft Generator:** One-click draft from contact detail; AI reads activity timeline; drafts personalized email or text referencing specific listings and behavior; contextual to lead stage; agent edits and sends. *Done when: clicking "Draft Follow-Up" on any contact produces a relevant, personalized message draft.*
-- [ ] **F3 — AI CMA Generator:** Agent inputs address; system pulls 5–8 MLS comps; AI generates report with pricing recommendation and market narrative; exportable as branded PDF via `@react-pdf/renderer`. *Done when: agent can generate a CMA and download a formatted PDF.*
-- [ ] **F4 — AI Listing Performance Insights + Seller Portal:** Agent view: per-listing stats benchmarked against comparables, AI action suggestions, trend charts, weekly digest email. Seller portal: tokenized read-only URL (no login), plain-language performance summary, sparkline chart; agent can toggle portal on/off per listing. *Done when: agent can share a portal link with a seller and the seller sees their listing stats without logging in.*
-- [ ] **F5 — AI Listing Description Generator:** Agent inputs details or pulls from MLS; AI generates 3 variations (lifestyle, features/specs, investment); agent selects, edits, copies. *Done when: agent can generate three distinct descriptions and copy their preferred version.*
-- [ ] **F6 — AI Email Campaign Content Generator:** Agent selects campaign type and audience; AI generates full 5–8 email drip sequence with suggested delays; personalization tokens; agent reviews before activating. *Done when: generated campaign can be reviewed and activated directly from the campaign writer page.*
-- [ ] **F7 — AI Social Media Post Generator:** Listing post, market update, or engagement content; post copy variations with hashtags and platform formatting; image selection from listing photos. *Done when: agent can select a listing and generate platform-ready post copy with photos.*
-- [ ] **F8 — AI Meeting Prep Brief:** Triggered before scheduled showings/meetings; compiles client search history, saved listings, comps, neighborhood stats, talking points; one-page mobile-accessible view. *Done when: opening a meeting prep brief for a scheduled showing shows a complete one-page summary.*
+- [x] **F1 — AI Lead Scoring & Prioritization:** Point-based scoring model with time-decay; AI-generated 2-sentence priority brief per lead; scoring cron via Inngest; dashboard sorted by score. *Done when: CRM contact list orders by score and each contact shows an AI-written priority brief.*
+- [x] **F2 — AI Follow-Up Draft Generator:** One-click draft from contact detail; AI reads activity timeline; drafts personalized email or text referencing specific listings and behavior; contextual to lead stage; agent edits and sends. *Done when: clicking "Draft Follow-Up" on any contact produces a relevant, personalized message draft.*
+- [x] **F3 — AI CMA Generator:** Agent inputs address; system pulls 5–8 MLS comps; AI generates report with pricing recommendation and market narrative; exportable as branded PDF via `@react-pdf/renderer`. *Done when: agent can generate a CMA and download a formatted PDF.*
+- [x] **F4 — AI Listing Performance Insights + Seller Portal:** Agent view: per-listing stats benchmarked against comparables, AI action suggestions, trend charts, weekly digest email. Seller portal: tokenized read-only URL (no login), plain-language performance summary, sparkline chart; agent can toggle portal on/off per listing. *Done when: agent can share a portal link with a seller and the seller sees their listing stats without logging in.*
+- [x] **F5 — AI Listing Description Generator:** Agent inputs details or pulls from MLS; AI generates 3 variations (lifestyle, features/specs, investment); agent selects, edits, copies. *Done when: agent can generate three distinct descriptions and copy their preferred version.*
+- [x] **F6 — AI Email Campaign Content Generator:** Agent selects campaign type and audience; AI generates full 5–8 email drip sequence with suggested delays; personalization tokens; agent reviews before activating. *Done when: generated campaign can be reviewed and activated directly from the campaign writer page.*
+- [x] **F7 — AI Social Media Post Generator:** Listing post, market update, or engagement content; post copy variations with hashtags and platform formatting; image selection from listing photos. *Done when: agent can select a listing and generate platform-ready post copy with photos.*
+- [x] **F8 — AI Meeting Prep Brief:** Triggered before scheduled showings/meetings; compiles client search history, saved listings, comps, neighborhood stats, talking points; one-page mobile-accessible view. *Done when: opening a meeting prep brief for a scheduled showing shows a complete one-page summary.*
 
 **Phase 5 verification:**
-- [ ] `npm run type-check` — zero errors
-- [ ] `npm run lint` — zero errors
-- [ ] `npm run build` — successful
+- [x] `npm run type-check` — zero errors
+- [ ] `npm run lint` — zero errors (ESLint config needs migration to flat config for ESLint 9)
+- [ ] `npm run build` — successful (requires database connection for SSG pages)
 - [ ] Manual: score a set of leads, generate a follow-up draft, produce and download a CMA PDF, generate a listing description, share a seller portal link
 
 ---
