@@ -23,6 +23,7 @@ This design defines the complete feature set for transforming the site into a fu
 | SMS | Twilio | Text campaigns, agent notifications |
 | Maps | Mapbox GL JS | Property map search, polygon drawing, neighborhood overlays |
 | MLS Data | Stellar MLS via MLS Grid | RESO Web API, OAuth 2.0, 15-min polling |
+| File Storage | Supabase Storage | Training videos, documents, agent uploads, PDF exports |
 
 **AI Service Layer:** All AI features share `src/lib/ai/` with prompt templates, token tracking, rate limiting, and response caching.
 
@@ -301,7 +302,7 @@ This design defines the complete feature set for transforming the site into a fu
 - AI generates full 5-8 email drip sequence with suggested delays
 - Personalization tokens + smart content blocks with listing recommendations
 - Agent reviews/edits before activating
-- Files: `src/app/api/ai/campaign/route.ts`
+- Files: `src/app/dashboard/agent-hub/campaign-writer/page.tsx`, `src/app/api/ai/campaign/route.ts`
 
 **F7. AI Social Media Post Generator**
 - Agent selects: listing post, market update, or engagement content
@@ -589,7 +590,7 @@ Smart alert matching with rigidity slider (G3), AI SEO content generation (G4). 
 Market stats pages, custom market reports, monthly market stats emails, embeddable widgets. **Also includes Public Learning Center (K2)** — Buying 101, Selling 101, video explainers, downloadable guides, progress tracking. Content tagged `both` in Training Hub automatically surfaces here with no re-upload.
 
 ### Phase 8: Team & Brokerage
-Lead routing, team performance dashboard, agent-branded nurturing.
+Team performance dashboard, agent-branded nurturing. *(Lead routing built in Phase 2 as part of B10/I1.)*
 
 ### Future (Deferred)
 - AI Neighborhood Guide (feature #2)
@@ -610,6 +611,7 @@ Lead routing, team performance dashboard, agent-branded nurturing.
 - `src/lib/maps/index.ts` — Mapbox configuration
 - `src/lib/inngest/client.ts` — Background job client
 - `src/lib/inngest/functions/` — MLS sync, alerts, campaigns, scoring crons
+- `src/lib/chatbot/engine.ts` — Shared chatbot core: streaming, conversation history, tool execution (powers all three J configurations)
 
 ### New Prisma Models
 - `Listing` — Full MLS listing with coordinates, photos, embedding vector
@@ -622,6 +624,11 @@ Lead routing, team performance dashboard, agent-branded nurturing.
 - `AutomationRule` — Behavioral trigger rules
 - `Task` — Agent follow-up tasks
 - `CmaReport` — Saved CMA reports
+- `SavedSearch` — Saved search criteria per user including `matchingMode` and `rigidity` fields (G3)
+- `Transaction` — One per contact when deal reaches Under Contract: address, purchase price, closing date
+- `TransactionMilestone` — Individual milestone records linked to Transaction: name, targetDate, completedAt, notes
+- `Conversation` — Chat session record per chatbot surface (public / agent website / dashboard), linked to user or session token
+- `ChatMessage` — Individual messages within a Conversation: role (user/assistant), content, timestamp
 - `ListingPortalAccess` — Token, listingId, expiresAt, enabled flag — powers seller read-only portal (F4)
 - `TrainingContent` — Video/document records with title, category, audience (AGENT/PUBLIC/BOTH), url, tags
 - `TrainingProgress` — Per-agent completion record linked to TrainingContent
