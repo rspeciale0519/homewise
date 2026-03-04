@@ -252,6 +252,38 @@ Some content serves both audiences. A "What happens at closing?" video is useful
 
 ---
 
+## Chatbot Architecture — How to Build All Three
+
+> **Engineering note:** Do not build separate chatbot systems. Build one shared engine, configured per context.
+
+### One Engine, Three Configurations
+
+```
+/lib/chatbot/
+  engine.ts          ← shared core: streaming, history, tool execution
+  contexts/
+    public-site.ts   ← public-facing listing/buyer chatbot
+    agent-website.ts ← per-agent chatbot (injected with that agent's data)
+    dashboard.ts     ← internal agent dashboard assistant
+```
+
+The engine handles streaming, conversation history, and tool execution identically everywhere. Each deployment point passes a **context bundle** that defines:
+
+| Bundle Field | What It Controls |
+|---|---|
+| System prompt | Who the chatbot is and how it behaves |
+| Knowledge scope | What data it can access (all listings vs. one agent's vs. platform docs) |
+| Available tools | What actions it can take (book showing, query dashboard, surface training content) |
+| User identity | Anonymous visitor / logged-in buyer / logged-in agent |
+
+### The Critical Separation
+
+The dashboard assistant needs authenticated, server-side tool calls to query live platform data (lead counts, training progress, conversation transcripts). The public chatbot must never have this access. This is handled by **what tools you include in each context bundle** — not by building separate systems.
+
+Adding a fourth chatbot in the future = one new context file. Nothing else changes.
+
+---
+
 ## Dashboard Assistant Chatbot (Agent-Facing, Internal)
 
 A second, entirely separate AI chatbot that lives inside the agent dashboard. Distinct from the public-facing chatbot on the agent's personal website — this one faces *inward*, helping agents navigate and get the most out of the Homewise platform.
