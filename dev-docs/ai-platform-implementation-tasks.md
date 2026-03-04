@@ -21,6 +21,14 @@
 
 > Spec ref: Section A (`A1`–`A8`)
 > Prerequisite for everything else. Do not start Phase 2 until all items here pass verification.
+>
+> **Note on pre-checked items:** A1, A2, and A5 were built during Phase 6.75 of the initial
+> scaffold (see `docs/temp/session-handoff.md`). Before continuing, verify that the existing
+> implementations align with the spec in `ai-platform-spec.md` — specifically that the `Listing`
+> Prisma model has all required MLS fields, that the Mapbox map integration supports the PostGIS
+> queries needed for polygon search (A3), and that Walk Score/GreatSchools data is cached in the
+> DB as specified. The initial build was designed before these AI features were planned, so gaps
+> or structural mismatches are possible and should be corrected before building on top of them.
 
 - [x] **A1 — Stellar MLS Provider:** `StellarMlsProvider` fully implements `PropertyProvider` interface; OAuth 2.0 auth with MLS Grid; 15-minute Inngest cron sync; extended `Listing` Prisma model with all MLS fields (MLS ID, listing agent, photos, HOA, year built, lot size, description, coordinates). *Done when: listings sync automatically every 15 min and appear in search results with full data.*
 - [x] **A2 — Map-Based Search:** Mapbox GL JS map with clustered pins, "search this area" on pan/zoom, split-screen map + cards layout, PostGIS geospatial queries. *Done when: user can pan the map and results update without a page reload.*
