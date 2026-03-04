@@ -213,6 +213,7 @@ This design defines the complete feature set for transforming the site into a fu
 - Conversation persisted per session (anonymous) or per user (logged in)
 - Graceful fallback: "Let me connect you with an agent" for out-of-scope questions
 - Files: `src/components/ai/chat-widget.tsx`, `src/app/api/ai/chat/route.ts`
+- **This is one of three chatbot surfaces sharing a single engine — see Section J for the full architecture**
 
 **E2. AI Home Valuation Narrative**
 - Extends existing Home Evaluation form
@@ -370,6 +371,138 @@ This design defines the complete feature set for transforming the site into a fu
 
 ---
 
+### J. AI Chatbot System Architecture
+
+> **Engineering note:** Do not build separate chatbot systems. Build one shared engine, configured per context. All three chatbot surfaces below run on this single engine.
+
+#### One Engine, Three Configurations
+
+```
+src/lib/chatbot/
+  engine.ts          ← shared core: streaming, history, tool execution
+  contexts/
+    public-site.ts   ← public-facing listing/buyer chatbot (E1)
+    agent-website.ts ← per-agent chatbot (injected with that agent's data)
+    dashboard.ts     ← internal agent dashboard assistant
+```
+
+The engine handles streaming, conversation history, and tool execution identically everywhere. Each deployment point passes a **context bundle** that defines:
+
+| Bundle Field | What It Controls |
+|---|---|
+| System prompt | Who the chatbot is and how it behaves |
+| Knowledge scope | What data it can access (all listings vs. one agent's vs. platform docs) |
+| Available tools | What actions it can take (book showing, query dashboard, surface training content) |
+| User identity | Anonymous visitor / logged-in buyer / logged-in agent |
+
+#### The Critical Separation
+
+The dashboard assistant needs authenticated, server-side tool calls to query live platform data (lead counts, training progress, conversation transcripts). The public chatbot must never have this access. This is handled by **what tools you include in each context bundle** — not by building separate systems.
+
+Adding a fourth chatbot in the future = one new context file. Nothing else changes.
+
+---
+
+#### Configuration 1: Public Site Chatbot (`public-site.ts`)
+
+The E1 AI Property Search Assistant described above. Floating widget on search pages + `/search/assistant`. Anonymous or logged-in buyers. No access to agent dashboard data.
+
+---
+
+#### Configuration 2: Per-Agent Website Chatbot (`agent-website.ts`)
+
+**Included free for all agents** — the single biggest differentiator between Homewise and every other brokerage in central Florida. Acts as a recruiting and retention tool: agents choose Homewise because they get this, and they stay because they don't want to lose it.
+
+Runs on each agent's personal website at `firstname-lastname.homewisefl.com`.
+
+##### Knowledge Layers
+
+| Layer | What It Contains |
+|-------|-----------------|
+| Real estate fundamentals | General buying/selling process, mortgage basics, closing costs, inspections |
+| Homewise Realty | The brokerage, service areas, company values, how to work with an agent |
+| The agent specifically | Name, bio, specialties, languages, designations, years of experience, service areas |
+| Their active listings | Every property they currently have listed — prices, features, neighborhoods |
+| Local market | Central Florida neighborhoods, schools, commute info |
+
+##### How It Behaves
+
+- Always acts as the agent's advocate
+- Funnels serious inquiries toward the agent via contact form
+- Qualifies leads before routing ("Are you looking to buy or sell? What's your timeline?") so agents get warm, pre-qualified inquiries
+- Never gives legal or financial advice
+- Never bad-mouths competitors
+- Conversation transcripts saved to agent's dashboard
+- Detects buying intent signals and triggers automatic follow-up notification to the agent
+
+##### Agent Training (Controlled Customization)
+
+Agents personalize the chatbot via a structured form — no free-text prompt editing to protect brand safety and quality control.
+
+| Field | Example |
+|-------|---------|
+| Personal tagline | "I specialize in helping military families relocate to central Florida" |
+| A few things I'm known for | "I always respond within 2 hours. I've lived in Oviedo for 20 years." |
+| My typical client | "First-time buyers, young families, people relocating from out of state" |
+| Something I want people to know | "I offer free home buyer consultations with no obligation" |
+| Tone preference | Formal / Balanced / Casual |
+
+Agent answers are woven into the chatbot's system prompt automatically — no prompt engineering required from the agent.
+
+##### Pro Tier — Third-Party Integrations (Premium Add-On)
+
+Integrations set up via OAuth "Connect" buttons in the agent dashboard — no technical knowledge needed.
+
+| Category | Apps | What the Chatbot Can Do |
+|----------|------|------------------------|
+| Scheduling | Google Calendar, Calendly | Check real availability, book showings directly, send booking links in context |
+| Communication | Gmail | Draft and send follow-up emails on the agent's behalf after a conversation |
+| CRM / Lead Capture | HubSpot, Follow Up Boss, kvCORE | Push conversation data (name, contact, buying intent, timeline) directly into CRM as a lead record |
+| Documents | Google Drive | Agent points bot to a folder of resources (buyer guides, neighborhood PDFs) — bot shares them contextually |
+
+##### Pricing Model
+
+| Tier | What's Included | Cost |
+|------|----------------|------|
+| **Standard** (all agents) | Full AI chatbot, agent-trained, listing-aware, lead capture, conversation transcripts | Included with Homewise |
+| **Pro** (optional upgrade) | All third-party integrations, conversation analytics, priority response speed | Monthly fee per agent |
+
+One extra closing pays for years of the Pro subscription — strong ROI argument for serious agents.
+
+- Files: `src/lib/chatbot/contexts/agent-website.ts`, `src/app/api/ai/agent-chat/route.ts`, `src/components/ai/agent-chat-widget.tsx`
+
+---
+
+#### Configuration 3: Dashboard Assistant Chatbot (`dashboard.ts`)
+
+An internal AI assistant that lives inside the agent dashboard. Distinct from the public-facing chatbots — this one faces *inward*, helping agents navigate and get the most out of the Homewise platform.
+
+##### As a Platform Guide
+
+Agents ask questions instead of clicking through menus:
+- "How do I connect my Google Calendar?"
+- "How many new leads do I have this week?"
+- "Show me the contact form submissions I haven't responded to"
+- "How do I update my bio and profile photo?"
+
+##### As a Training Hub Tutor
+
+Integrates with the Training Hub so agents can access learning content conversationally:
+- "Show me the videos about writing a buyer agreement"
+- "I haven't finished my onboarding — where did I leave off?"
+- "Find me the home inspection checklist"
+- "Walk me through how to use the CMA report generator"
+
+Instead of browsing menus to find training content, the agent just asks. The bot surfaces the right video, document, or lesson instantly and can guide them through it step by step.
+
+##### Key Principle
+
+One assistant that knows the entire platform inside and out — so agents spend less time figuring out the tool and more time selling.
+
+- Files: `src/lib/chatbot/contexts/dashboard.ts`, `src/app/api/ai/dashboard-chat/route.ts`, `src/components/ai/dashboard-chat-widget.tsx`
+
+---
+
 ## Implementation Phasing (High-Level)
 
 ### Phase 1: MLS Foundation
@@ -382,7 +515,7 @@ Contact model, activity timeline, lead stages pipeline, registration wall, showi
 Email infrastructure (Resend), drip campaigns, daily listing alerts, price change alerts, SMS (Twilio), behavioral triggers, broadcast emails, email tracking.
 
 ### Phase 4: AI — Public-Facing
-AI chatbot (search assistant), AI valuation narrative, AI mortgage advisor, AI market insights (lead funnel), semantic search (embeddings).
+Shared chatbot engine + all three configurations (public site search assistant, per-agent website chatbot, dashboard assistant), AI valuation narrative, AI mortgage advisor, AI market insights (lead funnel), semantic search (embeddings).
 
 ### Phase 5: AI — Agent Tools
 AI lead scoring, follow-up draft generator, CMA generator, listing performance insights, listing description writer, campaign content generator, social post generator, meeting prep briefs.
