@@ -30,6 +30,7 @@ model Agent {
   updatedAt        DateTime      @updatedAt
   preferredByUsers UserProfile[]
   user             UserProfile?  @relation("AgentUser", fields: [userId], references: [id])
+  contacts         Contact[]
 
   @@index([lastName])
   @@index([active])
@@ -286,4 +287,280 @@ model SyncState {
   metadata     Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// =============================================================================
+// CRM — Contact / Lead Management (B5)
+// =============================================================================
+
+model Contact {
+  id              String            @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String            @unique
+  phone           String?
+  source          String            @default("website")
+  type            String            @default("buyer")
+  stage           String            @default("new_lead")
+  score           Int               @default(0)
+  assignedAgentId String?
+  notes           String?
+  birthday        DateTime?
+  closeAnniversary DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  assignedAgent   Agent?            @relation(fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  tags            ContactTag[]
+  activities      ActivityEvent[]
+  tasks           Task[]
+  transactions    Transaction[]
+
+  @@index([email])
+  @@index([assignedAgentId])
+  @@index([stage])
+  @@index([source])
+  @@index([type])
+  @@index([score])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// Tags & Segmentation (B8)
+// =============================================================================
+
+model Tag {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  color     String       @default("#6366f1")
+  createdAt DateTime     @default(now())
+
+  contacts  ContactTag[]
+}
+
+model ContactTag {
+  id        String   @id @default(cuid())
+  contactId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, tagId])
+  @@index([contactId])
+  @@index([tagId])
+}
+
+// =============================================================================
+// Activity Timeline (B6)
+// =============================================================================
+
+model ActivityEvent {
+  id          String   @id @default(cuid())
+  contactId   String
+  type        String
+  title       String
+  description String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// Tasks & Reminders (B9)
+// =============================================================================
+
+model Task {
+  id            String    @id @default(cuid())
+  contactId     String?
+  assignedTo    String?
+  title         String
+  description   String?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  priority      String    @default("medium")
+  calendarEventId String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  contact       Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([contactId])
+  @@index([assignedTo])
+  @@index([dueDate])
+  @@index([completedAt])
+}
+
+// =============================================================================
+// Transaction Tracker (B7)
+// =============================================================================
+
+model Transaction {
+  id              String                @id @default(cuid())
+  contactId       String
+  address         String
+  purchasePrice   Float
+  closingDate     DateTime?
+  status          String                @default("active")
+  propertyId      String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  contact         Contact               @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  milestones      TransactionMilestone[]
+  documents       TransactionDocument[]
+
+  @@index([contactId])
+  @@index([status])
+  @@index([closingDate])
+}
+
+model TransactionMilestone {
+  id            String       @id @default(cuid())
+  transactionId String
+  name          String
+  targetDate    DateTime?
+  completedAt   DateTime?
+  notes         String?
+  sortOrder     Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+}
+
+model TransactionDocument {
+  id            String       @id @default(cuid())
+  transactionId String
+  name          String
+  type          String
+  url           String?
+  uploadedAt    DateTime?
+  required      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+}
+
+// =============================================================================
+// Lead Routing (B10 / I1)
+// =============================================================================
+
+model LeadRoutingRule {
+  id            String   @id @default(cuid())
+  name          String
+  agentId       String
+  conditions    Json
+  priority      Int      @default(0)
+  roundRobin    Boolean  @default(false)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([active])
+  @@index([priority])
+}
+
+// =============================================================================
+// Agent Training Hub (K1)
+// =============================================================================
+
+model TrainingContent {
+  id          String              @id @default(cuid())
+  title       String
+  description String?
+  category    String
+  audience    String              @default("agent")
+  type        String              @default("video")
+  url         String?
+  duration    Int?
+  tags        String[]
+  sortOrder   Int                 @default(0)
+  published   Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  progress    TrainingProgress[]
+  trackItems  TrainingTrackItem[]
+
+  @@index([category])
+  @@index([audience])
+  @@index([published])
+}
+
+model TrainingTrack {
+  id            String                @id @default(cuid())
+  name          String
+  description   String?
+  required      Boolean               @default(false)
+  autoEnroll    Boolean               @default(false)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  items         TrainingTrackItem[]
+  enrollments   TrainingEnrollment[]
+}
+
+model TrainingTrackItem {
+  id              String          @id @default(cuid())
+  trackId         String
+  contentId       String
+  sortOrder       Int             @default(0)
+
+  track           TrainingTrack   @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  content         TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, contentId])
+  @@index([trackId])
+}
+
+model TrainingEnrollment {
+  id          String        @id @default(cuid())
+  userId      String
+  trackId     String
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  track       TrainingTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackId])
+  @@index([userId])
+}
+
+model TrainingProgress {
+  id          String          @id @default(cuid())
+  userId      String
+  contentId   String
+  completed   Boolean         @default(false)
+  completedAt DateTime?
+  timeSpent   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  content     TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentId])
+  @@index([userId])
+}
+
+// =============================================================================
+// Visitor Registration Wall (B1)
+// =============================================================================
+
+model RegistrationConfig {
+  id             String  @id @default(cuid())
+  viewThreshold  Int     @default(5)
+  mode           String  @default("soft")
+  enabled        Boolean @default(true)
+  abTestVariant  String?
 }

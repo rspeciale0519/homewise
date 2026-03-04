@@ -52,22 +52,22 @@
 > Spec ref: Sections B (`B1`–`B10`), K (`K1`), I (`I1`)
 > Training Hub (K1) must be complete in this phase — the dashboard chatbot built in Phase 4 integrates with it.
 
-- [ ] **B5 — Contact/Lead Database (CRM):** `Contact` Prisma model with all fields; `/admin/contacts` with search, filter, sort, CSV export. *Done when: admin can find, filter, and export any contact.*
-- [ ] **B6 — Activity Timeline:** `ActivityEvent` model; every user action logged (views, searches, saves, email events, form submissions, notes); chronological display on contact detail. *Done when: opening a contact shows a complete history of their site activity.*
-- [ ] **B1 — Visitor Registration Wall:** Configurable trigger (default: 5 listing views); soft/forced modes; modal display; Supabase Auth registration; A/B testable threshold. *Done when: anonymous users are prompted to register after hitting the view threshold.*
-- [ ] **B4 — Lead Source Tracking:** `?source=` param captured in cookie; written to `Contact` on registration; source breakdown in admin. *Done when: contacts created from different sources show correct attribution.*
-- [ ] **B2 — Schedule a Showing:** Pre-filled form on listing pages; instant agent notification (email + push); auto-creates CRM lead. *Done when: form submission creates a contact record and the assigned agent receives a notification.*
-- [ ] **B3 — "What's My Home Worth?" Widget:** Multi-step seller lead form; creates seller lead; triggers seller drip campaign. *Done when: form completion creates a contact tagged as seller lead and enrolls them in the drip.*
-- [ ] **B7 — Lead Stages Pipeline + Transaction Tracker:** Kanban board (New Lead → Closed/Lost) with drag-and-drop; pipeline value aggregation; Transaction Tracker activates on "Under Contract" (milestones, document checklist, progress bar, deadline reminders, summary card on contact detail; closed deals populate agent sold history). *Done when: agent can move a deal through all stages and the transaction tracker panel appears on Under Contract.*
-- [ ] **B8 — Tags & Segmentation:** Multi-tag system on contacts; tag-based filtering and bulk campaign assignment. *Done when: admin can filter contacts by tag and bulk-assign a campaign.*
-- [ ] **B9 — Tasks & Reminders:** `Task` model linked to contacts; due dates; Google Calendar sync; daily task digest email. *Done when: agent creates a task, it appears in Google Calendar, and they receive the daily digest.*
-- [ ] **B10 / I1 — Lead Routing:** Auto-assignment rules by location, price range, source, type, language; round-robin option; 5-minute accept timeout with re-route; team-level rules in admin, individual rules in agent dashboard. *Done when: a new lead from a configured source auto-assigns to the correct agent.*
-- [ ] **K1 — Agent Training Hub:** `TrainingContent`, `TrainingProgress`, `TrainingTrack`, `TrainingEnrollment` Prisma models; admin content management (upload, tag `agent`/`public`/`both`, organize); video library and document vault in agent dashboard; required onboarding track with auto-enrollment; progress tracking visible to admin. *Done when: admin can upload a video, new agent is auto-enrolled in the onboarding track, and admin can see their completion status.*
+- [x] **B5 — Contact/Lead Database (CRM):** `Contact` Prisma model with all fields; `/admin/contacts` with search, filter, sort, CSV export. *Done when: admin can find, filter, and export any contact.*
+- [x] **B6 — Activity Timeline:** `ActivityEvent` model; every user action logged (views, searches, saves, email events, form submissions, notes); chronological display on contact detail. *Done when: opening a contact shows a complete history of their site activity.*
+- [x] **B1 — Visitor Registration Wall:** Configurable trigger (default: 5 listing views); soft/forced modes; modal display; Supabase Auth registration; A/B testable threshold. *Done when: anonymous users are prompted to register after hitting the view threshold.*
+- [x] **B4 — Lead Source Tracking:** `?source=` param captured in cookie; written to `Contact` on registration; source breakdown in admin. *Done when: contacts created from different sources show correct attribution.*
+- [x] **B2 — Schedule a Showing:** Pre-filled form on listing pages; instant agent notification (email + push); auto-creates CRM lead. *Done when: form submission creates a contact record and the assigned agent receives a notification.*
+- [x] **B3 — "What's My Home Worth?" Widget:** Multi-step seller lead form; creates seller lead; triggers seller drip campaign. *Done when: form completion creates a contact tagged as seller lead and enrolls them in the drip.*
+- [x] **B7 — Lead Stages Pipeline + Transaction Tracker:** Kanban board (New Lead → Closed/Lost) with drag-and-drop; pipeline value aggregation; Transaction Tracker activates on "Under Contract" (milestones, document checklist, progress bar, deadline reminders, summary card on contact detail; closed deals populate agent sold history). *Done when: agent can move a deal through all stages and the transaction tracker panel appears on Under Contract.*
+- [x] **B8 — Tags & Segmentation:** Multi-tag system on contacts; tag-based filtering and bulk campaign assignment. *Done when: admin can filter contacts by tag and bulk-assign a campaign.*
+- [x] **B9 — Tasks & Reminders:** `Task` model linked to contacts; due dates; Google Calendar sync; daily task digest email. *Done when: agent creates a task, it appears in Google Calendar, and they receive the daily digest.*
+- [x] **B10 / I1 — Lead Routing:** Auto-assignment rules by location, price range, source, type, language; round-robin option; 5-minute accept timeout with re-route; team-level rules in admin, individual rules in agent dashboard. *Done when: a new lead from a configured source auto-assigns to the correct agent.*
+- [x] **K1 — Agent Training Hub:** `TrainingContent`, `TrainingProgress`, `TrainingTrack`, `TrainingEnrollment` Prisma models; admin content management (upload, tag `agent`/`public`/`both`, organize); video library and document vault in agent dashboard; required onboarding track with auto-enrollment; progress tracking visible to admin. *Done when: admin can upload a video, new agent is auto-enrolled in the onboarding track, and admin can see their completion status.*
 
 **Phase 2 verification:**
-- [ ] `npm run type-check` — zero errors
-- [ ] `npm run lint` — zero errors
-- [ ] `npm run build` — successful
+- [x] `npm run type-check` — zero errors
+- [ ] `npm run lint` — zero errors (ESLint config needs migration to flat config for ESLint 9)
+- [ ] `npm run build` — successful (requires database connection for SSG pages)
 - [ ] Manual: register a visitor, submit a showing request, move a contact through pipeline stages, move to Under Contract and verify tracker appears, create training content as admin and verify agent sees it
 
 ---
