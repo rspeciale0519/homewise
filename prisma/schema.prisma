@@ -25,6 +25,9 @@ model Agent {
   inviteUsed       Boolean       @default(false)
   mlsAgentId       String?
   mlsOfficeId      String?
+  emailSignature   String?
+  emailTagline     String?
+  brandColor       String?
   userId           String?       @unique
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt

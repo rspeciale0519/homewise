@@ -178,11 +178,11 @@
 
 > Spec ref: Section I (`I2`, `I3`) — I1 lead routing was completed in Phase 2
 
-- [ ] **I2 — Team Performance Dashboard:** Per-agent metrics (leads, contacts, showings, offers, closings, pipeline value); comparative reporting with Chart.js; date range selector. *Done when: admin can view a side-by-side comparison of agent performance for any date range.*
-- [ ] **I3 — Agent-Branded Email Nurturing:** Brokerage campaign emails appear from the individual assigned agent (name, photo, signature in template); brokerage retains lead ownership. *Done when: a drip email sent by the brokerage system shows the assigned agent's name and photo to the recipient.*
+- [x] **I2 — Team Performance Dashboard:** Per-agent metrics (leads, contacts, showings, offers, closings, pipeline value); comparative reporting with Chart.js; date range selector. *Done when: admin can view a side-by-side comparison of agent performance for any date range.*
+- [x] **I3 — Agent-Branded Email Nurturing:** Brokerage campaign emails appear from the individual assigned agent (name, photo, signature in template); brokerage retains lead ownership. *Done when: a drip email sent by the brokerage system shows the assigned agent's name and photo to the recipient.*
 
 **Phase 8 verification:**
-- [ ] `npm run type-check` — zero errors
+- [x] `npm run type-check` — zero errors
 - [ ] `npm run lint` — zero errors
 - [ ] `npm run build` — successful
 - [ ] Manual: view team performance dashboard, send a branded nurturing email and verify agent identity shows correctly to recipient

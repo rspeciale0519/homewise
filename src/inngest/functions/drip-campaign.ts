@@ -3,52 +3,73 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
 import { sendSms } from "@/lib/sms";
 import { pickVariant } from "@/lib/email/ab-testing";
+import { buildAgentBrandedEmailHtml, getAgentBrandTokens } from "@/lib/email/agent-branded";
 
 export const processDripCampaigns = inngest.createFunction(
   { id: "process-drip-campaigns", concurrency: { limit: 1 } },
   { cron: "*/10 * * * *" }, // Every 10 minutes
   async ({ step }) => {
-    const enrollments = await step.run("fetch-due-enrollments", async () => {
-      return prisma.campaignEnrollment.findMany({
+    const enrollmentIds = await step.run("fetch-due-enrollments", async () => {
+      const rows = await prisma.campaignEnrollment.findMany({
         where: {
           status: "active",
           nextSendAt: { lte: new Date() },
         },
-        include: {
-          contact: true,
-          campaign: {
-            include: { emails: { orderBy: { sortOrder: "asc" } } },
-          },
-        },
+        select: { id: true },
         take: 50,
       });
+      return rows.map((r) => r.id);
     });
 
     let sent = 0;
 
-    for (const enrollment of enrollments) {
-      await step.run(`send-${enrollment.id}`, async () => {
+    for (const enrollmentId of enrollmentIds) {
+      await step.run(`send-${enrollmentId}`, async () => {
+        const enrollment = await prisma.campaignEnrollment.findUnique({
+          where: { id: enrollmentId },
+          include: {
+            contact: {
+              include: {
+                assignedAgent: {
+                  select: {
+                    firstName: true, lastName: true, email: true, phone: true,
+                    photoUrl: true, emailSignature: true, emailTagline: true, brandColor: true,
+                  },
+                },
+              },
+            },
+            campaign: {
+              include: { emails: { orderBy: { sortOrder: "asc" } } },
+            },
+          },
+        });
+
+        if (!enrollment) return;
+
         const email = enrollment.campaign.emails[enrollment.currentStep];
         if (!email) {
           await prisma.campaignEnrollment.update({
-            where: { id: enrollment.id },
+            where: { id: enrollmentId },
             data: { status: "completed", completedAt: new Date() },
           });
           return;
         }
 
         const contact = enrollment.contact;
+        const agent = contact.assignedAgent;
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://homewisefl.com";
         const tokens: Record<string, string> = {
           first_name: contact.firstName,
           last_name: contact.lastName,
           email: contact.email,
-          site_url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://homewisefl.com",
-          unsubscribe_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://homewisefl.com"}/unsubscribe?id=${contact.id}`,
-          agent_name: "Your Homewise Agent",
+          site_url: siteUrl,
+          unsubscribe_url: `${siteUrl}/unsubscribe?id=${contact.id}`,
+          agent_name: agent ? `${agent.firstName} ${agent.lastName}` : "Your Homewise Agent",
           area_of_interest: "",
           market_conditions: "active",
           avg_dom: "30",
           property_address: "",
+          ...(agent ? getAgentBrandTokens(agent, siteUrl) : {}),
         };
 
         if (email.channel === "sms" && email.smsBody && contact.phone) {
@@ -59,13 +80,23 @@ export const processDripCampaigns = inngest.createFunction(
           const subject = personalizeTemplate(variant?.subject ?? email.subject, tokens);
           const body = personalizeTemplate(email.body, tokens);
 
+          const html = agent
+            ? buildAgentBrandedEmailHtml(body, agent)
+            : buildEmailHtml(body);
+
+          const fromName = agent ? `${agent.firstName} ${agent.lastName} via Homewise FL` : undefined;
+          const fromAddr = fromName ? `${fromName} <noreply@homewisefl.com>` : undefined;
+
           await sendEmail({
             to: contact.email,
             subject,
-            html: buildEmailHtml(body),
+            html,
+            from: fromAddr,
+            replyTo: agent?.email ?? undefined,
             tags: [
               { name: "campaign_id", value: email.id },
               ...(variant ? [{ name: "variant", value: variant.variant }] : []),
+              ...(agent ? [{ name: "agent_id", value: "branded" }] : []),
             ],
           });
         }
@@ -76,12 +107,12 @@ export const processDripCampaigns = inngest.createFunction(
         if (nextEmail) {
           const delayMs = (nextEmail.delayDays * 86400000) + (nextEmail.delayHours * 3600000);
           await prisma.campaignEnrollment.update({
-            where: { id: enrollment.id },
+            where: { id: enrollmentId },
             data: { currentStep: nextStep, nextSendAt: new Date(Date.now() + delayMs) },
           });
         } else {
           await prisma.campaignEnrollment.update({
-            where: { id: enrollment.id },
+            where: { id: enrollmentId },
             data: { status: "completed", completedAt: new Date(), nextSendAt: null },
           });
         }
@@ -90,7 +121,7 @@ export const processDripCampaigns = inngest.createFunction(
       });
     }
 
-    return { processed: enrollments.length, sent };
+    return { processed: enrollmentIds.length, sent };
   },
 );
 
