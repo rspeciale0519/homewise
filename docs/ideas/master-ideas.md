@@ -362,4 +362,104 @@ One assistant that knows the entire platform inside and out — so agents spend 
 
 ---
 
+## Agent Billing & Fee Management
+
+> **Context:** Fees are currently collected manually via phone or check. This system replaces that entirely with self-serve online billing powered by Stripe, while giving admin full visibility and control.
+
+---
+
+### What Gets Billed
+
+| Fee Type | Description | Billing Cadence |
+|---|---|---|
+| Membership dues | Base brokerage membership fee | Annual today; monthly option to be added later |
+| Premium add-ons | Optional paid features agents can activate | Billed as additional items on the same subscription |
+
+The system must be open-ended for add-ons — specific ones don't need to be defined now, but the infrastructure should make it trivial to add new paid features later (one new Stripe Product + a toggle in the admin dashboard).
+
+---
+
+### How It Works (Stripe Model)
+
+Each agent is a **Stripe Customer**. Their membership and any add-ons they've activated are consolidated into a single **Stripe Subscription** with multiple line items — one invoice covers everything.
+
+- **Annual vs. Monthly:** Same Stripe Product, two different Prices. Switching a member from annual to monthly (or vice versa) swaps the price on their subscription; Stripe handles proration automatically.
+- **Add-ons:** Attached as additional Subscription Items to their existing subscription. Adding or removing one takes effect on the next billing cycle without creating a new subscription.
+- **Invoices:** Stripe generates and hosts PDF invoices automatically. Agents can view and download their full history.
+
+---
+
+### Agent Experience (Billing Section in Dashboard)
+
+- Current plan (Annual or Monthly) with next renewal date and amount
+- Active add-ons with a toggle to deactivate each
+- Available add-ons with pricing and a button to activate
+- Invoice history with downloadable PDFs
+- "Update Payment Method" button — opens the **Stripe Customer Portal**, a Stripe-hosted page for card management (no custom build needed)
+- Clear status banner if payment is past due or in grace period
+
+#### Who Sets Up Billing
+
+Both paths are supported:
+- **Admin-initiated:** Admin assigns a plan to an agent from the admin dashboard (e.g., when migrating existing agents off phone/check). Agent receives an email with a link to complete payment setup.
+- **Agent self-initiated:** Agent logs into their dashboard, navigates to Billing, selects a plan, and checks out directly.
+
+---
+
+### Admin Experience (Billing Controls in Admin Dashboard)
+
+| Control | Description |
+|---|---|
+| Agent billing overview | Table of all agents with current plan, status (active / past due / grace period / suspended), and next renewal date |
+| Overdue list | Filtered view of agents who haven't paid, with days overdue |
+| Grace period setting | Configurable number of days before a past-due account is restricted — default **15 days**, adjustable at any time |
+| Assign/change plan | Admin can set or change any agent's plan (annual/monthly) and activate/deactivate add-ons on their behalf |
+| Apply discount | Admin can apply a Stripe Coupon to an agent's subscription (e.g., for a promotional rate or a courtesy adjustment) |
+| Manual invoice | Admin can generate and send a one-off invoice for any non-subscription charge |
+
+---
+
+### Fee Reminders & Notifications
+
+**Layer 1 — Stripe built-in (zero config required):**
+- Payment receipt on successful charge
+- Failed payment notification (immediate)
+- Upcoming renewal reminder (configurable in Stripe dashboard — typically 7 days before)
+
+**Layer 2 — Custom reminders via Inngest:**
+- **Annual plan:** Reminders at 30, 14, and 7 days before renewal
+- **Monthly plan:** Reminder at 7 days before renewal
+- **Failed payment:** Immediate in-dashboard banner + email with a direct link to update payment method
+- **Grace period warning:** Email at grace period start, and again at 50% of grace period elapsed
+- **Suspension notice:** Email sent when grace period expires and account is restricted
+
+All reminder templates are managed in the admin dashboard — admins can edit the copy and timing without a code deploy.
+
+---
+
+### Grace Period Behavior
+
+1. Payment fails → Stripe retries (standard Stripe Smart Retries over ~1 week)
+2. If all retries fail → Grace period begins (default 15 days, admin-configurable)
+3. During grace period → Agent can still log in and use the platform; dashboard shows a prominent payment banner
+4. Grace period expires → Account suspended: agent can log in but cannot access dashboard features until payment is resolved
+5. Agent pays → Access restored immediately via Stripe webhook
+
+---
+
+### Database Additions Required
+
+| Field | Location | Purpose |
+|---|---|---|
+| `stripeCustomerId` | Agent | Links agent to their Stripe Customer record |
+| `stripeSubscriptionId` | Agent | Links to their active Stripe Subscription |
+| `subscriptionStatus` | Agent | Mirror of Stripe status: `active`, `past_due`, `unpaid`, `canceled` |
+| `currentPeriodEnd` | Agent | Next billing date, synced from Stripe |
+| `gracePeriodEnd` | Agent | Computed from `currentPeriodEnd` + grace period setting |
+| `gracePeriodDays` | Platform settings | Admin-configurable grace period (default: 15) |
+| `stripeProductId` | Add-on definition | Links each add-on to its Stripe Product |
+| `stripePriceId` | Add-on definition | Links each add-on to its Stripe Price |
+
+---
+
 *Last updated: 2026-03-04*
