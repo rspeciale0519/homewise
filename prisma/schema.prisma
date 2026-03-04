@@ -775,3 +775,53 @@ model AiUsageLog {
   @@index([userId])
   @@index([createdAt])
 }
+
+// =============================================================================
+// AI SEO Content (G4)
+// =============================================================================
+
+model SeoContent {
+  id          String    @id @default(cuid())
+  type        String
+  slug        String    @unique
+  title       String
+  body        String
+  metaTitle   String?
+  metaDesc    String?
+  city        String?
+  neighborhood String?
+  status      String    @default("draft")
+  publishedAt DateTime?
+  refreshedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([city])
+}
+
+// =============================================================================
+// Market Statistics (D1)
+// =============================================================================
+
+model MarketStats {
+  id              String   @id @default(cuid())
+  area            String
+  areaType        String   @default("city")
+  period          String
+  activeCount     Int      @default(0)
+  soldCount       Int      @default(0)
+  medianPrice     Float    @default(0)
+  avgPrice        Float    @default(0)
+  saleToListRatio Float    @default(0)
+  avgDom          Int      @default(0)
+  monthsOfInventory Float  @default(0)
+  newListings     Int      @default(0)
+  pricePerSqft    Float    @default(0)
+  createdAt       DateTime @default(now())
+
+  @@unique([area, areaType, period])
+  @@index([area])
+  @@index([period])
+}

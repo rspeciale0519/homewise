@@ -144,13 +144,13 @@
 
 > Spec ref: Section G (`G3`, `G4`) — note G1 was built in Phase 4, G2 in Phase 3
 
-- [ ] **G3 — Smart Alert Matching with Rigidity Slider:** User-controlled slider on saved search settings (`strict` / `balanced` / `discovery`); `matchingMode` and `rigidity` fields on `SavedSearch`; alert cron uses setting to determine matching algorithm (exact vs. AI-augmented suggestions). *Done when: user set to "Discovery" mode receives AI-suggested listings outside their strict filters alongside exact matches.*
-- [ ] **G4 — AI SEO Content Generation:** Auto-generates content for 50+ neighborhood pages, market reports, community guides; monthly refresh cron for market-sensitive content; admin review required before publishing. *Done when: admin sees a queue of AI-generated content drafts pending review, and approved content publishes to neighborhood pages.*
+- [x] **G3 — Smart Alert Matching with Rigidity Slider:** User-controlled slider on saved search settings (`strict` / `balanced` / `discovery`); `matchingMode` and `rigidity` fields on `SavedSearch`; alert cron uses setting to determine matching algorithm (exact vs. AI-augmented suggestions). *Done when: user set to "Discovery" mode receives AI-suggested listings outside their strict filters alongside exact matches.*
+- [x] **G4 — AI SEO Content Generation:** Auto-generates content for 50+ neighborhood pages, market reports, community guides; monthly refresh cron for market-sensitive content; admin review required before publishing. *Done when: admin sees a queue of AI-generated content drafts pending review, and approved content publishes to neighborhood pages.*
 
 **Phase 6 verification:**
-- [ ] `npm run type-check` — zero errors
-- [ ] `npm run lint` — zero errors
-- [ ] `npm run build` — successful
+- [x] `npm run type-check` — zero errors
+- [ ] `npm run lint` — zero errors (ESLint config needs migration to flat config for ESLint 9)
+- [ ] `npm run build` — successful (requires database connection for SSG pages)
 - [ ] Manual: set a saved search to Discovery mode and verify alert includes AI suggestions; trigger content generation and review the admin approval queue
 
 ---
