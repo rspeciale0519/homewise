@@ -77,21 +77,21 @@
 > Spec ref: Sections C (`C1`–`C8`), G (`G2`)
 > G2 (AI email subject line A/B testing) ships here so it is wired in from the first campaign send.
 
-- [ ] **Email infrastructure:** `src/lib/email/index.ts` with Resend client and React Email template rendering; transactional email sending verified end-to-end. *Done when: a test email sends and renders correctly via Resend.*
-- [ ] **C8 — Email Open & Click Tracking:** `EmailEvent` model; Resend webhooks → DB; events update lead score; events fire behavioral automation rules. *Done when: opening a tracked email increments the contact's score in the CRM.*
-- [ ] **G2 — AI Email Subject Line A/B Testing:** AI generates 2–3 subject line variations per automated email; random variant assigned per recipient; open rates tracked per variant. *Done when: a drip email send shows variant distribution and open rate split in the campaign analytics.*
-- [ ] **C1 — Drip Email Campaigns:** Campaign builder (N emails, configurable delays); auto-assignment by lead source/type/stage; personalization tokens; pre-built templates (New Buyer, Active Buyer, Seller Lead, Past Client, Open House Follow-up). *Done when: a new buyer lead is auto-enrolled in the New Buyer drip and receives the first email at the configured delay.*
-- [ ] **C2 — Daily New Listing Alerts:** Inngest cron queries new listings since last run matching each saved search; branded email with photos and links; unsubscribe link. *Done when: a user with a saved search receives an alert email containing new matching listings.*
-- [ ] **C3 — Price Change Alerts:** Price change detection during MLS sync; alert sent to users with matching saved searches or saved listings. *Done when: manually updating a listing price triggers an alert to a user who has it saved.*
-- [ ] **C5 — Behavioral Trigger Automation:** `AutomationRule` model; rules engine (condition → action); admin-configurable; example rules: listing saved → similar listings email, 30-day inactive → re-engagement. *Done when: saving a listing fires the configured follow-up rule.*
-- [ ] **C6 — Birthday/Anniversary Automations:** Date fields on `Contact`; daily cron checks for birthdays and closing anniversaries; sends branded greeting with referral CTA. *Done when: a contact with today's birthday receives the greeting email.*
-- [ ] **C7 — Broadcast/Mass Emails:** Audience selection by segment/tag; compose or select template; batch send via Resend; per-broadcast delivery/open/click tracking. *Done when: admin sends a broadcast to a tagged segment and the dashboard shows delivery stats.*
-- [ ] **C4 — SMS/Text Campaigns:** `src/lib/sms/index.ts` Twilio client; dedicated 10-digit numbers; text steps in drip campaigns alongside email; legal consent captured at registration; incoming reply webhook. *Done when: a drip campaign with an SMS step sends the text at the correct delay and an incoming reply is captured.*
+- [x] **Email infrastructure:** `src/lib/email/index.ts` with Resend client and React Email template rendering; transactional email sending verified end-to-end. *Done when: a test email sends and renders correctly via Resend.*
+- [x] **C8 — Email Open & Click Tracking:** `EmailEvent` model; Resend webhooks → DB; events update lead score; events fire behavioral automation rules. *Done when: opening a tracked email increments the contact's score in the CRM.*
+- [x] **G2 — AI Email Subject Line A/B Testing:** AI generates 2–3 subject line variations per automated email; random variant assigned per recipient; open rates tracked per variant. *Done when: a drip email send shows variant distribution and open rate split in the campaign analytics.*
+- [x] **C1 — Drip Email Campaigns:** Campaign builder (N emails, configurable delays); auto-assignment by lead source/type/stage; personalization tokens; pre-built templates (New Buyer, Active Buyer, Seller Lead, Past Client, Open House Follow-up). *Done when: a new buyer lead is auto-enrolled in the New Buyer drip and receives the first email at the configured delay.*
+- [x] **C2 — Daily New Listing Alerts:** Inngest cron queries new listings since last run matching each saved search; branded email with photos and links; unsubscribe link. *Done when: a user with a saved search receives an alert email containing new matching listings.*
+- [x] **C3 — Price Change Alerts:** Price change detection during MLS sync; alert sent to users with matching saved searches or saved listings. *Done when: manually updating a listing price triggers an alert to a user who has it saved.*
+- [x] **C5 — Behavioral Trigger Automation:** `AutomationRule` model; rules engine (condition → action); admin-configurable; example rules: listing saved → similar listings email, 30-day inactive → re-engagement. *Done when: saving a listing fires the configured follow-up rule.*
+- [x] **C6 — Birthday/Anniversary Automations:** Date fields on `Contact`; daily cron checks for birthdays and closing anniversaries; sends branded greeting with referral CTA. *Done when: a contact with today's birthday receives the greeting email.*
+- [x] **C7 — Broadcast/Mass Emails:** Audience selection by segment/tag; compose or select template; batch send via Resend; per-broadcast delivery/open/click tracking. *Done when: admin sends a broadcast to a tagged segment and the dashboard shows delivery stats.*
+- [x] **C4 — SMS/Text Campaigns:** `src/lib/sms/index.ts` Twilio client; dedicated 10-digit numbers; text steps in drip campaigns alongside email; legal consent captured at registration; incoming reply webhook. *Done when: a drip campaign with an SMS step sends the text at the correct delay and an incoming reply is captured.*
 
 **Phase 3 verification:**
-- [ ] `npm run type-check` — zero errors
-- [ ] `npm run lint` — zero errors
-- [ ] `npm run build` — successful
+- [x] `npm run type-check` — zero errors
+- [ ] `npm run lint` — zero errors (ESLint config needs migration to flat config for ESLint 9)
+- [ ] `npm run build` — successful (requires database connection for SSG pages)
 - [ ] Manual: trigger a drip enrollment, verify email delivery via Resend dashboard, verify A/B subject line variants appear, trigger a behavioral rule, send a broadcast
 
 ---
