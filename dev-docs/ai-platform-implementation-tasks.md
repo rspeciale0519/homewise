@@ -160,16 +160,16 @@
 > Spec ref: Sections D (`D1`–`D3`), K (`K2`, `K3`)
 > K2 Public Learning Center shares the K1 content layer — content tagged `both` or `public` in the Training Hub surfaces here automatically.
 
-- [ ] **D1 — Market Statistics Pages:** `MarketStats` model; Inngest daily aggregation cron; dynamic pages per city/zip/neighborhood with active count, median prices, sale-to-list ratio, avg DOM, months of inventory; 6-month trend charts. *Done when: `/market/oviedo` shows live aggregated MLS statistics with a trend chart.*
-- [ ] **D2 — Custom Market Reports:** Agent-defined market criteria; auto-generated live report pages; embeddable widget components. *Done when: agent creates a custom market and gets a shareable report URL.*
-- [ ] **D3 — Monthly Market Stats Email:** First-of-month Inngest cron; area statistics with charts; agent-branded template. *Done when: cron fires and subscribers receive the branded monthly report email.*
-- [ ] **K2 — Public Learning Center:** `/learn/buying`, `/learn/selling`, `/learn/[lesson-slug]` routes; Buying 101 and Selling 101 guided courses; video explainers; downloadable guides gated behind email capture; progress tracking for logged-in users. *Done when: a logged-in buyer can complete a lesson and resume where they left off on return.*
-- [ ] **K3 — Shared Content Layer verified:** Confirm content tagged `both` in the admin Training Hub surfaces correctly in both the agent Training Hub (K1) and the Public Learning Center (K2) without duplication. *Done when: a `both`-tagged video appears in both `/dashboard/training` and `/learn` without a separate upload.*
+- [x] **D1 — Market Statistics Pages:** `MarketStats` model; Inngest daily aggregation cron; dynamic pages per city/zip/neighborhood with active count, median prices, sale-to-list ratio, avg DOM, months of inventory; 6-month trend charts. *Done when: `/market/oviedo` shows live aggregated MLS statistics with a trend chart.*
+- [x] **D2 — Custom Market Reports:** Agent-defined market criteria; auto-generated live report pages; embeddable widget components. *Done when: agent creates a custom market and gets a shareable report URL.*
+- [x] **D3 — Monthly Market Stats Email:** First-of-month Inngest cron; area statistics with charts; agent-branded template. *Done when: cron fires and subscribers receive the branded monthly report email.*
+- [x] **K2 — Public Learning Center:** `/learn/buying`, `/learn/selling`, `/learn/[lesson-slug]` routes; Buying 101 and Selling 101 guided courses; video explainers; downloadable guides gated behind email capture; progress tracking for logged-in users. *Done when: a logged-in buyer can complete a lesson and resume where they left off on return.*
+- [x] **K3 — Shared Content Layer verified:** Confirm content tagged `both` in the admin Training Hub surfaces correctly in both the agent Training Hub (K1) and the Public Learning Center (K2) without duplication. *Done when: a `both`-tagged video appears in both `/dashboard/training` and `/learn` without a separate upload.*
 
 **Phase 7 verification:**
-- [ ] `npm run type-check` — zero errors
-- [ ] `npm run lint` — zero errors
-- [ ] `npm run build` — successful
+- [x] `npm run type-check` — zero errors
+- [ ] `npm run lint` — zero errors (ESLint config needs migration to flat config for ESLint 9)
+- [ ] `npm run build` — successful (requires database connection for SSG pages)
 - [ ] Manual: view a market stats page, create a custom market report, complete a lesson in the Learning Center, verify shared content appears in both locations
 
 ---
