@@ -50,16 +50,26 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
   }
 
   const page = Math.max(1, parseInt(String(rawParams.page ?? "1"), 10) || 1);
-  const where = { listingAgentMlsId: agent.mlsAgentId, status: { in: ["Active", "Pending"] } };
+  const statusFilter = String(rawParams.status ?? "active");
+  const statusValues =
+    statusFilter === "sold" ? ["Sold"] :
+    statusFilter === "pending" ? ["Pending"] :
+    statusFilter === "all" ? ["Active", "Pending", "Sold"] :
+    ["Active"];
 
-  const [listings, total] = await Promise.all([
+  const where = { listingAgentMlsId: agent.mlsAgentId, status: { in: statusValues } };
+
+  const [listings, total, activeCt, pendingCt, soldCt] = await Promise.all([
     prisma.listing.findMany({
       where,
-      orderBy: { price: "desc" },
+      orderBy: statusFilter === "sold" ? { closeDate: "desc" } : { price: "desc" },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
     prisma.listing.count({ where }),
+    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Active" } }),
+    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Pending" } }),
+    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Sold" } }),
   ]);
 
   const fullName = `${agent.firstName} ${agent.lastName}`;
@@ -121,6 +131,27 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
 
       <section className="section-padding bg-cream-50">
         <Container>
+          {/* Status tabs */}
+          <div className="flex items-center gap-2 mb-6">
+            {[
+              { key: "active", label: "Active", count: activeCt },
+              { key: "pending", label: "Pending", count: pendingCt },
+              { key: "sold", label: "Sold", count: soldCt },
+            ].map((tab) => (
+              <Link
+                key={tab.key}
+                href={`/agents/${agent.slug}/listings?status=${tab.key}`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  statusFilter === tab.key
+                    ? "bg-navy-600 text-white"
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {tab.label} ({tab.count})
+              </Link>
+            ))}
+          </div>
+
           {listings.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-slate-500 text-lg">No active listings at this time.</p>
@@ -150,6 +181,13 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         />
                       )}
+                      <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        listing.status === "Sold" ? "bg-slate-700 text-white" :
+                        listing.status === "Pending" ? "bg-amber-500 text-white" :
+                        "bg-green-600 text-white"
+                      }`}>
+                        {listing.status === "Pending" ? "Under Contract" : listing.status}
+                      </span>
                     </div>
                     <div className="p-4">
                       <p className="font-serif text-lg font-bold text-navy-700 group-hover:text-crimson-600 transition-colors">

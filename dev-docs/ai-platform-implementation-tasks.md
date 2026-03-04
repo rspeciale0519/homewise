@@ -32,17 +32,17 @@
 
 - [x] **A1 — Stellar MLS Provider:** `StellarMlsProvider` fully implements `PropertyProvider` interface; OAuth 2.0 auth with MLS Grid; 15-minute Inngest cron sync; extended `Listing` Prisma model with all MLS fields (MLS ID, listing agent, photos, HOA, year built, lot size, description, coordinates). *Done when: listings sync automatically every 15 min and appear in search results with full data.*
 - [x] **A2 — Map-Based Search:** Mapbox GL JS map with clustered pins, "search this area" on pan/zoom, split-screen map + cards layout, PostGIS geospatial queries. *Done when: user can pan the map and results update without a page reload.*
-- [ ] **A3 — Polygon/Draw Search:** Mapbox Draw plugin for freehand area selection; polygon stored on `SavedSearch`; PostGIS `ST_Within()` filters results. *Done when: user can draw a shape and see only listings inside it.*
-- [ ] **A4 — Advanced Search Filters:** Lot size, year built, pool/waterfront/garage, school district, HOA amount, new construction, open houses only, days on market; collapsible accordion; URL param persistence for shareable links. *Done when: all filters apply correctly and a filtered URL can be shared and reproduced.*
+- [x] **A3 — Polygon/Draw Search:** Mapbox Draw plugin for freehand area selection; polygon stored on `SavedSearch`; PostGIS `ST_Within()` filters results. *Done when: user can draw a shape and see only listings inside it.*
+- [x] **A4 — Advanced Search Filters:** Lot size, year built, pool/waterfront/garage, school district, HOA amount, new construction, open houses only, days on market; collapsible accordion; URL param persistence for shareable links. *Done when: all filters apply correctly and a filtered URL can be shared and reproduced.*
 - [x] **A5 — Walk Score + GreatSchools:** Both APIs integrated on listing detail pages; scores cached in DB by address. *Done when: scores appear on listing detail without re-fetching after first load.*
-- [ ] **A6 — Open House Search:** Open house data from MLS feed; filter to open-house-only results; date/time on listing pages; "Open Houses This Weekend" widget. *Done when: widget shows correct upcoming open houses from live MLS data.*
-- [ ] **A7 — Featured Listings:** Auto-populated by agent/office MLS ID; active, pending, and sold; `/my-listings` per agent + embeddable widget. *Done when: agent's own listings auto-appear on their profile page.*
-- [ ] **A8 — Sold/Pending Badges:** Status badges on listing cards; sold listings in results (where MLS permits); sold history on agent bio pages. *Done when: Under Contract and Sold badges render correctly on cards and agent bios show closed history.*
+- [x] **A6 — Open House Search:** Open house data from MLS feed; filter to open-house-only results; date/time on listing pages; "Open Houses This Weekend" widget. *Done when: widget shows correct upcoming open houses from live MLS data.*
+- [x] **A7 — Featured Listings:** Auto-populated by agent/office MLS ID; active, pending, and sold; `/my-listings` per agent + embeddable widget. *Done when: agent's own listings auto-appear on their profile page.*
+- [x] **A8 — Sold/Pending Badges:** Status badges on listing cards; sold listings in results (where MLS permits); sold history on agent bio pages. *Done when: Under Contract and Sold badges render correctly on cards and agent bios show closed history.*
 
 **Phase 1 verification:**
-- [ ] `npm run type-check` — zero errors
-- [ ] `npm run lint` — zero errors
-- [ ] `npm run build` — successful
+- [x] `npm run type-check` — zero errors
+- [ ] `npm run lint` — zero errors (ESLint config needs migration to flat config for ESLint 9)
+- [ ] `npm run build` — successful (requires database connection for SSG pages)
 - [ ] Manual: search map, draw polygon, filter results, open a listing detail, check Walk Score + schools display
 
 ---

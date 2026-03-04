@@ -150,6 +150,9 @@ model SavedSearch {
   userId       String
   name         String
   filters      Json
+  polygon      Json?
+  matchingMode String      @default("balanced")
+  rigidity     Int         @default(30)
   alertEnabled Boolean     @default(true)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
