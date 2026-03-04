@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/admin-toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { TiptapEditor } from "@/components/admin/tiptap-editor";
 
 interface BroadcastItem {
   id: string;
@@ -82,7 +83,7 @@ export function BroadcastListView({ broadcasts, tags }: BroadcastListViewProps) 
             <option value="">All contacts</option>
             {tags.map((t) => <option key={t.id} value={t.name}>{t.name} ({t.count})</option>)}
           </select>
-          <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Email body (HTML or plain text)" rows={6} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          <TiptapEditor content={body} onChange={setBody} size="sm" />
 
           {/* Email Preview */}
           {body.trim() && (

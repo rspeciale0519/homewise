@@ -1,8 +1,8 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/inngest/client";
-import { mlsSync } from "@/inngest/functions/mls-sync";
+import { ALL_INNGEST_FUNCTIONS } from "@/inngest/functions";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [mlsSync],
+  functions: ALL_INNGEST_FUNCTIONS,
 });

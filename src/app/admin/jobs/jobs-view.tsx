@@ -1,31 +1,11 @@
 "use client";
 
-interface JobInfo {
-  id: string;
-  name: string;
-  description: string;
-  schedule: string | null;
-  type: "cron" | "event";
-}
-
-const INNGEST_FUNCTIONS: JobInfo[] = [
-  { id: "mls-sync", name: "MLS Sync", description: "Sync listings from Stellar MLS", schedule: "Every 4 hours", type: "cron" },
-  { id: "lead-scoring-cron", name: "Lead Scoring", description: "Recalculate lead scores based on activity", schedule: "Every 6 hours", type: "cron" },
-  { id: "drip-campaign", name: "Drip Campaigns", description: "Send scheduled campaign emails to enrolled contacts", schedule: "Every 15 minutes", type: "cron" },
-  { id: "birthday-automations", name: "Birthday & Anniversary", description: "Send birthday and close anniversary emails", schedule: "Daily at 9 AM", type: "cron" },
-  { id: "listing-alerts", name: "Listing Alerts", description: "Notify subscribers of new matching listings", schedule: "Every 30 minutes", type: "cron" },
-  { id: "price-change-alerts", name: "Price Change Alerts", description: "Notify subscribers of price changes", schedule: "Every hour", type: "cron" },
-  { id: "smart-alerts", name: "Smart Alerts", description: "AI-enhanced property match notifications", schedule: "Every 2 hours", type: "cron" },
-  { id: "market-stats-aggregation", name: "Market Stats", description: "Aggregate market statistics by area", schedule: "Daily at 2 AM", type: "cron" },
-  { id: "monthly-market-email", name: "Monthly Market Email", description: "Send monthly market reports to subscribers", schedule: "1st of month", type: "cron" },
-  { id: "seo-content-generator", name: "SEO Content Generator", description: "AI-generate neighborhood guides and market content", schedule: "Weekly", type: "cron" },
-  { id: "generate-embeddings", name: "Generate Embeddings", description: "Create search embeddings for new listings", schedule: null, type: "event" },
-  { id: "behavioral-triggers", name: "Behavioral Triggers", description: "Process automation rules on contact activity", schedule: null, type: "event" },
-];
+import { JOB_REGISTRY } from "@/inngest/job-registry";
 
 export function JobsView() {
-  const cronJobs = INNGEST_FUNCTIONS.filter((j) => j.type === "cron");
-  const eventJobs = INNGEST_FUNCTIONS.filter((j) => j.type === "event");
+  const entries = Object.entries(JOB_REGISTRY).map(([id, meta]) => ({ id, ...meta }));
+  const cronJobs = entries.filter((j) => j.type === "cron");
+  const eventJobs = entries.filter((j) => j.type === "event");
 
   return (
     <div className="space-y-6">

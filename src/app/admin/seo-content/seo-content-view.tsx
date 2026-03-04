@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
+import { TiptapEditor } from "@/components/admin/tiptap-editor";
 
 interface SeoItem {
   id: string;
@@ -28,7 +29,6 @@ export function SeoContentView() {
   const [editing, setEditing] = useState<SeoItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState<"visual" | "source">("visual");
-  const editorRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -57,24 +57,16 @@ export function SeoContentView() {
     }
   };
 
-  const syncEditorToState = () => {
-    if (editorRef.current && editing) {
-      setEditing({ ...editing, body: editorRef.current.innerHTML });
-    }
-  };
-
   const handleSaveEdit = async () => {
     if (!editing) return;
-    syncEditorToState();
     setSaving(true);
     try {
-      const body = editMode === "visual" && editorRef.current ? editorRef.current.innerHTML : editing.body;
       await adminFetch("/api/admin/seo-content", {
         method: "PATCH",
         body: JSON.stringify({
           id: editing.id,
           title: editing.title,
-          body,
+          body: editing.body,
           metaTitle: editing.metaTitle,
           metaDesc: editing.metaDesc,
         }),
@@ -86,11 +78,6 @@ export function SeoContentView() {
       toast((err as Error).message, "error");
     }
     setSaving(false);
-  };
-
-  const execCmd = (cmd: string, value?: string) => {
-    document.execCommand(cmd, false, value);
-    editorRef.current?.focus();
   };
 
   return (
@@ -152,14 +139,14 @@ export function SeoContentView() {
                 <div className="flex gap-1">
                   <button
                     type="button"
-                    onClick={() => { syncEditorToState(); setEditMode("visual"); }}
+                    onClick={() => setEditMode("visual")}
                     className={`px-2 py-0.5 text-[10px] font-semibold rounded ${editMode === "visual" ? "bg-navy-600 text-white" : "bg-slate-100 text-slate-500"}`}
                   >
                     Visual
                   </button>
                   <button
                     type="button"
-                    onClick={() => { syncEditorToState(); setEditMode("source"); }}
+                    onClick={() => setEditMode("source")}
                     className={`px-2 py-0.5 text-[10px] font-semibold rounded ${editMode === "source" ? "bg-navy-600 text-white" : "bg-slate-100 text-slate-500"}`}
                   >
                     HTML
@@ -167,31 +154,11 @@ export function SeoContentView() {
                 </div>
               </div>
               {editMode === "visual" ? (
-                <div>
-                  <div className="flex items-center gap-0.5 px-2 py-1.5 border border-b-0 border-slate-200 rounded-t-lg bg-slate-50">
-                    <ToolbarBtn label="B" onClick={() => execCmd("bold")} bold />
-                    <ToolbarBtn label="I" onClick={() => execCmd("italic")} italic />
-                    <span className="w-px h-4 bg-slate-300 mx-1" />
-                    <ToolbarBtn label="H2" onClick={() => execCmd("formatBlock", "h2")} />
-                    <ToolbarBtn label="H3" onClick={() => execCmd("formatBlock", "h3")} />
-                    <ToolbarBtn label="P" onClick={() => execCmd("formatBlock", "p")} />
-                    <span className="w-px h-4 bg-slate-300 mx-1" />
-                    <ToolbarBtn label="UL" onClick={() => execCmd("insertUnorderedList")} />
-                    <ToolbarBtn label="OL" onClick={() => execCmd("insertOrderedList")} />
-                    <span className="w-px h-4 bg-slate-300 mx-1" />
-                    <ToolbarBtn label="Link" onClick={() => {
-                      const url = prompt("Enter URL:");
-                      if (url) execCmd("createLink", url);
-                    }} />
-                  </div>
-                  <div
-                    ref={editorRef}
-                    contentEditable
-                    suppressContentEditableWarning
-                    dangerouslySetInnerHTML={{ __html: editing.body }}
-                    className="w-full min-h-[240px] max-h-[400px] overflow-y-auto px-3 py-2 text-sm border border-slate-200 rounded-b-lg focus:outline-none focus:ring-2 focus:ring-navy-600 prose prose-sm max-w-none"
-                  />
-                </div>
+                <TiptapEditor
+                  key={editing.id + "-visual"}
+                  content={editing.body}
+                  onChange={(html) => setEditing({ ...editing, body: html })}
+                />
               ) : (
                 <textarea
                   value={editing.body}
@@ -263,18 +230,5 @@ export function SeoContentView() {
         </div>
       )}
     </div>
-  );
-}
-
-function ToolbarBtn({ label, onClick, bold, italic }: { label: string; onClick: () => void; bold?: boolean; italic?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-200 rounded transition-colors"
-      style={{ fontWeight: bold ? 700 : 400, fontStyle: italic ? "italic" : "normal" }}
-    >
-      {label}
-    </button>
   );
 }
