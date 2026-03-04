@@ -116,10 +116,19 @@ This design defines the complete feature set for transforming the site into a fu
 - Chronological display in CRM contact detail
 - Powers lead scoring and AI follow-up drafts
 
-**B7. Lead Stages (Pipeline)**
+**B7. Lead Stages Pipeline + Transaction Tracker**
 - Kanban board: New Lead -> Contacted -> Searching -> Showing -> Offer -> Under Contract -> Closed/Lost
 - Drag-and-drop stage changes
 - Pipeline value aggregation per stage
+- **Transaction Tracker (activates when deal moves to "Under Contract"):**
+  - Milestone timeline: Inspection Period, Appraisal Ordered, Appraisal Complete, Financing Contingency Cleared, Clear to Close, Closing Day
+  - Each milestone has a target date, completion checkbox, and optional notes
+  - Document checklist per transaction: purchase agreement, inspection report, appraisal, title commitment, closing disclosure
+  - Visual progress bar showing % of milestones complete
+  - Agent gets automated reminder notifications as milestone deadlines approach
+  - Transaction summary card on contact detail: address, purchase price, closing date, days to close
+  - Closed deals auto-populate sold history on agent bio page (A8)
+- Files: `src/app/dashboard/pipeline/page.tsx`, `src/components/admin/transaction-tracker.tsx`, `src/app/api/contacts/[id]/transaction/route.ts`
 
 **B8. Tags & Segmentation**
 - Multi-tag system (buyer, seller, investor, relocating, first-time, etc.)
@@ -263,11 +272,22 @@ This design defines the complete feature set for transforming the site into a fu
 - Exportable as branded PDF
 - Files: `src/app/api/ai/cma/route.ts`, `src/app/dashboard/agent-hub/cma/page.tsx`
 
-**F4. AI Listing Performance Insights**
-- For agent's own listings: views, saves, showing requests vs comparable listings
-- AI suggests actions: price adjustment, new photos, open house
-- Weekly digest email to listing agent
-- Files: `src/lib/ai/listing-insights.ts`, weekly cron via Inngest
+**F4. AI Listing Performance Insights + Seller Portal**
+- Two views built on one shared data layer:
+- **Agent view (full AI dashboard):**
+  - Views, saves, showing requests, inquiries for each active listing
+  - Benchmarked against comparable listings currently on market (avg views/saves at same price range and area)
+  - AI-generated action suggestions: price adjustment, new photos, open house scheduling, description refresh
+  - Trend charts: daily views over listing lifetime
+  - Weekly digest email to listing agent with performance summary and top recommended action per listing
+- **Seller portal (read-only, shareable link):**
+  - Accessible via unique token URL — no login required for seller
+  - Shows: total listing views, saves, showing requests, and inquiries received
+  - Simple sparkline chart of views over time
+  - "Your listing is performing above/below average for similar homes" plain-language summary
+  - No AI suggestions visible (agent-only) — purely informational for the seller
+  - Agent can enable/disable portal per listing from their dashboard
+- Files: `src/lib/ai/listing-insights.ts`, `src/app/dashboard/listings/[id]/performance/page.tsx`, `src/app/seller-portal/[token]/page.tsx`, `src/app/api/ai/listing-insights/route.ts`, weekly cron via Inngest
 
 **F5. AI Listing Description Generator (Agent-Only)**
 - Agent inputs property details or system pulls from MLS
