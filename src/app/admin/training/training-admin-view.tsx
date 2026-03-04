@@ -88,26 +88,26 @@ export function TrainingAdminView({ content, tracks, categories }: TrainingAdmin
       {showForm && (
         <form onSubmit={handleCreateContent} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
           <h3 className="font-semibold text-navy-700">New Training Content</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <input name="title" required placeholder="Title" className="h-10 px-3 text-sm border border-slate-200 rounded-lg" />
-            <select name="category" required className="h-10 px-3 text-sm border border-slate-200 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <input name="title" required placeholder="Title" className="h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            <select name="category" required className="h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600">
               {categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <textarea name="description" placeholder="Description" rows={2} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg resize-none" />
-          <div className="grid grid-cols-3 gap-4">
-            <select name="audience" className="h-10 px-3 text-sm border border-slate-200 rounded-lg">
+          <textarea name="description" placeholder="Description" rows={2} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-navy-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <select name="audience" className="h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600">
               <option value="agent">Agent Only</option>
               <option value="public">Public</option>
               <option value="both">Both</option>
             </select>
-            <select name="type" className="h-10 px-3 text-sm border border-slate-200 rounded-lg">
+            <select name="type" className="h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600">
               <option value="video">Video</option>
               <option value="document">Document</option>
               <option value="article">Article</option>
               <option value="quiz">Quiz</option>
             </select>
-            <input name="url" placeholder="URL (optional)" className="h-10 px-3 text-sm border border-slate-200 rounded-lg" />
+            <input name="url" placeholder="URL (optional)" className="h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600" />
           </div>
           <div className="flex gap-2">
             <button type="submit" className="px-4 py-2 bg-navy-600 text-white rounded-lg text-sm font-semibold hover:bg-navy-700">Save</button>
@@ -119,14 +119,15 @@ export function TrainingAdminView({ content, tracks, categories }: TrainingAdmin
       {/* Content list */}
       {activeTab === "content" && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Title</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Category</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Type</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Audience</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Status</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Title</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Category</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Type</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Audience</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -145,6 +146,7 @@ export function TrainingAdminView({ content, tracks, categories }: TrainingAdmin
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

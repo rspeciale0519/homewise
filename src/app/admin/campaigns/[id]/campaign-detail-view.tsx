@@ -84,14 +84,14 @@ export function CampaignDetailView({ campaign }: CampaignDetailViewProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-navy-700">{campaign.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-navy-700">{campaign.name}</h1>
           <p className="text-sm text-slate-500">
             {campaign.type} campaign · {campaign._count.enrollments} enrolled
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           {campaign.status === "draft" && (
             <button onClick={() => handleStatusChange("active")} className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
               Activate
@@ -182,6 +182,7 @@ export function CampaignDetailView({ campaign }: CampaignDetailViewProps) {
 
       {activeTab === "enrollments" && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
@@ -202,6 +203,7 @@ export function CampaignDetailView({ campaign }: CampaignDetailViewProps) {
               ))}
             </tbody>
           </table>
+          </div>
           {campaign.enrollments.length === 0 && (
             <p className="text-center py-8 text-slate-500">No enrollments yet.</p>
           )}
@@ -214,7 +216,7 @@ export function CampaignDetailView({ campaign }: CampaignDetailViewProps) {
             <div key={email.id} className="bg-white rounded-xl border border-slate-200 p-4">
               <h3 className="font-semibold text-sm text-navy-700 mb-3">Step {i + 1}: {email.subject}</h3>
               {email.variants.length > 0 ? (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {email.variants.map((v) => {
                     const openRate = v.sendCount > 0 ? ((v.openCount / v.sendCount) * 100).toFixed(1) : "0";
                     const clickRate = v.sendCount > 0 ? ((v.clickCount / v.sendCount) * 100).toFixed(1) : "0";

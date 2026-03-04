@@ -98,28 +98,28 @@ export function ContactDetailView({ contact, agents, allTags }: ContactDetailVie
   return (
     <div className={`space-y-6 transition-opacity ${isUpdating ? "opacity-70" : ""}`}>
       {/* Header */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-navy-700">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-navy-700 truncate">
               {contact.firstName} {contact.lastName}
             </h1>
-            <p className="text-slate-500">{contact.email}</p>
-            {contact.phone && <p className="text-slate-500">{contact.phone}</p>}
+            <p className="text-sm text-slate-500 truncate">{contact.email}</p>
+            {contact.phone && <p className="text-sm text-slate-500">{contact.phone}</p>}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-navy-700">{contact.score}</p>
-              <p className="text-xs text-slate-400">Score</p>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="text-center px-3 py-1.5 bg-navy-50 rounded-lg">
+              <p className="text-xl sm:text-2xl font-bold text-navy-700">{contact.score}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide">Score</p>
             </div>
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STAGE_COLORS[contact.stage] ?? "bg-slate-100"}`}>
+            <span className={`px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap ${STAGE_COLORS[contact.stage] ?? "bg-slate-100"}`}>
               {STAGE_LABELS[contact.stage] ?? contact.stage}
             </span>
           </div>
         </div>
 
         {/* Editable fields */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
           <div>
             <label className="text-xs font-medium text-slate-500">Stage</label>
             <select

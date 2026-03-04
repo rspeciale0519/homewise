@@ -19,6 +19,12 @@ interface AdvisorResult {
   summary: string;
 }
 
+const SCENARIO_STYLES = [
+  { bg: "bg-blue-50", border: "border-blue-200", badge: "bg-blue-100 text-blue-700", accent: "text-blue-700" },
+  { bg: "bg-green-50", border: "border-green-200", badge: "bg-green-100 text-green-700", accent: "text-green-700" },
+  { bg: "bg-amber-50", border: "border-amber-200", badge: "bg-amber-100 text-amber-700", accent: "text-amber-700" },
+];
+
 export function MortgageAdvisor() {
   const [income, setIncome] = useState("");
   const [debt, setDebt] = useState("");
@@ -55,27 +61,20 @@ export function MortgageAdvisor() {
     setLoading(false);
   };
 
-  const scenarioColors = ["bg-blue-50 border-blue-200", "bg-green-50 border-green-200", "bg-amber-50 border-amber-200"];
-
   return (
     <div>
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-6 mb-8">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 mb-8 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField label="Annual Income" value={income} onChange={setIncome} placeholder="75000" prefix="$" type="number" />
+          <InputField label="Monthly Debt Payments" value={debt} onChange={setDebt} placeholder="500" prefix="$" type="number" />
+          <InputField label="Down Payment Available" value={downPayment} onChange={setDownPayment} placeholder="20000" prefix="$" type="number" />
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Annual Income</label>
-            <input type="number" value={income} onChange={(e) => setIncome(e.target.value)} placeholder="$75,000" className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Monthly Debt Payments</label>
-            <input type="number" value={debt} onChange={(e) => setDebt(e.target.value)} placeholder="$500" className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Down Payment Available</label>
-            <input type="number" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} placeholder="$20,000" className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Credit Score Range</label>
-            <select value={creditScore} onChange={(e) => setCreditScore(e.target.value)} className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Credit Score Range</label>
+            <select
+              value={creditScore}
+              onChange={(e) => setCreditScore(e.target.value)}
+              className="w-full h-11 px-3 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-navy-600 transition-colors"
+            >
               <option value="">Select range</option>
               <option value="760+">Excellent (760+)</option>
               <option value="700-759">Good (700-759)</option>
@@ -84,53 +83,79 @@ export function MortgageAdvisor() {
               <option value="below 620">Poor (below 620)</option>
             </select>
           </div>
+          <InputField label="Target Home Price (optional)" value={homePrice} onChange={setHomePrice} placeholder="350000" prefix="$" type="number" />
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Target Home Price (optional)</label>
-            <input type="number" value={homePrice} onChange={(e) => setHomePrice(e.target.value)} placeholder="$350,000" className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Additional Details</label>
-            <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="First-time buyer, VA eligible, etc." className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600" />
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Additional Details</label>
+            <input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="First-time buyer, VA eligible, etc."
+              className="w-full h-11 px-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-600 transition-colors"
+            />
           </div>
         </div>
         <button
           type="submit"
           disabled={loading || (!income && !description)}
-          className="mt-4 w-full px-6 py-3 bg-navy-600 text-white font-semibold rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50"
+          className="mt-5 w-full px-6 py-3.5 bg-navy-600 text-white font-semibold rounded-xl hover:bg-navy-700 transition-all disabled:opacity-50 active:scale-[0.99]"
         >
-          {loading ? "Generating scenarios..." : "Get My Scenarios"}
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Generating scenarios...
+            </span>
+          ) : "Get My Scenarios"}
         </button>
       </form>
 
       {result?.scenarios && (
         <div>
           {result.summary && (
-            <div className="bg-slate-50 rounded-xl p-4 mb-6">
-              <p className="text-sm text-slate-700">{result.summary}</p>
+            <div className="bg-slate-50 rounded-xl p-4 sm:p-5 mb-6 border border-slate-100">
+              <p className="text-sm text-slate-700 leading-relaxed">{result.summary}</p>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {result.scenarios.map((scenario, i) => (
-              <div key={scenario.name} className={`rounded-xl border p-5 ${scenarioColors[i] ?? "bg-white border-slate-200"}`}>
-                <h3 className="font-serif text-lg font-bold text-navy-700 mb-3">{scenario.name}</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-slate-500">Loan Type</span><span className="font-medium">{scenario.loanType}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Home Price</span><span className="font-medium">${scenario.homePrice?.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Down Payment</span><span className="font-medium">${scenario.downPayment?.toLocaleString()} ({scenario.downPaymentPct}%)</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Monthly Payment</span><span className="font-bold text-navy-700">${scenario.monthlyPayment?.toLocaleString()}/mo</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Term</span><span className="font-medium">{scenario.loanTerm}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Est. Rate</span><span className="font-medium">{scenario.interestRateEstimate}</span></div>
-                </div>
-                {scenario.considerations?.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-200">
-                    <p className="text-xs font-medium text-slate-500 mb-1">Considerations:</p>
-                    <ul className="text-xs text-slate-600 space-y-1">
-                      {scenario.considerations.map((c, j) => <li key={j}>• {c}</li>)}
-                    </ul>
+            {result.scenarios.map((scenario, i) => {
+              const style = SCENARIO_STYLES[i] ?? SCENARIO_STYLES[0]!;
+              return (
+                <div key={scenario.name} className={`rounded-xl border ${style.border} ${style.bg} p-4 sm:p-5`}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${style.badge}`}>
+                      Scenario {i + 1}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
+                  <h3 className="font-serif text-lg font-bold text-navy-700 mb-4">{scenario.name}</h3>
+                  <div className="space-y-2.5 text-sm">
+                    <DetailRow label="Loan Type" value={scenario.loanType} />
+                    <DetailRow label="Home Price" value={`$${scenario.homePrice?.toLocaleString()}`} />
+                    <DetailRow label="Down Payment" value={`$${scenario.downPayment?.toLocaleString()} (${scenario.downPaymentPct}%)`} />
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-200/50">
+                      <span className="text-slate-500">Monthly Payment</span>
+                      <span className="text-lg font-bold text-navy-700">${scenario.monthlyPayment?.toLocaleString()}<span className="text-xs font-normal text-slate-400">/mo</span></span>
+                    </div>
+                    <DetailRow label="Term" value={scenario.loanTerm} />
+                    <DetailRow label="Est. Rate" value={scenario.interestRateEstimate} />
+                  </div>
+                  {scenario.considerations?.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-slate-200/50">
+                      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Considerations</p>
+                      <ul className="text-xs text-slate-600 space-y-1.5">
+                        {scenario.considerations.map((c, j) => (
+                          <li key={j} className="flex gap-2">
+                            <span className={`mt-0.5 shrink-0 h-1.5 w-1.5 rounded-full ${style.accent === "text-blue-700" ? "bg-blue-400" : style.accent === "text-green-700" ? "bg-green-400" : "bg-amber-400"}`} />
+                            {c}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div className="mt-8 text-center">
@@ -145,6 +170,49 @@ export function MortgageAdvisor() {
       <p className="text-xs text-slate-400 text-center mt-6">
         For educational purposes only. Not financial advice. Consult a licensed mortgage professional.
       </p>
+    </div>
+  );
+}
+
+function InputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  prefix,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  prefix?: string;
+  type?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+      <div className="relative">
+        {prefix && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">{prefix}</span>
+        )}
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`w-full h-11 ${prefix ? "pl-7" : "pl-3"} pr-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-600 transition-colors`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-medium text-navy-700">{value}</span>
     </div>
   );
 }
