@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/admin";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { AdminToastProvider } from "@/components/admin/admin-toast";
 
 export default async function AdminLayout({
   children,
@@ -14,7 +15,9 @@ export default async function AdminLayout({
       <AdminHeader />
       <div className="flex min-h-[calc(100vh-4rem)]">
         <AdminSidebar />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          <AdminToastProvider>{children}</AdminToastProvider>
+        </main>
       </div>
     </div>
   );

@@ -56,6 +56,9 @@ export async function PATCH(
         phone: data.phone === "" ? null : data.phone,
         photoUrl: data.photoUrl === "" ? null : data.photoUrl,
         bio: data.bio === "" ? null : data.bio,
+        emailSignature: data.emailSignature === "" ? null : data.emailSignature,
+        emailTagline: data.emailTagline === "" ? null : data.emailTagline,
+        brandColor: data.brandColor === "" ? null : data.brandColor,
       },
     });
 

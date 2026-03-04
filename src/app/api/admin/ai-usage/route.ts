@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
+import { estimateCost } from "@/lib/ai-pricing";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdminApi();
@@ -52,10 +53,7 @@ export async function GET(req: NextRequest) {
   }));
 
   const totalTokens = (logs._sum.inputTokens ?? 0) + (logs._sum.outputTokens ?? 0);
-  // Rough cost estimate: ~$3 per 1M input, ~$15 per 1M output for Claude Sonnet
-  const estimatedCost =
-    ((logs._sum.inputTokens ?? 0) / 1_000_000) * 3 +
-    ((logs._sum.outputTokens ?? 0) / 1_000_000) * 15;
+  const estimatedCostVal = estimateCost(logs._sum.inputTokens ?? 0, logs._sum.outputTokens ?? 0);
 
   return NextResponse.json({
     totalCalls: logs._count,
@@ -63,7 +61,7 @@ export async function GET(req: NextRequest) {
     inputTokens: logs._sum.inputTokens ?? 0,
     outputTokens: logs._sum.outputTokens ?? 0,
     avgLatencyMs: Math.round(logs._avg.latencyMs ?? 0),
-    estimatedCost: Math.round(estimatedCost * 100) / 100,
+    estimatedCost: Math.round(estimatedCostVal * 100) / 100,
     daily,
     byFeature,
   });

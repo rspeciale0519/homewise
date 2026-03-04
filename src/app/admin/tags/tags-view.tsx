@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useToast } from "@/components/admin/admin-toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { adminFetch } from "@/lib/admin-fetch";
 
 interface TagItem {
   id: string;
@@ -17,6 +20,7 @@ const PRESET_COLORS = [
 ];
 
 export function TagsView() {
+  const { toast } = useToast();
   const [tags, setTags] = useState<TagItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
@@ -24,45 +28,64 @@ export function TagsView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<TagItem | null>(null);
 
   const fetchTags = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/admin/tags");
-    if (res.ok) setTags(await res.json());
+    try {
+      const data = await adminFetch<TagItem[]>("/api/admin/tags");
+      setTags(data);
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
     setLoading(false);
-  }, []);
+  }, [toast]);
 
   useEffect(() => { fetchTags(); }, [fetchTags]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
-    await fetch("/api/admin/tags", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), color: newColor }),
-    });
-    setNewName("");
-    fetchTags();
+    try {
+      await adminFetch("/api/admin/tags", {
+        method: "POST",
+        body: JSON.stringify({ name: newName.trim(), color: newColor }),
+      });
+      toast("Tag created", "success");
+      setNewName("");
+      fetchTags();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
   };
 
   const handleUpdate = async (id: string) => {
-    await fetch("/api/admin/tags", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, name: editName, color: editColor }),
-    });
-    setEditingId(null);
-    fetchTags();
+    try {
+      await adminFetch("/api/admin/tags", {
+        method: "PATCH",
+        body: JSON.stringify({ id, name: editName, color: editColor }),
+      });
+      toast("Tag updated", "success");
+      setEditingId(null);
+      fetchTags();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
   };
 
-  const handleDelete = async (id: string) => {
-    await fetch("/api/admin/tags", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    fetchTags();
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await adminFetch("/api/admin/tags", {
+        method: "DELETE",
+        body: JSON.stringify({ id: deleteTarget.id }),
+      });
+      toast("Tag deleted", "success");
+      setDeleteTarget(null);
+      fetchTags();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
   };
 
   const startEdit = (tag: TagItem) => {
@@ -73,6 +96,13 @@ export function TagsView() {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Tag"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       {/* Create form */}
       <form onSubmit={handleCreate} className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
         <h3 className="font-semibold text-navy-700 mb-3">Create Tag</h3>
@@ -146,7 +176,7 @@ export function TagsView() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button onClick={() => startEdit(tag)} className="text-xs text-navy-600 hover:underline">Edit</button>
                     {tag.contactCount === 0 && (
-                      <button onClick={() => handleDelete(tag.id)} className="text-xs text-red-500 hover:underline">Delete</button>
+                      <button onClick={() => setDeleteTarget(tag)} className="text-xs text-red-500 hover:underline">Delete</button>
                     )}
                   </div>
                 </div>

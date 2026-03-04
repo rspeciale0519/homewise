@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/admin/admin-toast";
+import { adminFetch } from "@/lib/admin-fetch";
 
 interface SeoItem {
   id: string;
@@ -19,48 +21,76 @@ interface SeoItem {
 }
 
 export function SeoContentView() {
+  const { toast } = useToast();
   const [items, setItems] = useState<SeoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [editing, setEditing] = useState<SeoItem | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState<"visual" | "source">("visual");
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const url = filter === "all" ? "/api/admin/seo-content" : `/api/admin/seo-content?status=${filter}`;
-    const res = await fetch(url);
-    if (res.ok) setItems(await res.json());
+    try {
+      const url = filter === "all" ? "/api/admin/seo-content" : `/api/admin/seo-content?status=${filter}`;
+      const data = await adminFetch<SeoItem[]>(url);
+      setItems(data);
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
     setLoading(false);
-  }, [filter]);
+  }, [filter, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleStatusChange = async (id: string, status: string) => {
-    await fetch("/api/admin/seo-content", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
-    });
-    fetchData();
+    try {
+      await adminFetch("/api/admin/seo-content", {
+        method: "PATCH",
+        body: JSON.stringify({ id, status }),
+      });
+      toast(status === "published" ? "Content published" : "Content unpublished", "success");
+      fetchData();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
+  };
+
+  const syncEditorToState = () => {
+    if (editorRef.current && editing) {
+      setEditing({ ...editing, body: editorRef.current.innerHTML });
+    }
   };
 
   const handleSaveEdit = async () => {
     if (!editing) return;
+    syncEditorToState();
     setSaving(true);
-    await fetch("/api/admin/seo-content", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: editing.id,
-        title: editing.title,
-        body: editing.body,
-        metaTitle: editing.metaTitle,
-        metaDesc: editing.metaDesc,
-      }),
-    });
+    try {
+      const body = editMode === "visual" && editorRef.current ? editorRef.current.innerHTML : editing.body;
+      await adminFetch("/api/admin/seo-content", {
+        method: "PATCH",
+        body: JSON.stringify({
+          id: editing.id,
+          title: editing.title,
+          body,
+          metaTitle: editing.metaTitle,
+          metaDesc: editing.metaDesc,
+        }),
+      });
+      toast("Content saved", "success");
+      setEditing(null);
+      fetchData();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
     setSaving(false);
-    setEditing(null);
-    fetchData();
+  };
+
+  const execCmd = (cmd: string, value?: string) => {
+    document.execCommand(cmd, false, value);
+    editorRef.current?.focus();
   };
 
   return (
@@ -117,13 +147,59 @@ export function SeoContentView() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500">Body (HTML)</label>
-              <textarea
-                value={editing.body}
-                onChange={(e) => setEditing({ ...editing, body: e.target.value })}
-                rows={12}
-                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg font-mono resize-y focus:outline-none focus:ring-2 focus:ring-navy-600"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-slate-500">Body</label>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { syncEditorToState(); setEditMode("visual"); }}
+                    className={`px-2 py-0.5 text-[10px] font-semibold rounded ${editMode === "visual" ? "bg-navy-600 text-white" : "bg-slate-100 text-slate-500"}`}
+                  >
+                    Visual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { syncEditorToState(); setEditMode("source"); }}
+                    className={`px-2 py-0.5 text-[10px] font-semibold rounded ${editMode === "source" ? "bg-navy-600 text-white" : "bg-slate-100 text-slate-500"}`}
+                  >
+                    HTML
+                  </button>
+                </div>
+              </div>
+              {editMode === "visual" ? (
+                <div>
+                  <div className="flex items-center gap-0.5 px-2 py-1.5 border border-b-0 border-slate-200 rounded-t-lg bg-slate-50">
+                    <ToolbarBtn label="B" onClick={() => execCmd("bold")} bold />
+                    <ToolbarBtn label="I" onClick={() => execCmd("italic")} italic />
+                    <span className="w-px h-4 bg-slate-300 mx-1" />
+                    <ToolbarBtn label="H2" onClick={() => execCmd("formatBlock", "h2")} />
+                    <ToolbarBtn label="H3" onClick={() => execCmd("formatBlock", "h3")} />
+                    <ToolbarBtn label="P" onClick={() => execCmd("formatBlock", "p")} />
+                    <span className="w-px h-4 bg-slate-300 mx-1" />
+                    <ToolbarBtn label="UL" onClick={() => execCmd("insertUnorderedList")} />
+                    <ToolbarBtn label="OL" onClick={() => execCmd("insertOrderedList")} />
+                    <span className="w-px h-4 bg-slate-300 mx-1" />
+                    <ToolbarBtn label="Link" onClick={() => {
+                      const url = prompt("Enter URL:");
+                      if (url) execCmd("createLink", url);
+                    }} />
+                  </div>
+                  <div
+                    ref={editorRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    dangerouslySetInnerHTML={{ __html: editing.body }}
+                    className="w-full min-h-[240px] max-h-[400px] overflow-y-auto px-3 py-2 text-sm border border-slate-200 rounded-b-lg focus:outline-none focus:ring-2 focus:ring-navy-600 prose prose-sm max-w-none"
+                  />
+                </div>
+              ) : (
+                <textarea
+                  value={editing.body}
+                  onChange={(e) => setEditing({ ...editing, body: e.target.value })}
+                  rows={12}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg font-mono resize-y focus:outline-none focus:ring-2 focus:ring-navy-600"
+                />
+              )}
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={handleSaveEdit} disabled={saving} className="px-4 py-2 bg-navy-600 text-white rounded-lg text-sm font-semibold hover:bg-navy-700 disabled:opacity-50">
@@ -187,5 +263,18 @@ export function SeoContentView() {
         </div>
       )}
     </div>
+  );
+}
+
+function ToolbarBtn({ label, onClick, bold, italic }: { label: string; onClick: () => void; bold?: boolean; italic?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-200 rounded transition-colors"
+      style={{ fontWeight: bold ? 700 : 400, fontStyle: italic ? "italic" : "normal" }}
+    >
+      {label}
+    </button>
   );
 }

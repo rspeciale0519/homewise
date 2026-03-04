@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useToast } from "@/components/admin/admin-toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { adminFetch } from "@/lib/admin-fetch";
 
 interface Agent {
   id: string;
@@ -31,16 +34,22 @@ const CONDITION_FIELDS = [
 ] as const;
 
 export function LeadRoutingView() {
+  const { toast } = useToast();
   const [data, setData] = useState<RoutingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<RoutingRule | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/admin/lead-routing");
-    if (res.ok) setData(await res.json());
+    try {
+      const result = await adminFetch<RoutingData>("/api/admin/lead-routing");
+      setData(result);
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
     setLoading(false);
-  }, []);
+  }, [toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -50,37 +59,50 @@ export function LeadRoutingView() {
     const condField = form.get("conditionField") as string;
     const condValue = form.get("conditionValue") as string;
 
-    await fetch("/api/admin/lead-routing", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.get("name"),
-        agentId: form.get("agentId"),
-        conditions: condField && condValue ? { [condField]: condValue } : {},
-        priority: Number(form.get("priority") ?? 0),
-        roundRobin: form.get("roundRobin") === "on",
-      }),
-    });
-    setShowForm(false);
-    fetchData();
+    try {
+      await adminFetch("/api/admin/lead-routing", {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.get("name"),
+          agentId: form.get("agentId"),
+          conditions: condField && condValue ? { [condField]: condValue } : {},
+          priority: Number(form.get("priority") ?? 0),
+          roundRobin: form.get("roundRobin") === "on",
+        }),
+      });
+      toast("Rule created", "success");
+      setShowForm(false);
+      fetchData();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
   };
 
   const handleToggle = async (id: string, active: boolean) => {
-    await fetch("/api/admin/lead-routing", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, active: !active }),
-    });
-    fetchData();
+    try {
+      await adminFetch("/api/admin/lead-routing", {
+        method: "PATCH",
+        body: JSON.stringify({ id, active: !active }),
+      });
+      fetchData();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
   };
 
-  const handleDelete = async (id: string) => {
-    await fetch("/api/admin/lead-routing", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    fetchData();
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await adminFetch("/api/admin/lead-routing", {
+        method: "DELETE",
+        body: JSON.stringify({ id: deleteTarget.id }),
+      });
+      toast("Rule deleted", "success");
+      setDeleteTarget(null);
+      fetchData();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
   };
 
   const getAgentName = (agentId: string): string => {
@@ -90,6 +112,13 @@ export function LeadRoutingView() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Routing Rule"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? Leads will no longer be routed by this rule.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <div className="flex justify-end">
         <button
           onClick={() => setShowForm(!showForm)}
@@ -183,7 +212,7 @@ export function LeadRoutingView() {
                     {rule.active ? "Active" : "Inactive"}
                   </button>
                   <button
-                    onClick={() => handleDelete(rule.id)}
+                    onClick={() => setDeleteTarget(rule)}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                   >
                     Delete

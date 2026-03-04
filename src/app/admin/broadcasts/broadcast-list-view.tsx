@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/admin-toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 
 interface BroadcastItem {
   id: string;
@@ -30,27 +32,35 @@ interface BroadcastListViewProps {
 
 export function BroadcastListView({ broadcasts, tags }: BroadcastListViewProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [audienceTag, setAudienceTag] = useState("");
   const [sending, setSending] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [confirmSend, setConfirmSend] = useState(false);
 
   const handleSend = async (send: boolean) => {
     if (!name.trim() || !subject.trim() || !body.trim()) return;
     setSending(true);
-    await fetch("/api/admin/broadcasts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, subject, body, audienceTag: audienceTag || undefined, send }),
-    });
+    try {
+      await fetch("/api/admin/broadcasts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, subject, body, audienceTag: audienceTag || undefined, send }),
+      });
+      toast(send ? "Broadcast sent" : "Draft saved", "success");
+      setIsCreating(false);
+      setName("");
+      setSubject("");
+      setBody("");
+      router.refresh();
+    } catch {
+      toast("Failed to send broadcast", "error");
+    }
     setSending(false);
-    setIsCreating(false);
-    setName("");
-    setSubject("");
-    setBody("");
-    router.refresh();
   };
 
   return (
@@ -73,14 +83,40 @@ export function BroadcastListView({ broadcasts, tags }: BroadcastListViewProps) 
             {tags.map((t) => <option key={t.id} value={t.name}>{t.name} ({t.count})</option>)}
           </select>
           <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Email body (HTML or plain text)" rows={6} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-navy-600" />
+
+          {/* Email Preview */}
+          {body.trim() && (
+            <div>
+              <button type="button" onClick={() => setShowPreview(!showPreview)} className="text-xs text-navy-600 hover:underline mb-2">
+                {showPreview ? "Hide Preview" : "Show Preview"}
+              </button>
+              {showPreview && (
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
+                    <p className="text-xs text-slate-500">Subject: <span className="font-medium text-navy-700">{subject || "(no subject)"}</span></p>
+                  </div>
+                  <div className="p-4 bg-white prose prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: body }} />
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button onClick={() => handleSend(false)} disabled={sending} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50">
               Save Draft
             </button>
-            <button onClick={() => handleSend(true)} disabled={sending} className="px-4 py-2 text-sm font-semibold text-white bg-crimson-600 rounded-lg hover:bg-crimson-700 disabled:opacity-50">
+            <button onClick={() => setConfirmSend(true)} disabled={sending || !name.trim() || !subject.trim() || !body.trim()} className="px-4 py-2 text-sm font-semibold text-white bg-crimson-600 rounded-lg hover:bg-crimson-700 disabled:opacity-50">
               {sending ? "Sending..." : "Send Now"}
             </button>
           </div>
+          <ConfirmDialog
+            open={confirmSend}
+            title="Send Broadcast"
+            message={`This will send "${subject}" to ${audienceTag ? `contacts tagged "${audienceTag}"` : "all contacts"} immediately. This cannot be undone.`}
+            confirmLabel="Send Now"
+            onConfirm={() => { setConfirmSend(false); handleSend(true); }}
+            onCancel={() => setConfirmSend(false)}
+          />
         </div>
       )}
 
