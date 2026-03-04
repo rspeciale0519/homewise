@@ -269,8 +269,8 @@ This design defines the complete feature set for transforming the site into a fu
 - Agent inputs property address
 - System pulls 5-8 comps from MLS data
 - AI generates CMA report with pricing recommendation and market narrative
-- Exportable as branded PDF
-- Files: `src/app/api/ai/cma/route.ts`, `src/app/dashboard/agent-hub/cma/page.tsx`
+- Exportable as branded PDF via `@react-pdf/renderer`
+- Files: `src/app/api/ai/cma/route.ts`, `src/app/dashboard/agent-hub/cma/page.tsx`, `src/components/pdf/cma-report.tsx`
 
 **F4. AI Listing Performance Insights + Seller Portal**
 - Two views built on one shared data layer:
@@ -375,9 +375,8 @@ This design defines the complete feature set for transforming the site into a fu
 ### I. Team & Brokerage Tools
 
 **I1. Smart Lead Routing**
-- Auto-assignment rules by location, price, source, type, language
-- Round-robin option
-- 5-minute accept timeout -> re-route
+- See B10 — identical spec, implemented as part of Phase 2 CRM build
+- Team-level routing rules configured in admin; individual agent rules configured in agent dashboard
 
 **I2. Team Performance Dashboard**
 - Per-agent metrics: leads, contacts, showings, offers, closings, pipeline value
@@ -523,28 +522,71 @@ One assistant that knows the entire platform inside and out — so agents spend 
 
 ---
 
+### K. Training & Education Hub
+
+> **Dependency note:** The Agent Training Hub (K1) must be built in Phase 2 — the Dashboard Assistant chatbot (Section J, Configuration 3) integrates with it in Phase 4. Public Learning Center (K2) can follow in Phase 7 alongside SEO/content features.
+
+---
+
+#### K1. Agent Training Hub (Private — Dashboard Only)
+
+A private knowledge base managed by Homewise admins, accessible only to logged-in agents. Replaces scattered PDFs and informal onboarding with a structured, trackable system.
+
+- **Video library:** Training videos organized by category — onboarding, contracts, compliance, platform how-tos, market knowledge. Each video has a title, category tag, description, and optional attached document.
+- **Document vault:** Scripts, forms, checklists, marketing templates, compliance docs — fully searchable by keyword and tag. Agents can download; they cannot upload.
+- **Onboarding track:** New agents are auto-enrolled in a required sequence of modules that must be completed before their account goes fully active. Admin defines the track; system enforces it.
+- **Progress tracking:** Admin can see exactly which agents have completed which content, completion dates, and time spent — nothing falls through the cracks. Useful for compliance documentation.
+- **Admin content management:** Admins upload, organize, tag, and update all content from the admin dashboard at any time — no code deploy required. Content tagged for `agent`, `public`, or `both` audiences.
+- **Dashboard chatbot integration:** The Configuration 3 Dashboard Assistant (Section J) can surface content conversationally — "Find me the home inspection checklist" resolves to the correct document without the agent navigating menus.
+- Files: `src/app/(admin)/admin/training/page.tsx`, `src/app/dashboard/training/page.tsx`, `src/app/api/training/route.ts`, `src/components/dashboard/training-progress.tsx`
+
+---
+
+#### K2. Public Learning Center (Buyer & Seller Facing)
+
+A public-facing education section positioned as both a conversion tool and an SEO asset. Educational real estate content ranks extremely well on Google — this brings in buyers and sellers in research mode before they're ready to contact an agent.
+
+- **Buying 101 course:** Step-by-step guided journey from "thinking about buying" to closing day — short, digestible lessons with progress tracking for logged-in users
+- **Selling 101 course:** Same guided format for sellers — pre-listing prep through closing
+- **Video explainers:** Short videos answering common questions: "What is earnest money?", "How does the inspection process work?", "What are closing costs?"
+- **Downloadable guides:** First-time buyer checklist, moving timeline, what to expect at closing — gated behind email capture for lead generation
+- **Progress tracking:** Logged-in buyers and sellers see which lessons they've completed; resumes where they left off
+- Routes: `/learn/buying`, `/learn/selling`, `/learn/[lesson-slug]`
+- Files: `src/app/(marketing)/learn/page.tsx`, `src/app/(marketing)/learn/[slug]/page.tsx`, `src/app/api/learning/progress/route.ts`
+
+---
+
+#### K3. Shared Content Layer
+
+Some content serves both audiences. A "What happens at closing?" video is useful for a first-time buyer *and* a new agent. Admins tag content for `agent`, `public`, or `both` on upload — no duplication of content, single source of truth.
+
+- `TrainingContent.audience` enum: `AGENT | PUBLIC | BOTH`
+- Public-tagged content surfaces in K2 Learning Center; agent-tagged content surfaces in K1 Training Hub; both-tagged content appears in both
+
+---
+
 ## Implementation Phasing (High-Level)
 
 ### Phase 1: MLS Foundation
 MLS Grid integration, extended Listing model, map search, advanced filters, Walk Score, GreatSchools, open house data, sold/pending data. This is the prerequisite for everything else.
 
 ### Phase 2: CRM & Lead Capture
-Contact model, activity timeline, lead stages pipeline, registration wall, showing request, valuation widget, lead source tracking, tags, tasks.
+Contact model, activity timeline, lead stages pipeline (+ transaction tracker), registration wall, showing request, valuation widget, lead source tracking, tags, tasks, lead routing (B10/I1). **Also includes Agent Training Hub (K1)** — must be complete before Phase 4 since the dashboard chatbot integrates with it.
 
 ### Phase 3: Marketing Automation
-Email infrastructure (Resend), drip campaigns, daily listing alerts, price change alerts, SMS (Twilio), behavioral triggers, broadcast emails, email tracking.
+Email infrastructure (Resend), drip campaigns, daily listing alerts, price change alerts, SMS (Twilio), behavioral triggers, broadcast emails, email tracking. **Also includes G2 (AI email subject line A/B testing)** — wired in from day one of campaign sends, not added later.
 
 ### Phase 4: AI — Public-Facing
-Shared chatbot engine + all three configurations (public site search assistant, per-agent website chatbot, dashboard assistant), AI valuation narrative, AI mortgage advisor, AI market insights (lead funnel), semantic search (embeddings).
+Shared chatbot engine + all three configurations (public site search assistant, per-agent website chatbot, dashboard assistant), AI valuation narrative, AI mortgage advisor, AI market insights (lead funnel), semantic search (embeddings). **Dashboard chatbot (Config 3) integrates with Training Hub built in Phase 2.**
 
 ### Phase 5: AI — Agent Tools
 AI lead scoring, follow-up draft generator, CMA generator, listing performance insights, listing description writer, campaign content generator, social post generator, meeting prep briefs.
 
 ### Phase 6: Behind-the-Scenes AI
-Smart alert matching with rigidity slider, AI email subject line A/B testing, AI SEO content generation.
+Smart alert matching with rigidity slider (G3), AI SEO content generation (G4). *(G2 AI email A/B testing moved to Phase 3.)*
 
-### Phase 7: Market Statistics
-Market stats pages, custom market reports, monthly market stats emails, embeddable widgets.
+### Phase 7: Market Statistics + Public Learning Center
+Market stats pages, custom market reports, monthly market stats emails, embeddable widgets. **Also includes Public Learning Center (K2)** — Buying 101, Selling 101, video explainers, downloadable guides, progress tracking. Content tagged `both` in Training Hub automatically surfaces here with no re-upload.
 
 ### Phase 8: Team & Brokerage
 Lead routing, team performance dashboard, agent-branded nurturing.
@@ -580,13 +622,18 @@ Lead routing, team performance dashboard, agent-branded nurturing.
 - `AutomationRule` — Behavioral trigger rules
 - `Task` — Agent follow-up tasks
 - `CmaReport` — Saved CMA reports
+- `ListingPortalAccess` — Token, listingId, expiresAt, enabled flag — powers seller read-only portal (F4)
+- `TrainingContent` — Video/document records with title, category, audience (AGENT/PUBLIC/BOTH), url, tags
+- `TrainingProgress` — Per-agent completion record linked to TrainingContent
+- `TrainingTrack` — Ordered sequence of required modules for new agent onboarding
+- `TrainingEnrollment` — Tracks which agents are enrolled in which track and their overall % complete
 
 ### Existing Files to Modify
 - `src/providers/property-provider.ts` — Extend Property interface with MLS fields
 - `prisma/schema.prisma` — Add all new models
 - `src/app/dashboard/layout.tsx` — Add new nav items for agent AI tools
 - `src/app/admin/` — Add CRM, campaigns, automation admin pages
-- `package.json` — Add: `ai`, `@ai-sdk/openai`, `resend`, `react-email`, `twilio`, `mapbox-gl`, `inngest`, `@supabase/postgrest-js` (pgvector queries)
+- `package.json` — Add: `ai`, `@ai-sdk/openai`, `resend`, `react-email`, `twilio`, `mapbox-gl`, `inngest`, `@supabase/postgrest-js` (pgvector queries), `@react-pdf/renderer` (CMA PDF export)
 
 ---
 
