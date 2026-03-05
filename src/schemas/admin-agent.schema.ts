@@ -19,6 +19,9 @@ export const adminAgentCreateSchema = z.object({
   languages: z.array(z.string().trim()).default([]),
   designations: z.array(z.string().trim()).default([]),
   active: z.boolean().default(true),
+  emailSignature: z.string().max(500).trim().optional().or(z.literal("")),
+  emailTagline: z.string().max(200).trim().optional().or(z.literal("")),
+  brandColor: z.string().max(7).trim().optional().or(z.literal("")),
 });
 
 export type AdminAgentCreateInput = z.infer<typeof adminAgentCreateSchema>;

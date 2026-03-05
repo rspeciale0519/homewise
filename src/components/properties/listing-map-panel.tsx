@@ -2,14 +2,16 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import type { Property } from "@/providers/property-provider";
 import { formatPrice } from "@/lib/format";
 
 interface ListingMapPanelProps {
   properties: Property[];
   onBoundsChange: (bounds: { north: number; south: number; east: number; west: number }) => void;
-  onPolygonDraw?: (polygon: [number, number][]) => void;
+  onPolygonDraw?: (polygon: [number, number][] | null) => void;
   center?: [number, number];
   zoom?: number;
 }
@@ -20,13 +22,19 @@ const DEFAULT_ZOOM = 9;
 export function ListingMapPanel({
   properties,
   onBoundsChange,
+  onPolygonDraw,
   center = CENTRAL_FL_CENTER,
   zoom = DEFAULT_ZOOM,
 }: ListingMapPanelProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const drawRef = useRef<MapboxDraw | null>(null);
   const [showSearchArea, setShowSearchArea] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasPolygon, setHasPolygon] = useState(false);
   const boundsRef = useRef<{ north: number; south: number; east: number; west: number } | null>(null);
+  const onPolygonDrawRef = useRef(onPolygonDraw);
+  onPolygonDrawRef.current = onPolygonDraw;
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -36,6 +44,24 @@ export function ListingMapPanel({
       setShowSearchArea(false);
     }
   }, [onBoundsChange]);
+
+  const handleStartDraw = useCallback(() => {
+    const draw = drawRef.current;
+    if (!draw) return;
+    draw.deleteAll();
+    draw.changeMode("draw_polygon");
+    setIsDrawing(true);
+    setHasPolygon(false);
+  }, []);
+
+  const handleClearPolygon = useCallback(() => {
+    const draw = drawRef.current;
+    if (!draw) return;
+    draw.deleteAll();
+    setHasPolygon(false);
+    setIsDrawing(false);
+    onPolygonDrawRef.current?.(null);
+  }, []);
 
   useEffect(() => {
     if (!token || !mapContainer.current || mapRef.current) return;
@@ -50,6 +76,76 @@ export function ListingMapPanel({
     });
 
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    // Add draw control for polygon search
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {},
+      defaultMode: "simple_select",
+      styles: [
+        {
+          id: "gl-draw-polygon-fill",
+          type: "fill",
+          filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
+          paint: { "fill-color": "#1e3a5f", "fill-outline-color": "#1e3a5f", "fill-opacity": 0.15 },
+        },
+        {
+          id: "gl-draw-polygon-stroke",
+          type: "line",
+          filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": "#1e3a5f", "line-dasharray": [0.2, 2], "line-width": 2 },
+        },
+        {
+          id: "gl-draw-polygon-midpoint",
+          type: "circle",
+          filter: ["all", ["==", "$type", "Point"], ["==", "meta", "midpoint"]],
+          paint: { "circle-radius": 3, "circle-color": "#1e3a5f" },
+        },
+        {
+          id: "gl-draw-point",
+          type: "circle",
+          filter: ["all", ["==", "$type", "Point"], ["==", "meta", "vertex"]],
+          paint: { "circle-radius": 5, "circle-color": "#ffffff", "circle-stroke-color": "#1e3a5f", "circle-stroke-width": 2 },
+        },
+        {
+          id: "gl-draw-line",
+          type: "line",
+          filter: ["all", ["==", "$type", "LineString"], ["!=", "mode", "static"]],
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": "#1e3a5f", "line-dasharray": [0.2, 2], "line-width": 2 },
+        },
+      ],
+    });
+
+    map.addControl(draw, "top-left");
+    drawRef.current = draw;
+
+    map.on("draw.create", () => {
+      const data = draw.getAll();
+      const feature = data.features[0];
+      if (feature && feature.geometry.type === "Polygon") {
+        const coords = feature.geometry.coordinates[0] as [number, number][];
+        setIsDrawing(false);
+        setHasPolygon(true);
+        onPolygonDrawRef.current?.(coords);
+      }
+    });
+
+    map.on("draw.update", () => {
+      const data = draw.getAll();
+      const feature = data.features[0];
+      if (feature && feature.geometry.type === "Polygon") {
+        const coords = feature.geometry.coordinates[0] as [number, number][];
+        onPolygonDrawRef.current?.(coords);
+      }
+    });
+
+    map.on("draw.delete", () => {
+      setHasPolygon(false);
+      setIsDrawing(false);
+      onPolygonDrawRef.current?.(null);
+    });
 
     map.on("load", () => {
       map.addSource("listings", {
@@ -157,6 +253,7 @@ export function ListingMapPanel({
     return () => {
       map.remove();
       mapRef.current = null;
+      drawRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -187,7 +284,40 @@ export function ListingMapPanel({
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
-      {showSearchArea && (
+
+      {/* Draw polygon / clear controls */}
+      <div className="absolute top-4 right-14 z-10 flex gap-2">
+        {!isDrawing && !hasPolygon && (
+          <button
+            onClick={handleStartDraw}
+            className="px-3 py-2 bg-white rounded-lg shadow-lg border border-slate-200 text-xs font-semibold text-navy-700 hover:bg-navy-50 transition-colors flex items-center gap-1.5"
+            title="Draw area to search"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Draw
+          </button>
+        )}
+        {isDrawing && (
+          <span className="px-3 py-2 bg-navy-600 rounded-lg shadow-lg text-xs font-semibold text-white animate-pulse">
+            Click to draw boundary...
+          </span>
+        )}
+        {hasPolygon && (
+          <button
+            onClick={handleClearPolygon}
+            className="px-3 py-2 bg-white rounded-lg shadow-lg border border-crimson-200 text-xs font-semibold text-crimson-600 hover:bg-crimson-50 transition-colors flex items-center gap-1.5"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear area
+          </button>
+        )}
+      </div>
+
+      {showSearchArea && !hasPolygon && (
         <button
           onClick={handleSearchArea}
           className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-white rounded-full shadow-lg border border-slate-200 text-sm font-semibold text-navy-700 hover:bg-navy-50 transition-colors"

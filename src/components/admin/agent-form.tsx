@@ -15,6 +15,9 @@ interface AgentFormData {
   languages: string[];
   designations: string[];
   active: boolean;
+  emailSignature: string;
+  emailTagline: string;
+  brandColor: string;
 }
 
 interface AgentFormProps {
@@ -33,29 +36,19 @@ const defaultData: AgentFormData = {
   languages: [],
   designations: [],
   active: true,
+  emailSignature: "",
+  emailTagline: "",
+  brandColor: "",
 };
 
-const COMMON_LANGUAGES = [
-  "English",
-  "Spanish",
-  "Portuguese",
-  "French",
-  "Mandarin",
-  "Haitian Creole",
-  "Vietnamese",
-  "Arabic",
+const BRAND_COLORS = [
+  "#1e3a5f", "#0f766e", "#7c3aed", "#dc2626",
+  "#ea580c", "#ca8a04", "#16a34a", "#2563eb",
 ];
 
-const COMMON_DESIGNATIONS = [
-  "CRS",
-  "GRI",
-  "ABR",
-  "SRS",
-  "SRES",
-  "CIPS",
-  "MRP",
-  "PSA",
-];
+const COMMON_LANGUAGES = ["English", "Spanish", "Portuguese", "French", "Mandarin", "Haitian Creole", "Vietnamese", "Arabic"];
+
+const COMMON_DESIGNATIONS = ["CRS", "GRI", "ABR", "SRS", "SRES", "CIPS", "MRP", "PSA"];
 
 function formatPhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
@@ -340,6 +333,62 @@ export function AgentForm({ mode, agentId, initialData }: AgentFormProps) {
               className={inputCls}
               placeholder="Type and press Enter to add"
             />
+          </div>
+
+          {/* Email Branding */}
+          <div className="border-t border-slate-100 pt-5">
+            <label className={labelCls}>Email Branding</label>
+            <p className="text-xs text-slate-400 mb-3">Personalize automated emails sent on this agent&apos;s behalf</p>
+            <div className="space-y-3"><div>
+                <label className="text-xs text-slate-500">Email Tagline</label>
+                <input
+                  type="text"
+                  value={form.emailTagline}
+                  onChange={(e) => updateField("emailTagline", e.target.value)}
+                  className={inputCls}
+                  placeholder="Your Dream Home Awaits"
+                  maxLength={200}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Email Signature</label>
+                <textarea
+                  value={form.emailSignature}
+                  onChange={(e) => updateField("emailSignature", e.target.value)}
+                  className={cn(inputCls, "resize-y")}
+                  rows={3}
+                  placeholder="Best regards,&#10;Jane Smith | Homewise FL&#10;(407) 555-0100"
+                  maxLength={500}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1.5 block">Brand Color</label>
+                <div className="flex items-center gap-2">
+                  {BRAND_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => updateField("brandColor", c)}
+                      className={`h-7 w-7 rounded-full border-2 transition-transform ${
+                        form.brandColor === c ? "border-navy-600 scale-110" : "border-transparent"
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={form.brandColor || "#1e3a5f"}
+                    onChange={(e) => updateField("brandColor", e.target.value)}
+                    className="h-7 w-7 rounded cursor-pointer border-0 p-0"
+                  />
+                  {form.brandColor && (
+                    <button type="button" onClick={() => updateField("brandColor", "")} className="text-xs text-slate-400 hover:text-slate-600">
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Active toggle */}

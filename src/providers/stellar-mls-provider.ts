@@ -87,6 +87,15 @@ export class StellarMlsProvider implements PropertyProvider {
       where.openHouseSchedule = { not: Prisma.JsonNull };
     }
 
+    // Polygon search: point-in-polygon test
+    if (filters.polygon && filters.polygon.length >= 3) {
+      const polyIds = await filterByPolygon(filters.polygon);
+      if (polyIds.length === 0) {
+        return { properties: [], total: 0, totalPages: 0, currentPage: page };
+      }
+      where.id = { in: polyIds };
+    }
+
     const orderBy = buildOrderBy(sortBy);
 
     const [listings, total] = await Promise.all([
@@ -112,6 +121,33 @@ export class StellarMlsProvider implements PropertyProvider {
     if (!listing) return null;
     return mapListingToProperty(listing);
   }
+}
+
+async function filterByPolygon(polygon: [number, number][]): Promise<string[]> {
+  // Fetch all listings with coordinates, then filter in-memory using ray-casting
+  const candidates = await prisma.listing.findMany({
+    where: { latitude: { not: null }, longitude: { not: null } },
+    select: { id: true, latitude: true, longitude: true },
+  });
+
+  return candidates
+    .filter((c) => pointInPolygon([c.longitude!, c.latitude!], polygon))
+    .map((c) => c.id);
+}
+
+function pointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
+  const [x, y] = point;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const pi = polygon[i]!;
+    const pj = polygon[j]!;
+    const [xi, yi] = pi;
+    const [xj, yj] = pj;
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
 }
 
 function buildOrderBy(sortBy: string): Prisma.ListingOrderByWithRelationInput {

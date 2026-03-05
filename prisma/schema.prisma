@@ -25,11 +25,15 @@ model Agent {
   inviteUsed       Boolean       @default(false)
   mlsAgentId       String?
   mlsOfficeId      String?
+  emailSignature   String?
+  emailTagline     String?
+  brandColor       String?
   userId           String?       @unique
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   preferredByUsers UserProfile[]
   user             UserProfile?  @relation("AgentUser", fields: [userId], references: [id])
+  contacts         Contact[]
 
   @@index([lastName])
   @@index([active])
@@ -150,6 +154,9 @@ model SavedSearch {
   userId       String
   name         String
   filters      Json
+  polygon      Json?
+  matchingMode String      @default("balanced")
+  rigidity     Int         @default(30)
   alertEnabled Boolean     @default(true)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -231,6 +238,8 @@ model Listing {
   featured            Boolean  @default(false)
   virtualTourUrl      String?
   remarks             String?
+  embedding           Float[]
+  embeddingText       String?
   mlsLastModified     DateTime?
   syncedAt            DateTime @default(now())
   createdAt           DateTime @default(now())
@@ -283,4 +292,539 @@ model SyncState {
   metadata     Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// =============================================================================
+// CRM — Contact / Lead Management (B5)
+// =============================================================================
+
+model Contact {
+  id              String            @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String            @unique
+  phone           String?
+  source          String            @default("website")
+  type            String            @default("buyer")
+  stage           String            @default("new_lead")
+  score           Int               @default(0)
+  assignedAgentId String?
+  notes           String?
+  birthday        DateTime?
+  closeAnniversary DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  assignedAgent   Agent?            @relation(fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  tags            ContactTag[]
+  activities      ActivityEvent[]
+  tasks           Task[]
+  transactions    Transaction[]
+  enrollments     CampaignEnrollment[]
+  emailEvents     EmailEvent[]
+
+  @@index([email])
+  @@index([assignedAgentId])
+  @@index([stage])
+  @@index([source])
+  @@index([type])
+  @@index([score])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// Tags & Segmentation (B8)
+// =============================================================================
+
+model Tag {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  color     String       @default("#6366f1")
+  createdAt DateTime     @default(now())
+
+  contacts  ContactTag[]
+}
+
+model ContactTag {
+  id        String   @id @default(cuid())
+  contactId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, tagId])
+  @@index([contactId])
+  @@index([tagId])
+}
+
+// =============================================================================
+// Activity Timeline (B6)
+// =============================================================================
+
+model ActivityEvent {
+  id          String   @id @default(cuid())
+  contactId   String
+  type        String
+  title       String
+  description String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// Tasks & Reminders (B9)
+// =============================================================================
+
+model Task {
+  id            String    @id @default(cuid())
+  contactId     String?
+  assignedTo    String?
+  title         String
+  description   String?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  priority      String    @default("medium")
+  calendarEventId String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  contact       Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([contactId])
+  @@index([assignedTo])
+  @@index([dueDate])
+  @@index([completedAt])
+}
+
+// =============================================================================
+// Transaction Tracker (B7)
+// =============================================================================
+
+model Transaction {
+  id              String                @id @default(cuid())
+  contactId       String
+  address         String
+  purchasePrice   Float
+  closingDate     DateTime?
+  status          String                @default("active")
+  propertyId      String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  contact         Contact               @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  milestones      TransactionMilestone[]
+  documents       TransactionDocument[]
+
+  @@index([contactId])
+  @@index([status])
+  @@index([closingDate])
+}
+
+model TransactionMilestone {
+  id            String       @id @default(cuid())
+  transactionId String
+  name          String
+  targetDate    DateTime?
+  completedAt   DateTime?
+  notes         String?
+  sortOrder     Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+}
+
+model TransactionDocument {
+  id            String       @id @default(cuid())
+  transactionId String
+  name          String
+  type          String
+  url           String?
+  uploadedAt    DateTime?
+  required      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+}
+
+// =============================================================================
+// Lead Routing (B10 / I1)
+// =============================================================================
+
+model LeadRoutingRule {
+  id            String   @id @default(cuid())
+  name          String
+  agentId       String
+  conditions    Json
+  priority      Int      @default(0)
+  roundRobin    Boolean  @default(false)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([active])
+  @@index([priority])
+}
+
+// =============================================================================
+// Agent Training Hub (K1)
+// =============================================================================
+
+model TrainingContent {
+  id          String              @id @default(cuid())
+  title       String
+  description String?
+  category    String
+  audience    String              @default("agent")
+  type        String              @default("video")
+  url         String?
+  duration    Int?
+  tags        String[]
+  sortOrder   Int                 @default(0)
+  published   Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  progress    TrainingProgress[]
+  trackItems  TrainingTrackItem[]
+
+  @@index([category])
+  @@index([audience])
+  @@index([published])
+}
+
+model TrainingTrack {
+  id            String                @id @default(cuid())
+  name          String
+  description   String?
+  required      Boolean               @default(false)
+  autoEnroll    Boolean               @default(false)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  items         TrainingTrackItem[]
+  enrollments   TrainingEnrollment[]
+}
+
+model TrainingTrackItem {
+  id              String          @id @default(cuid())
+  trackId         String
+  contentId       String
+  sortOrder       Int             @default(0)
+
+  track           TrainingTrack   @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  content         TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, contentId])
+  @@index([trackId])
+}
+
+model TrainingEnrollment {
+  id          String        @id @default(cuid())
+  userId      String
+  trackId     String
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  track       TrainingTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackId])
+  @@index([userId])
+}
+
+model TrainingProgress {
+  id          String          @id @default(cuid())
+  userId      String
+  contentId   String
+  completed   Boolean         @default(false)
+  completedAt DateTime?
+  timeSpent   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  content     TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentId])
+  @@index([userId])
+}
+
+// =============================================================================
+// Visitor Registration Wall (B1)
+// =============================================================================
+
+model RegistrationConfig {
+  id             String  @id @default(cuid())
+  viewThreshold  Int     @default(5)
+  mode           String  @default("soft")
+  enabled        Boolean @default(true)
+  abTestVariant  String?
+}
+
+// =============================================================================
+// Marketing Automation — Campaigns (C1)
+// =============================================================================
+
+model Campaign {
+  id            String               @id @default(cuid())
+  name          String
+  type          String               @default("drip")
+  status        String               @default("draft")
+  triggerSource String?
+  triggerType   String?
+  triggerStage  String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  emails        CampaignEmail[]
+  enrollments   CampaignEnrollment[]
+
+  @@index([status])
+  @@index([type])
+}
+
+model CampaignEmail {
+  id            String   @id @default(cuid())
+  campaignId    String
+  subject       String
+  body          String
+  delayDays     Int      @default(0)
+  delayHours    Int      @default(0)
+  sortOrder     Int      @default(0)
+  channel       String   @default("email")
+  smsBody       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  variants      SubjectLineVariant[]
+
+  @@index([campaignId])
+}
+
+model CampaignEnrollment {
+  id            String    @id @default(cuid())
+  campaignId    String
+  contactId     String
+  currentStep   Int       @default(0)
+  status        String    @default("active")
+  nextSendAt    DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact       Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, contactId])
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([status])
+  @@index([nextSendAt])
+}
+
+// =============================================================================
+// Email Tracking (C8)
+// =============================================================================
+
+model EmailEvent {
+  id            String   @id @default(cuid())
+  contactId     String?
+  emailAddress  String
+  messageId     String?
+  type          String
+  subject       String?
+  campaignId    String?
+  variant       String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  contact       Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([contactId])
+  @@index([emailAddress])
+  @@index([messageId])
+  @@index([type])
+  @@index([campaignId])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// AI Email Subject Line A/B Testing (G2)
+// =============================================================================
+
+model SubjectLineVariant {
+  id              String        @id @default(cuid())
+  campaignEmailId String
+  variant         String
+  subject         String
+  sendCount       Int           @default(0)
+  openCount       Int           @default(0)
+  clickCount      Int           @default(0)
+  createdAt       DateTime      @default(now())
+
+  campaignEmail   CampaignEmail @relation(fields: [campaignEmailId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignEmailId, variant])
+  @@index([campaignEmailId])
+}
+
+// =============================================================================
+// Behavioral Trigger Automation (C5)
+// =============================================================================
+
+model AutomationRule {
+  id          String   @id @default(cuid())
+  name        String
+  triggerType String
+  conditions  Json
+  actionType  String
+  actionData  Json
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([triggerType])
+  @@index([active])
+}
+
+// =============================================================================
+// Broadcast Emails (C7)
+// =============================================================================
+
+model Broadcast {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  body        String
+  audienceTag String?
+  audienceIds String[]
+  status      String   @default("draft")
+  sentAt      DateTime?
+  sentCount   Int      @default(0)
+  openCount   Int      @default(0)
+  clickCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+}
+
+// =============================================================================
+// Chatbot Engine (J)
+// =============================================================================
+
+model Conversation {
+  id          String        @id @default(cuid())
+  sessionId   String
+  userId      String?
+  agentId     String?
+  config      String        @default("public")
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  messages    ChatMessage[]
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([agentId])
+  @@index([config])
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  toolCalls      Json?
+  toolResults    Json?
+  tokenCount     Int          @default(0)
+  createdAt      DateTime     @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// AI Usage Tracking
+// =============================================================================
+
+model AiUsageLog {
+  id          String   @id @default(cuid())
+  feature     String
+  userId      String?
+  model       String
+  inputTokens  Int     @default(0)
+  outputTokens Int     @default(0)
+  cached      Boolean  @default(false)
+  latencyMs   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([feature])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// AI SEO Content (G4)
+// =============================================================================
+
+model SeoContent {
+  id          String    @id @default(cuid())
+  type        String
+  slug        String    @unique
+  title       String
+  body        String
+  metaTitle   String?
+  metaDesc    String?
+  city        String?
+  neighborhood String?
+  status      String    @default("draft")
+  publishedAt DateTime?
+  refreshedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([city])
+}
+
+// =============================================================================
+// Market Statistics (D1)
+// =============================================================================
+
+model MarketStats {
+  id              String   @id @default(cuid())
+  area            String
+  areaType        String   @default("city")
+  period          String
+  activeCount     Int      @default(0)
+  soldCount       Int      @default(0)
+  medianPrice     Float    @default(0)
+  avgPrice        Float    @default(0)
+  saleToListRatio Float    @default(0)
+  avgDom          Int      @default(0)
+  monthsOfInventory Float  @default(0)
+  newListings     Int      @default(0)
+  pricePerSqft    Float    @default(0)
+  createdAt       DateTime @default(now())
+
+  @@unique([area, areaType, period])
+  @@index([area])
+  @@index([period])
 }

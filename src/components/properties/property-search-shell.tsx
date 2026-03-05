@@ -32,6 +32,27 @@ export function PropertySearchShell({ properties, children }: PropertySearchShel
       params.set("south", bounds.south.toFixed(6));
       params.set("east", bounds.east.toFixed(6));
       params.set("west", bounds.west.toFixed(6));
+      params.delete("polygon");
+      params.delete("page");
+      startTransition(() => {
+        router.push(`${pathname}?${params.toString()}`);
+      });
+    },
+    [router, pathname, searchParams]
+  );
+
+  const handlePolygonDraw = useCallback(
+    (polygon: [number, number][] | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (polygon) {
+        params.set("polygon", JSON.stringify(polygon));
+        params.delete("north");
+        params.delete("south");
+        params.delete("east");
+        params.delete("west");
+      } else {
+        params.delete("polygon");
+      }
       params.delete("page");
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`);
@@ -72,6 +93,7 @@ export function PropertySearchShell({ properties, children }: PropertySearchShel
             <ListingMapPanel
               properties={properties}
               onBoundsChange={handleBoundsChange}
+              onPolygonDraw={handlePolygonDraw}
             />
           </div>
         )}

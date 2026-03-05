@@ -16,7 +16,12 @@ const statusVariant: Record<string, "success" | "crimson" | "gold" | "default"> 
   "For Sale": "success",
   "New Listing": "crimson",
   "Pending": "gold",
+  "Under Contract": "gold",
   "Sold": "default",
+};
+
+const statusLabel: Record<string, string> = {
+  "Pending": "Under Contract",
 };
 
 export function ListingCard({ property, isFavorited = false, showFavorite = true }: ListingCardProps) {
@@ -42,7 +47,7 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
             size="sm"
             className="shadow-sm backdrop-blur-sm"
           >
-            {property.status}
+            {statusLabel[property.status] ?? property.status}
           </Badge>
         </div>
 

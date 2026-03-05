@@ -49,6 +49,9 @@ export default async function AdminEditAgentPage({
                 languages: agent.languages,
                 designations: agent.designations,
                 active: agent.active,
+                emailSignature: agent.emailSignature ?? "",
+                emailTagline: agent.emailTagline ?? "",
+                brandColor: agent.brandColor ?? "",
               }}
             />
           </div>

@@ -1,0 +1,53 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+
+const createSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  category: z.string().min(1),
+  audience: z.enum(["agent", "public", "both"]).optional(),
+  type: z.enum(["video", "document", "quiz", "article"]).optional(),
+  url: z.string().url().optional(),
+  duration: z.number().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export async function GET(request: NextRequest) {
+  const category = request.nextUrl.searchParams.get("category") ?? undefined;
+  const audience = request.nextUrl.searchParams.get("audience") ?? undefined;
+
+  const where: Record<string, unknown> = { published: true };
+  if (category) where.category = category;
+  if (audience) where.audience = { in: [audience, "both"] };
+
+  const content = await prisma.trainingContent.findMany({
+    where,
+    orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+  });
+
+  return NextResponse.json(content);
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const parsed = createSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+  }
+
+  const content = await prisma.trainingContent.create({
+    data: {
+      title: parsed.data.title,
+      description: parsed.data.description,
+      category: parsed.data.category,
+      audience: parsed.data.audience ?? "agent",
+      type: parsed.data.type ?? "video",
+      url: parsed.data.url,
+      duration: parsed.data.duration,
+      tags: parsed.data.tags ?? [],
+    },
+  });
+
+  return NextResponse.json(content, { status: 201 });
+}
