@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const listingInsightsSchema = z.object({
   mlsId: z.string().min(1, "mlsId is required"),
 });

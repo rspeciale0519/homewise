@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const cmaSchema = z.object({
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),

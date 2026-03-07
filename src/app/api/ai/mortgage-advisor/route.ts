@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { aiComplete } from "@/lib/ai";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const mortgageAdvisorSchema = z.object({
   annualIncome: z.number().positive().optional(),
   monthlyDebt: z.number().min(0).optional(),

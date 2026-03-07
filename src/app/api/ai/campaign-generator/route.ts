@@ -3,6 +3,8 @@ import { requireAuthApi, isError } from "@/lib/admin-api";
 import { aiComplete } from "@/lib/ai";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const campaignGeneratorSchema = z.object({
   campaignType: z.string().min(1, "campaignType is required"),
   audience: z.string().min(1, "audience is required"),

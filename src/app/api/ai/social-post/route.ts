@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const socialPostSchema = z.object({
   type: z.enum(["listing", "market_update", "engagement"]),
   mlsId: z.string().optional(),

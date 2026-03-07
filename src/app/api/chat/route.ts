@@ -3,6 +3,8 @@ import { requireAuthApi, isError } from "@/lib/admin-api";
 import { createPublicChatbot } from "@/lib/chatbot/public-site";
 import { createAgentChatbot } from "@/lib/chatbot/agent-website";
 import { createDashboardChatbot } from "@/lib/chatbot/dashboard";
+
+export const maxDuration = 60;
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
