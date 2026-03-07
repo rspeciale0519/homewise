@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/components/admin/admin-toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { adminFetch } from "@/lib/admin-fetch";
@@ -30,7 +30,7 @@ export function TagsView() {
   const [editColor, setEditColor] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<TagItem | null>(null);
 
-  const fetchTags = useCallback(async () => {
+  const refreshTags = async () => {
     setLoading(true);
     try {
       const data = await adminFetch<TagItem[]>("/api/admin/tags");
@@ -39,9 +39,23 @@ export function TagsView() {
       toast((err as Error).message, "error");
     }
     setLoading(false);
-  }, [toast]);
+  };
 
-  useEffect(() => { fetchTags(); }, [fetchTags]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const data = await adminFetch<TagItem[]>("/api/admin/tags");
+        if (!cancelled) setTags(data);
+      } catch (err) {
+        if (!cancelled) toast((err as Error).message, "error");
+      }
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [toast]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +67,7 @@ export function TagsView() {
       });
       toast("Tag created", "success");
       setNewName("");
-      fetchTags();
+      refreshTags();
     } catch (err) {
       toast((err as Error).message, "error");
     }
@@ -67,7 +81,7 @@ export function TagsView() {
       });
       toast("Tag updated", "success");
       setEditingId(null);
-      fetchTags();
+      refreshTags();
     } catch (err) {
       toast((err as Error).message, "error");
     }
@@ -82,7 +96,7 @@ export function TagsView() {
       });
       toast("Tag deleted", "success");
       setDeleteTarget(null);
-      fetchTags();
+      refreshTags();
     } catch (err) {
       toast((err as Error).message, "error");
     }

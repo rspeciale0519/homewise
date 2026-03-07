@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import { TiptapEditor } from "@/components/admin/tiptap-editor";
@@ -30,7 +30,7 @@ export function SeoContentView() {
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState<"visual" | "source">("visual");
 
-  const fetchData = useCallback(async () => {
+  const refreshData = async () => {
     setLoading(true);
     try {
       const url = filter === "all" ? "/api/admin/seo-content" : `/api/admin/seo-content?status=${filter}`;
@@ -40,9 +40,24 @@ export function SeoContentView() {
       toast((err as Error).message, "error");
     }
     setLoading(false);
-  }, [filter, toast]);
+  };
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const url = filter === "all" ? "/api/admin/seo-content" : `/api/admin/seo-content?status=${filter}`;
+        const data = await adminFetch<SeoItem[]>(url);
+        if (!cancelled) setItems(data);
+      } catch (err) {
+        if (!cancelled) toast((err as Error).message, "error");
+      }
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [filter, toast]);
 
   const handleStatusChange = async (id: string, status: string) => {
     try {
@@ -51,7 +66,7 @@ export function SeoContentView() {
         body: JSON.stringify({ id, status }),
       });
       toast(status === "published" ? "Content published" : "Content unpublished", "success");
-      fetchData();
+      refreshData();
     } catch (err) {
       toast((err as Error).message, "error");
     }
@@ -73,7 +88,7 @@ export function SeoContentView() {
       });
       toast("Content saved", "success");
       setEditing(null);
-      fetchData();
+      refreshData();
     } catch (err) {
       toast((err as Error).message, "error");
     }

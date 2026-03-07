@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
-import { pickVariant } from "@/lib/email/ab-testing";
 
 export async function GET() {
   const auth = await requireAdminApi();

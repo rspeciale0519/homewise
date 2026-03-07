@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/components/admin/admin-toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { adminFetch } from "@/lib/admin-fetch";
@@ -40,7 +40,7 @@ export function LeadRoutingView() {
   const [showForm, setShowForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<RoutingRule | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const refreshData = async () => {
     setLoading(true);
     try {
       const result = await adminFetch<RoutingData>("/api/admin/lead-routing");
@@ -49,9 +49,23 @@ export function LeadRoutingView() {
       toast((err as Error).message, "error");
     }
     setLoading(false);
-  }, [toast]);
+  };
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const result = await adminFetch<RoutingData>("/api/admin/lead-routing");
+        if (!cancelled) setData(result);
+      } catch (err) {
+        if (!cancelled) toast((err as Error).message, "error");
+      }
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [toast]);
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -72,7 +86,7 @@ export function LeadRoutingView() {
       });
       toast("Rule created", "success");
       setShowForm(false);
-      fetchData();
+      refreshData();
     } catch (err) {
       toast((err as Error).message, "error");
     }
@@ -84,7 +98,7 @@ export function LeadRoutingView() {
         method: "PATCH",
         body: JSON.stringify({ id, active: !active }),
       });
-      fetchData();
+      refreshData();
     } catch (err) {
       toast((err as Error).message, "error");
     }
@@ -99,7 +113,7 @@ export function LeadRoutingView() {
       });
       toast("Rule deleted", "success");
       setDeleteTarget(null);
-      fetchData();
+      refreshData();
     } catch (err) {
       toast((err as Error).message, "error");
     }

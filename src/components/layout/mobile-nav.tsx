@@ -27,7 +27,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
-      setExpandedItem(null);
+      requestAnimationFrame(() => setExpandedItem(null));
     }
     return () => { document.body.style.overflow = ""; };
   }, [open]);

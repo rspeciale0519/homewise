@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 
 interface AgentMetrics {
   agentId: string;
@@ -49,34 +50,44 @@ function formatDate(d: Date): string {
   return d.toISOString().split("T")[0]!;
 }
 
+function daysAgo(days: number): string {
+  return formatDate(new Date(Date.now() - days * 86400000));
+}
+
 function thisYearStart(): string {
   return `${new Date().getFullYear()}-01-01`;
 }
 
+const INITIAL_FROM = daysAgo(30);
+const INITIAL_TO = daysAgo(0);
+
 export function TeamPerformanceView() {
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [from, setFrom] = useState(formatDate(new Date(Date.now() - 30 * 86400000)));
-  const [to, setTo] = useState(formatDate(new Date()));
+  const [from, setFrom] = useState(INITIAL_FROM);
+  const [to, setTo] = useState(INITIAL_TO);
   const [sortBy, setSortBy] = useState<SortKey>("closings");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const res = await fetch(`/api/admin/team-performance?from=${from}&to=${to}`);
-    if (res.ok) setData(await res.json());
-    setLoading(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      const res = await fetch(`/api/admin/team-performance?from=${from}&to=${to}`);
+      if (!cancelled && res.ok) setData(await res.json());
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
   }, [from, to]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handlePreset = (days: number) => {
     if (days === -1) {
       setFrom(thisYearStart());
     } else {
-      setFrom(formatDate(new Date(Date.now() - days * 86400000)));
+      setFrom(daysAgo(days));
     }
-    setTo(formatDate(new Date()));
+    setTo(daysAgo(0));
   };
 
   const handleSort = (key: SortKey) => {
@@ -277,7 +288,7 @@ function AgentAvatar({ agent }: { agent: AgentMetrics }) {
     <div className="flex items-center gap-3">
       <div className="h-8 w-8 rounded-full bg-navy-100 flex items-center justify-center text-xs font-bold text-navy-600 overflow-hidden shrink-0">
         {agent.photoUrl ? (
-          <img src={agent.photoUrl} alt="" className="h-full w-full object-cover" />
+          <Image src={agent.photoUrl} alt="" width={32} height={32} className="h-full w-full object-cover" />
         ) : (
           `${agent.firstName[0]}${agent.lastName[0]}`
         )}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { SITE_NAME, PHONE, FAX, EMAIL, ADDRESS, SERVICE_AREAS } from "@/lib/constants";
+import { SITE_NAME, PHONE, EMAIL, ADDRESS, SERVICE_AREAS } from "@/lib/constants";
 import { SocialLinks } from "@/components/shared/social-links";
 import { Container } from "@/components/ui/container";
 

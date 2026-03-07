@@ -83,7 +83,6 @@ export async function aiComplete({
 }
 
 export async function aiStream({
-  feature,
   systemPrompt,
   userMessage,
   model = "claude-sonnet-4-20250514",

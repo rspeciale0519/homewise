@@ -130,7 +130,7 @@
 - [x] Wire up behavioral automation dispatch via Inngest
 
 ## Phase 9: Platform Completion — ESLint Migration & Code Quality
-- [ ] Create eslint.config.mjs flat config (ESLint 9)
-- [ ] Archive .eslintrc.json
-- [ ] Fix all lint errors
-- [ ] Update .env.example with all required environment variables
+- [x] Create eslint.config.mjs flat config (ESLint 9)
+- [x] Archive .eslintrc.json
+- [x] Fix all lint errors
+- [x] Update .env.example with all required environment variables

@@ -1,6 +1,6 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
+import { sendEmail, personalizeTemplate } from "@/lib/email";
 import { listingAlertEmail } from "@/lib/email/templates";
 
 export const dailyListingAlerts = inngest.createFunction(

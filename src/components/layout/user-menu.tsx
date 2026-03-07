@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSupabase } from "@/components/providers/supabase-provider";
-import { cn } from "@/lib/utils";
 
 const MENU_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },

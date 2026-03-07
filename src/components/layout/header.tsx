@@ -26,8 +26,10 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    setMobileOpen(false);
-    setOpenDropdown(null);
+    requestAnimationFrame(() => {
+      setMobileOpen(false);
+      setOpenDropdown(null);
+    });
   }, [pathname]);
 
   const handleMouseEnter = (label: string) => {
