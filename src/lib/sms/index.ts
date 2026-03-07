@@ -1,9 +1,16 @@
 import twilio from "twilio";
 
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN,
-);
+let _client: ReturnType<typeof twilio> | null = null;
+
+function getClient() {
+  if (!_client) {
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+      throw new Error("Twilio credentials are not configured");
+    }
+    _client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+  }
+  return _client;
+}
 
 const FROM_NUMBER = process.env.TWILIO_PHONE_NUMBER ?? "";
 
@@ -20,7 +27,7 @@ interface SendSmsResult {
 
 export async function sendSms({ to, body, from }: SendSmsInput): Promise<SendSmsResult> {
   try {
-    const message = await client.messages.create({
+    const message = await getClient().messages.create({
       body,
       from: from ?? FROM_NUMBER,
       to,

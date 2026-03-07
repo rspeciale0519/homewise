@@ -41,7 +41,7 @@ describe("homeEvaluationSchema", () => {
   });
 
   it("defaults state to FL", () => {
-    const { state: _, ...noState } = valid;
+    const { state: _state, ...noState } = valid;
     const result = homeEvaluationSchema.safeParse(noState);
     expect(result.success).toBe(true);
     if (result.success) {

@@ -1,10 +1,62 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+const LEAD_SOURCE_COOKIE = "hw_lead_source";
+const LISTING_VIEW_COOKIE = "hw_listing_views";
+const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
+
 export async function proxy(request: NextRequest) {
-  return updateSession(request);
+  const { searchParams, pathname } = request.nextUrl;
+
+  // Auth-protected routes: delegate to Supabase session handler
+  if (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin") ||
+    pathname === "/login" ||
+    pathname === "/register"
+  ) {
+    const response = await updateSession(request);
+
+    // Also apply lead source tracking on auth routes
+    const source = searchParams.get("source");
+    if (source) {
+      response.cookies.set(LEAD_SOURCE_COOKIE, source, {
+        maxAge: COOKIE_MAX_AGE,
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+      });
+    }
+
+    return response;
+  }
+
+  // Public routes: lead source + listing view tracking
+  const response = NextResponse.next();
+
+  const source = searchParams.get("source");
+  if (source) {
+    response.cookies.set(LEAD_SOURCE_COOKIE, source, {
+      maxAge: COOKIE_MAX_AGE,
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    });
+  }
+
+  if (pathname.match(/^\/properties\/[^/]+$/) && !pathname.endsWith("/properties")) {
+    const current = parseInt(request.cookies.get(LISTING_VIEW_COOKIE)?.value ?? "0", 10);
+    response.cookies.set(LISTING_VIEW_COOKIE, String(current + 1), {
+      maxAge: COOKIE_MAX_AGE,
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+    });
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/login", "/register"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
