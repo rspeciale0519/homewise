@@ -14,6 +14,37 @@ function isError(result: AdminApiResult): result is AdminApiError {
 
 export { isError };
 
+export async function requireAuthApi(): Promise<AdminApiResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      ),
+    };
+  }
+
+  const profile = await prisma.userProfile.findUnique({
+    where: { id: user.id },
+  });
+
+  if (!profile) {
+    return {
+      error: NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      ),
+    };
+  }
+
+  return { user, profile };
+}
+
 export async function requireAdminApi(): Promise<AdminApiResult> {
   const supabase = await createClient();
   const {

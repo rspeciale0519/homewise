@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+const listingInsightsSchema = z.object({
+  mlsId: z.string().min(1, "mlsId is required"),
+});
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
-  const mlsId = searchParams.get("mlsId");
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
 
-  if (!mlsId) return NextResponse.json({ error: "mlsId required" }, { status: 400 });
+  const params = Object.fromEntries(request.nextUrl.searchParams.entries());
+  const input = listingInsightsSchema.safeParse(params);
+  if (!input.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: input.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+  const { mlsId } = input.data;
 
   try {
     const listing = await prisma.listing.findUnique({ where: { mlsId } });

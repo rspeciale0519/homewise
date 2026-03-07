@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 
 interface RouteParams {
@@ -6,6 +7,9 @@ interface RouteParams {
 }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const { id } = await params;
 
   const campaign = await prisma.campaign.findUnique({
@@ -32,6 +36,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const { id } = await params;
 
   try {

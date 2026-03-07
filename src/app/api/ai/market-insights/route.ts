@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+const marketInsightsSchema = z.object({
+  city: z.string().min(1).optional(),
+});
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
-  const city = searchParams.get("city") ?? "Orlando";
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
+
+  const params = Object.fromEntries(request.nextUrl.searchParams.entries());
+  const input = marketInsightsSchema.safeParse(params);
+  if (!input.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: input.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+  const city = input.data.city ?? "Orlando";
 
   try {
     const [activeListings, soldListings, avgPrice, medianDom] = await Promise.all([

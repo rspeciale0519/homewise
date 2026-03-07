@@ -1,10 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+const meetingPrepSchema = z.object({
+  contactId: z.string().min(1, "contactId is required"),
+  propertyId: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
+
   try {
-    const body = (await request.json()) as { contactId: string; propertyId?: string };
+    const raw: unknown = await request.json();
+    const input = meetingPrepSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const body = input.data;
 
     const contact = await prisma.contact.findUnique({
       where: { id: body.contactId },

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const stage = request.nextUrl.searchParams.get("stage") ?? undefined;
   const source = request.nextUrl.searchParams.get("source") ?? undefined;
   const type = request.nextUrl.searchParams.get("type") ?? undefined;

@@ -1,16 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+const socialPostSchema = z.object({
+  type: z.enum(["listing", "market_update", "engagement"]),
+  mlsId: z.string().optional(),
+  topic: z.string().optional(),
+  platform: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = (await request.json()) as {
-      type: "listing" | "market_update" | "engagement";
-      mlsId?: string;
-      topic?: string;
-      platform?: string;
-    };
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
 
+  try {
+    const raw: unknown = await request.json();
+    const input = socialPostSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const body = input.data;
     const platform = body.platform ?? "instagram";
     let context = "";
 

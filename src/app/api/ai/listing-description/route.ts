@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+const listingDescriptionSchema = z.object({
+  mlsId: z.string().optional(),
+  details: z.string().optional(),
+}).refine((data) => data.mlsId || data.details, {
+  message: "Provide mlsId or details",
+});
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
+
   try {
-    const body = (await request.json()) as { mlsId?: string; details?: string };
+    const raw: unknown = await request.json();
+    const input = listingDescriptionSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const body = input.data;
 
     let listingInfo = body.details ?? "";
 

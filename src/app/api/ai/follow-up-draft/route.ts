@@ -1,10 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+const followUpSchema = z.object({
+  contactId: z.string().min(1, "contactId is required"),
+  channel: z.enum(["email", "sms"]).optional(),
+});
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
+
   try {
-    const body = (await request.json()) as { contactId: string; channel?: "email" | "sms" };
+    const raw: unknown = await request.json();
+    const input = followUpSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const body = input.data;
     const channel = body.channel ?? "email";
 
     const contact = await prisma.contact.findUnique({

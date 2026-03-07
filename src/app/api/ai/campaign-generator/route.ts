@@ -1,18 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+const campaignGeneratorSchema = z.object({
+  campaignType: z.string().min(1, "campaignType is required"),
+  audience: z.string().min(1, "audience is required"),
+  emailCount: z.number().int().min(1).max(20).optional(),
+});
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
+
   try {
-    const body = (await request.json()) as {
-      campaignType: string;
-      audience: string;
-      emailCount?: number;
-    };
-
-    if (!body.campaignType || !body.audience) {
-      return NextResponse.json({ error: "campaignType and audience required" }, { status: 400 });
+    const raw: unknown = await request.json();
+    const input = campaignGeneratorSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
-
+    const body = input.data;
     const emailCount = body.emailCount ?? 5;
 
     const prompt = `Generate a ${emailCount}-email drip campaign for:

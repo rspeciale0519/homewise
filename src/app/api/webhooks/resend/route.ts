@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Webhook } from "svix";
 import { prisma } from "@/lib/prisma";
+import { inngest } from "@/inngest/client";
 
 interface ResendWebhookPayload {
   type: string;
@@ -13,8 +15,30 @@ interface ResendWebhookPayload {
 }
 
 export async function POST(request: NextRequest) {
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error("[webhook/resend] RESEND_WEBHOOK_SECRET not configured");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+
+  const body = await request.text();
+  const svixId = request.headers.get("svix-id") ?? "";
+  const svixTimestamp = request.headers.get("svix-timestamp") ?? "";
+  const svixSignature = request.headers.get("svix-signature") ?? "";
+
+  const wh = new Webhook(webhookSecret);
+  let payload: ResendWebhookPayload;
   try {
-    const payload = (await request.json()) as ResendWebhookPayload;
+    payload = wh.verify(body, {
+      "svix-id": svixId,
+      "svix-timestamp": svixTimestamp,
+      "svix-signature": svixSignature,
+    }) as ResendWebhookPayload;
+  } catch {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  try {
     const { type, data } = payload;
 
     const emailAddress = data.to?.[0] ?? "";
@@ -69,14 +93,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fire behavioral automation rules for email events
     if (contact && (type === "email.opened" || type === "email.clicked")) {
       const rules = await prisma.automationRule.findMany({
         where: { triggerType: type, active: true },
       });
 
       for (const rule of rules) {
-        console.log(`[automation] would fire rule "${rule.name}" for contact ${contact.id}`);
+        await inngest.send({
+          name: "crm/behavioral.trigger",
+          data: { contactId: contact.id, ruleId: rule.id, triggerType: type },
+        });
       }
     }
 

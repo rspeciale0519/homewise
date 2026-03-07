@@ -119,3 +119,18 @@
 - [x] Add favicon and app icons
 - [x] Performance optimization pass
 - [x] Final verification (type-check, lint, test, build, visual)
+
+## Phase 8: Platform Completion — Security & Auth Hardening
+- [x] Add requireAdminApi() to 14 unprotected admin API routes
+- [x] Create requireAuthApi() helper for non-admin authenticated routes
+- [x] Add auth to 10 AI API routes (mortgage-advisor stays public)
+- [x] Add auth to /api/chat for dashboard and agent configs
+- [x] Add Zod input validation to all 11 AI API routes
+- [x] Add Resend webhook signature verification (svix)
+- [x] Wire up behavioral automation dispatch via Inngest
+
+## Phase 9: Platform Completion — ESLint Migration & Code Quality
+- [ ] Create eslint.config.mjs flat config (ESLint 9)
+- [ ] Archive .eslintrc.json
+- [ ] Fix all lint errors
+- [ ] Update .env.example with all required environment variables

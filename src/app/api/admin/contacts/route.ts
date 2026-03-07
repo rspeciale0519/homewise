@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -28,6 +29,9 @@ const createSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
   const parsed = querySchema.safeParse(params);
   if (!parsed.success) {
@@ -83,6 +87,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const body = await request.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
