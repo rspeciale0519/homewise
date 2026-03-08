@@ -99,14 +99,8 @@ export function TeamPerformanceView() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
-      {/* Header + Controls */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div>
-          <h1 className="font-serif text-xl sm:text-2xl font-bold text-navy-700">Team Performance</h1>
-          <p className="text-sm text-slate-500">Compare agent metrics across your team</p>
-        </div>
-
+    <>
+      <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center gap-1.5">
             {PRESET_RANGES.map((p) => (
@@ -146,7 +140,6 @@ export function TeamPerformanceView() {
 
       {data && !loading && (
         <>
-          {/* Team Totals */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 mb-6 sm:mb-8">
             <TotalCard label="Leads" value={data.totals.leads} />
             <TotalCard label="Contacts" value={data.totals.contacts} />
@@ -158,7 +151,6 @@ export function TeamPerformanceView() {
             <TotalCard label="Opens" value={data.totals.emailOpens} />
           </div>
 
-          {/* Desktop: Table */}
           <div className="hidden lg:block bg-white rounded-2xl border border-slate-200 overflow-hidden mb-8">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -205,7 +197,6 @@ export function TeamPerformanceView() {
             </div>
           </div>
 
-          {/* Mobile/Tablet: Card Layout */}
           <div className="lg:hidden space-y-3 mb-8">
             {sorted.map((agent) => (
               <div key={agent.agentId} className="bg-white rounded-xl border border-slate-200 p-4">
@@ -221,7 +212,6 @@ export function TeamPerformanceView() {
                   <div><span className="text-slate-500 text-xs">Pipeline</span><p className="font-semibold text-navy-700">${(agent.pipelineValue / 1000).toFixed(0)}k</p></div>
                   <div><span className="text-slate-500 text-xs">Avg Score</span><p className="font-semibold text-amber-600">{agent.avgScore}</p></div>
                 </div>
-                {/* Mini bar */}
                 <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-navy-500 rounded-full transition-all"
@@ -238,7 +228,6 @@ export function TeamPerformanceView() {
             </div>
           )}
 
-          {/* Visual Bar Chart Comparison */}
           {sorted.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
               <h2 className="font-semibold text-navy-700 mb-4">Closings by Agent</h2>
@@ -268,7 +257,7 @@ export function TeamPerformanceView() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }
 

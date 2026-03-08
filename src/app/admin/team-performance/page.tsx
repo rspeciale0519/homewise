@@ -8,5 +8,11 @@ export const metadata: Metadata = {
 
 export default async function TeamPerformancePage() {
   await requireAdmin();
-  return <TeamPerformanceView />;
+  return (
+    <div>
+      <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">Team Performance</h1>
+      <p className="text-slate-500 text-sm mb-8">Compare agent metrics across your team</p>
+      <TeamPerformanceView />
+    </div>
+  );
 }

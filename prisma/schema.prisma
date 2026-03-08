@@ -489,6 +489,8 @@ model TrainingContent {
   audience    String              @default("agent")
   type        String              @default("video")
   url         String?
+  body        String?
+  fileKey     String?
   duration    Int?
   tags        String[]
   sortOrder   Int                 @default(0)
@@ -510,6 +512,8 @@ model TrainingTrack {
   description   String?
   required      Boolean               @default(false)
   autoEnroll    Boolean               @default(false)
+  reminderDays  Int?
+  reminderRepeat Int?
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
