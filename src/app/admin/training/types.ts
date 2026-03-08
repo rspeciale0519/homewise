@@ -22,7 +22,9 @@ export interface TrackData {
   description: string | null;
   required: boolean;
   autoEnroll: boolean;
-  items: { content: { id: string; title: string } }[];
+  reminderDays: number | null;
+  reminderRepeat: number | null;
+  items: { content: { id: string; title: string; type: string } }[];
   _count: { enrollments: number };
 }
 

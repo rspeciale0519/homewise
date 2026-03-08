@@ -16,7 +16,7 @@ export default async function TrainingAdminPage() {
   const tracks = await prisma.trainingTrack.findMany({
     include: {
       items: {
-        include: { content: { select: { id: true, title: true } } },
+        include: { content: { select: { id: true, title: true, type: true } } },
         orderBy: { sortOrder: "asc" },
       },
       _count: { select: { enrollments: true } },

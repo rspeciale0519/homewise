@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import { TrainingContentDrawer } from "@/components/admin/training-content-drawer";
+import { TrainingTrackDrawer } from "@/components/admin/training-track-drawer";
+import { TrainingProgressView } from "@/components/admin/training-progress-view";
 import type { TrainingItem, TrackData } from "./types";
 
 interface TrainingAdminViewProps {
@@ -21,6 +23,9 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
   const [audienceFilter, setAudienceFilter] = useState("all");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<TrainingItem | null>(null);
+  const [tracksData, setTracksData] = useState<TrackData[]>(tracks);
+  const [trackDrawerOpen, setTrackDrawerOpen] = useState(false);
+  const [editingTrack, setEditingTrack] = useState<TrackData | null>(null);
 
   const fetchContent = useCallback(async () => {
     setLoading(true);
@@ -31,6 +36,15 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
       toast((err as Error).message, "error");
     }
     setLoading(false);
+  }, [toast]);
+
+  const fetchTracks = useCallback(async () => {
+    try {
+      const data = await adminFetch<TrackData[]>("/api/admin/training/tracks");
+      setTracksData(data);
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
   }, [toast]);
 
   useEffect(() => {
@@ -97,7 +111,7 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
             activeTab === "tracks" ? "bg-navy-600 text-white" : "bg-white border border-slate-200 text-slate-600"
           }`}
         >
-          Tracks ({tracks.length})
+          Tracks ({tracksData.length})
         </button>
         <button
           onClick={() => setActiveTab("progress")}
@@ -113,6 +127,14 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
             className="ml-auto px-4 py-2 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 transition-colors"
           >
             + Add Content
+          </button>
+        )}
+        {activeTab === "tracks" && (
+          <button
+            onClick={() => { setEditingTrack(null); setTrackDrawerOpen(true); }}
+            className="ml-auto px-4 py-2 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 transition-colors"
+          >
+            + Create Track
           </button>
         )}
       </div>
@@ -220,25 +242,29 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
       {/* Tracks tab */}
       {activeTab === "tracks" && (
         <div className="space-y-4">
-          {tracks.map((track) => (
-            <div key={track.id} className="bg-white rounded-xl border border-slate-200 p-6">
+          {tracksData.map((t) => (
+            <div
+              key={t.id}
+              onClick={() => { setEditingTrack(t); setTrackDrawerOpen(true); }}
+              className="bg-white rounded-xl border border-slate-200 p-6 cursor-pointer hover:border-slate-300 transition-colors"
+            >
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-semibold text-navy-700">{track.name}</h3>
-                  {track.description && <p className="text-xs text-slate-500 mt-0.5">{track.description}</p>}
+                  <h3 className="font-semibold text-navy-700">{t.name}</h3>
+                  {t.description && <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>}
                 </div>
                 <div className="flex gap-2">
-                  {track.required && (
+                  {t.required && (
                     <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-crimson-100 text-crimson-700">Required</span>
                   )}
-                  {track.autoEnroll && (
+                  {t.autoEnroll && (
                     <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Auto-enroll</span>
                   )}
-                  <span className="text-xs text-slate-400">{track._count.enrollments} enrolled</span>
+                  <span className="text-xs text-slate-400">{t._count.enrollments} enrolled</span>
                 </div>
               </div>
               <div className="space-y-1">
-                {track.items.map((ti, i) => (
+                {t.items.map((ti, i) => (
                   <div key={ti.content.id} className="flex items-center gap-2 text-sm text-slate-600">
                     <span className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500">{i + 1}</span>
                     {ti.content.title}
@@ -247,18 +273,14 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
               </div>
             </div>
           ))}
-          {tracks.length === 0 && (
+          {tracksData.length === 0 && (
             <p className="text-sm text-slate-400 text-center py-8">No tracks created yet</p>
           )}
         </div>
       )}
 
-      {/* Progress tab placeholder */}
-      {activeTab === "progress" && (
-        <div className="text-center py-12">
-          <p className="text-sm text-slate-400">Progress tracking coming soon</p>
-        </div>
-      )}
+      {/* Progress tab */}
+      {activeTab === "progress" && <TrainingProgressView />}
 
       {/* Training content drawer */}
       <TrainingContentDrawer
@@ -267,6 +289,15 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
         item={editing}
         categories={categories}
         onSaved={fetchContent}
+      />
+
+      {/* Training track drawer */}
+      <TrainingTrackDrawer
+        open={trackDrawerOpen}
+        onClose={() => { setTrackDrawerOpen(false); setEditingTrack(null); }}
+        track={editingTrack}
+        allContent={content}
+        onSaved={fetchTracks}
       />
     </div>
   );
