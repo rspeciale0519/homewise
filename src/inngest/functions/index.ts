@@ -10,6 +10,7 @@ import { monthlyMarketEmail } from "./monthly-market-email";
 import { generateSeoContent } from "./seo-content-generator";
 import { generateListingEmbeddings, generateSingleEmbedding } from "./generate-embeddings";
 import { processBehavioralTrigger } from "./behavioral-triggers";
+import { trainingReminders } from "./training-reminders";
 
 export const ALL_INNGEST_FUNCTIONS = [
   mlsSync,
@@ -26,4 +27,5 @@ export const ALL_INNGEST_FUNCTIONS = [
   generateListingEmbeddings,
   generateSingleEmbedding,
   processBehavioralTrigger,
+  trainingReminders,
 ];

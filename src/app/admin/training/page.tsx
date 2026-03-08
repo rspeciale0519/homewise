@@ -13,30 +13,24 @@ const CATEGORIES = [
 ] as const;
 
 export default async function TrainingAdminPage() {
-  const [content, tracks] = await Promise.all([
-    prisma.trainingContent.findMany({
-      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
-    }),
-    prisma.trainingTrack.findMany({
-      include: {
-        items: {
-          include: { content: { select: { id: true, title: true } } },
-          orderBy: { sortOrder: "asc" },
-        },
-        _count: { select: { enrollments: true } },
+  const tracks = await prisma.trainingTrack.findMany({
+    include: {
+      items: {
+        include: { content: { select: { id: true, title: true, type: true } } },
+        orderBy: { sortOrder: "asc" },
       },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+      _count: { select: { enrollments: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div>
       <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">Training Hub</h1>
       <p className="text-slate-500 text-sm mb-8">
-        {content.length} items across {tracks.length} tracks
+        Manage training content, tracks, and agent progress
       </p>
       <TrainingAdminView
-        content={content}
         tracks={tracks}
         categories={[...CATEGORIES]}
       />

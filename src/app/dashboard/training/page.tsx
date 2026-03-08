@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Training — Dashboard" };
 
 export default async function AgentTrainingPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const content = await prisma.trainingContent.findMany({
     where: { published: true, audience: { in: ["agent", "both"] } },
     orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
@@ -18,6 +25,17 @@ export default async function AgentTrainingPage() {
     },
     orderBy: { createdAt: "asc" },
   });
+
+  const completedIds = user
+    ? (
+        await prisma.trainingProgress.findMany({
+          where: { userId: user.id, completed: true },
+          select: { contentId: true },
+        })
+      ).map((p) => p.contentId)
+    : [];
+
+  const completedSet = new Set(completedIds);
 
   // Group content by category
   const grouped = content.reduce<Record<string, typeof content>>((acc, item) => {
@@ -45,11 +63,25 @@ export default async function AgentTrainingPage() {
                 {track.description && <p className="text-xs text-slate-500 mb-3">{track.description}</p>}
                 <div className="space-y-2">
                   {track.items.map((item, i) => (
-                    <div key={item.content.id} className="flex items-center gap-2 text-sm">
-                      <span className="h-6 w-6 rounded-full bg-navy-50 text-navy-600 flex items-center justify-center text-xs font-semibold">{i + 1}</span>
+                    <Link
+                      key={item.content.id}
+                      href={`/dashboard/training/${item.content.id}`}
+                      className="flex items-center gap-2 text-sm hover:bg-slate-50 rounded-lg p-1 -m-1 transition-colors"
+                    >
+                      {completedSet.has(item.content.id) ? (
+                        <span className="h-6 w-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </span>
+                      ) : (
+                        <span className="h-6 w-6 rounded-full bg-navy-50 text-navy-600 flex items-center justify-center text-xs font-semibold">
+                          {i + 1}
+                        </span>
+                      )}
                       <span className="text-slate-700">{item.content.title}</span>
                       <span className="text-xs text-slate-400 capitalize ml-auto">{item.content.type}</span>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -66,7 +98,11 @@ export default async function AgentTrainingPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((item) => (
-              <div key={item.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
+              <Link
+                key={item.id}
+                href={`/dashboard/training/${item.id}`}
+                className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow block"
+              >
                 <div className="flex items-start gap-3">
                   <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
                     item.type === "video" ? "bg-crimson-100 text-crimson-600" :
@@ -81,8 +117,18 @@ export default async function AgentTrainingPage() {
                       )}
                     </svg>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-navy-700">{item.title}</h3>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-navy-700">{item.title}</h3>
+                      {completedSet.has(item.id) && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Done
+                        </span>
+                      )}
+                    </div>
                     {item.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{item.description}</p>}
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-slate-400 capitalize">{item.type}</span>
@@ -90,7 +136,7 @@ export default async function AgentTrainingPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

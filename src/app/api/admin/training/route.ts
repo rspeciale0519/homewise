@@ -5,10 +5,12 @@ import { z } from "zod";
 const createSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
+  body: z.string().optional(),
   category: z.string().min(1),
   audience: z.enum(["agent", "public", "both"]).optional(),
   type: z.enum(["video", "document", "quiz", "article"]).optional(),
   url: z.string().url().optional(),
+  fileKey: z.string().optional(),
   duration: z.number().optional(),
   tags: z.array(z.string()).optional(),
 });
@@ -16,8 +18,10 @@ const createSchema = z.object({
 export async function GET(request: NextRequest) {
   const category = request.nextUrl.searchParams.get("category") ?? undefined;
   const audience = request.nextUrl.searchParams.get("audience") ?? undefined;
+  const admin = request.nextUrl.searchParams.get("admin") === "true";
 
-  const where: Record<string, unknown> = { published: true };
+  const where: Record<string, unknown> = {};
+  if (!admin) where.published = true;
   if (category) where.category = category;
   if (audience) where.audience = { in: [audience, "both"] };
 
@@ -40,10 +44,12 @@ export async function POST(request: NextRequest) {
     data: {
       title: parsed.data.title,
       description: parsed.data.description,
+      body: parsed.data.body,
       category: parsed.data.category,
       audience: parsed.data.audience ?? "agent",
       type: parsed.data.type ?? "video",
       url: parsed.data.url,
+      fileKey: parsed.data.fileKey,
       duration: parsed.data.duration,
       tags: parsed.data.tags ?? [],
     },
