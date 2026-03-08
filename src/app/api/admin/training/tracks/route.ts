@@ -7,6 +7,8 @@ const createTrackSchema = z.object({
   description: z.string().optional(),
   required: z.boolean().optional(),
   autoEnroll: z.boolean().optional(),
+  reminderDays: z.number().nullable().optional(),
+  reminderRepeat: z.number().nullable().optional(),
   contentIds: z.array(z.string()).optional(),
 });
 
@@ -37,6 +39,8 @@ export async function POST(request: NextRequest) {
       description: parsed.data.description,
       required: parsed.data.required ?? false,
       autoEnroll: parsed.data.autoEnroll ?? false,
+      reminderDays: parsed.data.reminderDays ?? null,
+      reminderRepeat: parsed.data.reminderRepeat ?? null,
       ...(parsed.data.contentIds?.length
         ? {
             items: {
