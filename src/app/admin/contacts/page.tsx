@@ -55,8 +55,8 @@ export default async function ContactsPage({ searchParams }: ContactsPageProps) 
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-navy-700">Contacts</h1>
-          <p className="text-sm text-slate-500">{total} total contacts</p>
+          <h1 className="font-serif text-2xl sm:text-3xl text-navy-700">Contacts</h1>
+          <p className="text-slate-500 text-sm">{total} total contacts</p>
         </div>
         <div className="flex gap-2">
           <Link

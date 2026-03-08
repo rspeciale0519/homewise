@@ -37,10 +37,8 @@ export default async function AutomationsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-navy-700">Automations</h1>
-        <p className="text-sm text-slate-500">Behavioral trigger rules: condition → action</p>
-      </div>
+      <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">Automations</h1>
+      <p className="text-slate-500 text-sm mb-8">Behavioral trigger rules: condition → action</p>
       <AutomationListView rules={serialized} triggerTypes={TRIGGER_TYPES} actionTypes={ACTION_TYPES} />
     </div>
   );

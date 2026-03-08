@@ -8,10 +8,8 @@ export default async function SettingsPage() {
   await requireAdmin();
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-navy-700">Settings</h1>
-        <p className="text-sm text-slate-500">Configure site-wide settings and registration wall behavior</p>
-      </div>
+      <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">Settings</h1>
+      <p className="text-slate-500 text-sm mb-8">Configure site-wide settings and registration wall behavior</p>
       <SettingsView />
     </div>
   );

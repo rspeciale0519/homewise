@@ -8,10 +8,8 @@ export default async function LeadRoutingPage() {
   await requireAdmin();
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-navy-700">Lead Routing</h1>
-        <p className="text-sm text-slate-500">Configure rules for automatic lead assignment to agents</p>
-      </div>
+      <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">Lead Routing</h1>
+      <p className="text-slate-500 text-sm mb-8">Configure rules for automatic lead assignment to agents</p>
       <LeadRoutingView />
     </div>
   );

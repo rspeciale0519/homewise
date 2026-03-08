@@ -31,12 +31,10 @@ export default async function TrainingAdminPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-navy-700">Training Hub</h1>
-        <p className="text-sm text-slate-500">
-          {content.length} items across {tracks.length} tracks
-        </p>
-      </div>
+      <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">Training Hub</h1>
+      <p className="text-slate-500 text-sm mb-8">
+        {content.length} items across {tracks.length} tracks
+      </p>
       <TrainingAdminView
         content={content}
         tracks={tracks}

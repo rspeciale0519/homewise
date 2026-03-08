@@ -8,10 +8,8 @@ export default async function JobsPage() {
   await requireAdmin();
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-navy-700">Background Jobs</h1>
-        <p className="text-sm text-slate-500">Monitor Inngest-powered background automations and scheduled tasks</p>
-      </div>
+      <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">Background Jobs</h1>
+      <p className="text-slate-500 text-sm mb-8">Monitor Inngest-powered background automations and scheduled tasks</p>
       <JobsView />
     </div>
   );

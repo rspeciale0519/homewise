@@ -15,8 +15,10 @@ export default async function AdminLayout({
       <AdminHeader />
       <div className="flex min-h-[calc(100vh-4rem)]">
         <AdminSidebar />
-        <main className="flex-1 overflow-y-auto">
-          <AdminToastProvider>{children}</AdminToastProvider>
+        <main className="flex-1 overflow-y-auto p-6 sm:p-8 lg:p-10">
+          <AdminToastProvider>
+            <div className="max-w-7xl">{children}</div>
+          </AdminToastProvider>
         </main>
       </div>
     </div>

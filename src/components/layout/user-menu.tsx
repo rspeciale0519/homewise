@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useSupabase } from "@/components/providers/supabase-provider";
-import { cn } from "@/lib/utils";
 
 const MENU_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -16,81 +15,72 @@ const MENU_ITEMS = [
 export function UserMenu() {
   const { user, supabase, loading } = useSupabase();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   if (loading || !user) return null;
 
   const initials = getInitials(user.user_metadata?.first_name, user.user_metadata?.last_name, user.email);
 
   const handleSignOut = async () => {
-    setOpen(false);
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
   };
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-navy-600 focus:ring-offset-2"
-        aria-label="User menu"
-        aria-expanded={open}
-      >
-        <span className="h-9 w-9 rounded-full bg-navy-600 text-white text-xs font-bold flex items-center justify-center shadow-sm">
-          {initials}
-        </span>
-      </button>
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-navy-600 focus:ring-offset-2"
+          aria-label="User menu"
+        >
+          <span className="h-9 w-9 rounded-full bg-navy-600 text-white text-xs font-bold flex items-center justify-center shadow-sm">
+            {initials}
+          </span>
+        </button>
+      </DropdownMenu.Trigger>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 bg-white/95 backdrop-blur-lg rounded-xl shadow-dropdown border border-slate-100 py-2 animate-slide-down z-50">
-          {/* User info */}
-          <div className="px-4 py-2 border-b border-slate-100 mb-1">
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={8}
+          className="w-56 bg-white/95 backdrop-blur-lg rounded-xl shadow-dropdown border border-slate-100 py-2 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out fade-in-0 fade-out-0 zoom-in-95 zoom-out-95 data-[side=bottom]:slide-in-from-top-2 duration-200"
+        >
+          <DropdownMenu.Label className="px-4 py-2 border-b border-slate-100 mb-1">
             <p className="text-sm font-medium text-navy-700 truncate">
               {user.user_metadata?.first_name} {user.user_metadata?.last_name}
             </p>
             <p className="text-xs text-slate-400 truncate">{user.email}</p>
-          </div>
+          </DropdownMenu.Label>
 
-          {/* Menu items */}
           {MENU_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-navy-700 transition-colors"
-            >
-              <MenuIcon type={item.icon} />
-              {item.label}
-            </Link>
+            <DropdownMenu.Item key={item.href} asChild>
+              <Link
+                href={item.href}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-navy-700 transition-colors outline-none data-[highlighted]:bg-slate-50 data-[highlighted]:text-navy-700"
+              >
+                <MenuIcon type={item.icon} />
+                {item.label}
+              </Link>
+            </DropdownMenu.Item>
           ))}
 
-          <div className="border-t border-slate-100 mt-1 pt-1">
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-crimson-50 hover:text-crimson-700 transition-colors"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-              </svg>
-              Sign Out
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+          <DropdownMenu.Separator className="h-px bg-slate-100 my-1" />
+
+          <DropdownMenu.Item
+            onSelect={(e) => {
+              e.preventDefault();
+              handleSignOut();
+            }}
+            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-crimson-50 hover:text-crimson-700 transition-colors outline-none cursor-pointer data-[highlighted]:bg-crimson-50 data-[highlighted]:text-crimson-700"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+            </svg>
+            Sign Out
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
   );
 }
 

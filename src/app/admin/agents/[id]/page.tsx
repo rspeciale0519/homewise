@@ -17,7 +17,7 @@ export default async function AdminEditAgentPage({
   if (!agent) notFound();
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
+    <div className="max-w-5xl">
       <Link
         href="/admin/agents"
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-navy-700 transition-colors mb-6"
