@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { adminRoleUpdateSchema } from "@/schemas/admin-user.schema";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { adminUserUpdateSchema } from "@/schemas/admin-user.schema";
 
 export async function GET(
   _request: NextRequest,
@@ -48,7 +49,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body: unknown = await request.json();
-  const parsed = adminRoleUpdateSchema.safeParse(body);
+  const parsed = adminUserUpdateSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -57,7 +58,7 @@ export async function PATCH(
     );
   }
 
-  if (id === auth.profile.id && parsed.data.role !== "admin") {
+  if (parsed.data.role && id === auth.profile.id && parsed.data.role !== "admin") {
     return NextResponse.json(
       { error: "You cannot remove your own admin role." },
       { status: 403 }
@@ -67,10 +68,46 @@ export async function PATCH(
   try {
     const updated = await prisma.userProfile.update({
       where: { id },
-      data: { role: parsed.data.role },
+      data: parsed.data,
     });
 
     return NextResponse.json({ user: updated });
+  } catch {
+    return NextResponse.json(
+      { error: "An unexpected error occurred." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
+  const { id } = await params;
+
+  if (id === auth.profile.id) {
+    return NextResponse.json(
+      { error: "You cannot delete your own account." },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const user = await prisma.userProfile.findUnique({ where: { id } });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    await prisma.userProfile.delete({ where: { id } });
+
+    const supabaseAdmin = createAdminClient();
+    await supabaseAdmin.auth.admin.deleteUser(id);
+
+    return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred." },

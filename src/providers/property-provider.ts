@@ -95,8 +95,11 @@ export interface Property {
   listingOfficeName?: string;
   listingOfficeMlsId?: string;
   walkScore?: number;
+  walkScoreDescription?: string;
   transitScore?: number;
+  transitScoreDescription?: string;
   bikeScore?: number;
+  bikeScoreDescription?: string;
   featured?: boolean;
   virtualTourUrl?: string;
   listDate?: string;

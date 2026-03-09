@@ -28,11 +28,15 @@ export function ListingDetailLocation({ property, schools }: ListingDetailLocati
 
       {/* Walk Score */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-card p-6 sm:p-8">
-        <h2 className="font-serif text-2xl font-semibold text-navy-700 mb-4">Walk Score</h2>
+        <h2 className="font-serif text-2xl font-semibold text-navy-700 mb-2">Walkability & Transportation</h2>
+        <p className="text-sm text-slate-600 mb-6">Understand how walkable this neighborhood is and what transportation options are available. These scores help you evaluate the convenience and lifestyle of the area.</p>
         <WalkScoreDisplay
           walkScore={property.walkScore ?? null}
+          walkScoreDescription={property.walkScoreDescription ?? null}
           transitScore={property.transitScore ?? null}
+          transitScoreDescription={property.transitScoreDescription ?? null}
           bikeScore={property.bikeScore ?? null}
+          bikeScoreDescription={property.bikeScoreDescription ?? null}
         />
       </div>
 

@@ -1,5 +1,33 @@
 import { buildEmailHtml } from "./index";
 
+export function adminUserWelcomeEmail(firstName: string, setupUrl: string): { subject: string; html: string } {
+  return {
+    subject: "Set up your Homewise account",
+    html: buildEmailHtml(`
+      <h2>Welcome, ${firstName}!</h2>
+      <p>Your administrator has created a Homewise account for you. To get started, please set your password by clicking the button below.</p>
+      <p style="text-align:center;margin-top:24px">
+        <a href="${setupUrl}" class="btn">Set Your Password</a>
+      </p>
+      <p style="margin-top:24px;font-size:13px;color:#64748b">This link expires in 24 hours. If it has expired, ask your administrator to resend the invitation.</p>
+    `, "Set up your Homewise account"),
+  };
+}
+
+export function passwordResetEmail(firstName: string, resetUrl: string): { subject: string; html: string } {
+  return {
+    subject: "Reset your Homewise password",
+    html: buildEmailHtml(`
+      <h2>Hi ${firstName},</h2>
+      <p>We received a request to reset your password. Click the button below to choose a new one.</p>
+      <p style="text-align:center;margin-top:24px">
+        <a href="${resetUrl}" class="btn">Reset Password</a>
+      </p>
+      <p style="margin-top:24px;font-size:13px;color:#64748b">This link expires in 24 hours. If you didn&apos;t request this, you can safely ignore this email.</p>
+    `, "Reset your Homewise password"),
+  };
+}
+
 export function newBuyerWelcome(): { subject: string; html: string } {
   return {
     subject: "Welcome to Homewise FL, {{first_name}}!",

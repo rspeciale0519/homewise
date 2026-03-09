@@ -46,26 +46,37 @@ const statusVariant: Record<string, "success" | "crimson" | "gold" | "default"> 
 
 export default async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const { id } = await params;
+  console.log("[PropertyDetailPage] Fetching property with id:", id);
   const property = await propertyProvider.getProperty(id);
+
+  console.log("[PropertyDetailPage] Property found:", !!property, { address: property?.address, lat: property?.latitude, lng: property?.longitude });
 
   if (!property) notFound();
 
   // Fetch third-party data in parallel (graceful if unavailable)
+  const hasCoordinates = property.latitude != null && property.longitude != null;
+  console.log("[PropertyDetailPage] Has coordinates:", hasCoordinates);
+
   const [walkScoreResult, schools] = await Promise.all([
-    property.latitude && property.longitude
+    hasCoordinates && property.latitude != null && property.longitude != null
       ? getWalkScore(`${property.address}, ${property.city}, ${property.state} ${property.zip}`, property.latitude, property.longitude)
       : Promise.resolve(null),
-    property.latitude && property.longitude
+    hasCoordinates && property.latitude != null && property.longitude != null
       ? getNearbySchools(property.latitude, property.longitude)
       : Promise.resolve(null),
   ]);
+
+  console.log("[PropertyDetailPage] Walk score result:", walkScoreResult);
 
   // Merge walk scores into property for display
   const enrichedProperty = {
     ...property,
     walkScore: walkScoreResult?.walkScore ?? property.walkScore ?? undefined,
+    walkScoreDescription: walkScoreResult?.walkScoreDescription ?? undefined,
     transitScore: walkScoreResult?.transitScore ?? property.transitScore ?? undefined,
+    transitScoreDescription: walkScoreResult?.transitScoreDescription ?? undefined,
     bikeScore: walkScoreResult?.bikeScore ?? property.bikeScore ?? undefined,
+    bikeScoreDescription: walkScoreResult?.bikeScoreDescription ?? undefined,
   };
 
   const photos = property.photos?.length ? property.photos : [property.imageUrl];

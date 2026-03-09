@@ -19,8 +19,17 @@
 *.pem
 /temp
 
+# playwright mcp artifacts
+.playwright-mcp/
+
+# test/debug screenshots
+verify-*.png
+audit-*.png
+mapbox-test.png
+
 # debug
 npm-debug.log*
+firebase-debug.log
 yarn-debug.log*
 yarn-error.log*
 

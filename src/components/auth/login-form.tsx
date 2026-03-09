@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { loginSchema, magicLinkSchema } from "@/schemas/login.schema";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { cn } from "@/lib/utils";
@@ -153,9 +154,14 @@ export function LoginForm() {
       {/* Password (only in password mode) */}
       {mode === "password" && (
         <div>
-          <label htmlFor="login-password" className="block text-sm font-medium text-navy-700 mb-1.5">
-            Password <span className="text-crimson-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label htmlFor="login-password" className="block text-sm font-medium text-navy-700">
+              Password <span className="text-crimson-500">*</span>
+            </label>
+            <Link href="/forgot-password" className="text-xs text-navy-600 hover:underline">
+              Forgot Password?
+            </Link>
+          </div>
           <input
             id="login-password"
             type="password"
