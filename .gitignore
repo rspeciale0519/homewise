@@ -21,7 +21,11 @@
 
 # playwright mcp artifacts
 .playwright-mcp/
+
+# test/debug screenshots
 verify-*.png
+audit-*.png
+mapbox-test.png
 
 # debug
 npm-debug.log*
