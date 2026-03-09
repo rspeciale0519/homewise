@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useSupabase } from "@/components/providers/supabase-provider";
 
 interface SettingsActionsProps {
   hasPasswordProvider: boolean;
@@ -9,21 +8,27 @@ interface SettingsActionsProps {
 }
 
 export function SettingsActions({ hasPasswordProvider, email }: SettingsActionsProps) {
-  const { supabase } = useSupabase();
   const [resetStatus, setResetStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   const handlePasswordReset = async () => {
     setResetStatus("sending");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?redirectTo=/dashboard/settings`,
-    });
 
-    if (error) {
+    try {
+      const res = await fetch("/api/user/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!res.ok) {
+        setResetStatus("error");
+        return;
+      }
+
+      setResetStatus("sent");
+    } catch {
       setResetStatus("error");
-      return;
     }
-
-    setResetStatus("sent");
   };
 
   return (
