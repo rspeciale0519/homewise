@@ -32,11 +32,11 @@ export function ListingDetailLocation({ property, schools }: ListingDetailLocati
         <p className="text-sm text-slate-600 mb-6">Understand how walkable this neighborhood is and what transportation options are available. These scores help you evaluate the convenience and lifestyle of the area.</p>
         <WalkScoreDisplay
           walkScore={property.walkScore ?? null}
-          walkScoreDescription={(property as any).walkScoreDescription ?? null}
+          walkScoreDescription={property.walkScoreDescription ?? null}
           transitScore={property.transitScore ?? null}
-          transitScoreDescription={(property as any).transitScoreDescription ?? null}
+          transitScoreDescription={property.transitScoreDescription ?? null}
           bikeScore={property.bikeScore ?? null}
-          bikeScoreDescription={(property as any).bikeScoreDescription ?? null}
+          bikeScoreDescription={property.bikeScoreDescription ?? null}
         />
       </div>
 

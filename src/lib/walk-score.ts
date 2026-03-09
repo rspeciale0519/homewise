@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { writeFileSync, appendFileSync } from "fs";
-import { join } from "path";
+import { appendFileSync } from "fs";
 
 const API_KEY = process.env.WALK_SCORE_API_KEY ?? "";
 const BASE_URL = "https://api.walkscore.com/score";
@@ -40,11 +39,11 @@ export async function getWalkScore(address: string, lat: number, lng: number): P
     debug("Using cached result", { address, walkScore: cached.walkScore });
     return {
       walkScore: cached.walkScore,
-      walkScoreDescription: (cached.rawResponse as any)?.description ?? null,
+      walkScoreDescription: (cached.rawResponse as Record<string, unknown> | null)?.description as string ?? null,
       transitScore: cached.transitScore,
-      transitScoreDescription: (cached.rawResponse as any)?.transit?.description ?? null,
+      transitScoreDescription: ((cached.rawResponse as Record<string, unknown> | null)?.transit as Record<string, unknown> | undefined)?.description as string ?? null,
       bikeScore: cached.bikeScore,
-      bikeScoreDescription: (cached.rawResponse as any)?.bike?.description ?? null,
+      bikeScoreDescription: ((cached.rawResponse as Record<string, unknown> | null)?.bike as Record<string, unknown> | undefined)?.description as string ?? null,
     };
   }
 
