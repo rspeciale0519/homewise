@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
@@ -66,9 +67,8 @@ export function TrainingProgressView() {
     setLoading(false);
   }, [toast]);
 
-  useEffect(() => {
-    fetchProgress();
-  }, [fetchProgress]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching effect
+  useEffect(() => { fetchProgress(); }, [fetchProgress]);
 
   if (loading) {
     return (
@@ -192,7 +192,7 @@ function AgentAvatar({ agent }: { agent: AgentProgress }) {
     <div className="flex items-center gap-3">
       <div className="h-8 w-8 rounded-full bg-navy-100 flex items-center justify-center text-xs font-bold text-navy-600 overflow-hidden shrink-0">
         {agent.photoUrl ? (
-          <img src={agent.photoUrl} alt="" className="h-full w-full object-cover" />
+          <Image src={agent.photoUrl} alt="" width={32} height={32} className="h-full w-full object-cover" />
         ) : (
           `${agent.firstName[0]}${agent.lastName[0]}`
         )}

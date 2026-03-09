@@ -47,9 +47,8 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
     }
   }, [toast]);
 
-  useEffect(() => {
-    fetchContent();
-  }, [fetchContent]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching effect
+  useEffect(() => { fetchContent(); }, [fetchContent]);
 
   const filtered = useMemo(() => {
     let list = content;

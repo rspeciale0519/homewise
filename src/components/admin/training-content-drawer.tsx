@@ -60,6 +60,7 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- sync form state from props */
   useEffect(() => {
     if (!open) return;
     if (item) {
@@ -81,6 +82,7 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
       setTagsStr(""); setPublished(false); setUploadedFile(null);
     }
   }, [open, item, categories]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleFileUpload = useCallback(async (file: File) => {
     const ext = getFileExtension(file.name);

@@ -128,6 +128,7 @@ export function TrainingTrackDrawer({
     useSensor(KeyboardSensor),
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect -- sync form state from props */
   useEffect(() => {
     if (!open) return;
     if (track) {
@@ -156,6 +157,7 @@ export function TrainingTrackDrawer({
     setPickerOpen(false);
     setPickerSearch("");
   }, [open, track]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 
