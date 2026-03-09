@@ -1,27 +1,50 @@
 import { prisma } from "@/lib/prisma";
+import { writeFileSync, appendFileSync } from "fs";
+import { join } from "path";
 
 const API_KEY = process.env.WALK_SCORE_API_KEY ?? "";
 const BASE_URL = "https://api.walkscore.com/score";
+const LOG_FILE = "/tmp/walkscore-debug.log";
+
+function debug(message: string, data?: unknown) {
+  const timestamp = new Date().toISOString();
+  const logMessage = data ? `${timestamp} - ${message}: ${JSON.stringify(data)}` : `${timestamp} - ${message}`;
+  try {
+    appendFileSync(LOG_FILE, logMessage + "\n");
+  } catch {
+    // Ignore file write errors
+  }
+}
 
 interface WalkScoreResult {
   walkScore: number | null;
+  walkScoreDescription: string | null;
   transitScore: number | null;
+  transitScoreDescription: string | null;
   bikeScore: number | null;
-  description: string | null;
+  bikeScoreDescription: string | null;
 }
 
 export async function getWalkScore(address: string, lat: number, lng: number): Promise<WalkScoreResult | null> {
-  if (!API_KEY) return null;
+  debug("getWalkScore called", { address, lat, lng });
+
+  if (!API_KEY) {
+    debug("API_KEY is not set");
+    return null;
+  }
 
   const addressKey = `${address}|${lat.toFixed(4)},${lng.toFixed(4)}`;
 
   const cached = await prisma.walkScoreCache.findUnique({ where: { addressKey } });
   if (cached && cached.expiresAt > new Date()) {
+    debug("Using cached result", { address, walkScore: cached.walkScore });
     return {
       walkScore: cached.walkScore,
+      walkScoreDescription: (cached.rawResponse as any)?.description ?? null,
       transitScore: cached.transitScore,
+      transitScoreDescription: (cached.rawResponse as any)?.transit?.description ?? null,
       bikeScore: cached.bikeScore,
-      description: cached.description,
+      bikeScoreDescription: (cached.rawResponse as any)?.bike?.description ?? null,
     };
   }
 
@@ -35,22 +58,34 @@ export async function getWalkScore(address: string, lat: number, lng: number): P
     url.searchParams.set("bike", "1");
     url.searchParams.set("wsapikey", API_KEY);
 
+    debug("Fetching from URL", { url: url.toString() });
     const res = await fetch(url.toString());
-    if (!res.ok) return null;
+    debug("Response received", { status: res.status, statusText: res.statusText });
+
+    if (!res.ok) {
+      debug("Response not ok", { status: res.status });
+      return null;
+    }
 
     const data = (await res.json()) as {
       walkscore?: number;
-      transit?: { score?: number };
-      bike?: { score?: number };
       description?: string;
+      transit?: { score?: number; description?: string };
+      bike?: { score?: number; description?: string };
     };
+
+    debug("API response data", data);
 
     const result: WalkScoreResult = {
       walkScore: data.walkscore ?? null,
+      walkScoreDescription: data.description ?? null,
       transitScore: data.transit?.score ?? null,
+      transitScoreDescription: data.transit?.description ?? null,
       bikeScore: data.bike?.score ?? null,
-      description: data.description ?? null,
+      bikeScoreDescription: data.bike?.description ?? null,
     };
+
+    debug("Parsed result", result);
 
     const thirtyDays = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await prisma.walkScoreCache.upsert({
@@ -69,8 +104,10 @@ export async function getWalkScore(address: string, lat: number, lng: number): P
       },
     });
 
+    debug("Cached result", { address, walkScore: result.walkScore });
     return result;
-  } catch {
+  } catch (error) {
+    debug("Error fetching data", error instanceof Error ? error.message : String(error));
     return null;
   }
 }

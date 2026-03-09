@@ -14,6 +14,8 @@ export interface MockListing {
   imageUrl: string;
   daysOnMarket: number;
   featured?: boolean;
+  latitude: number;
+  longitude: number;
 }
 
 export const MOCK_LISTINGS: MockListing[] = [
@@ -33,6 +35,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 3,
     featured: true,
+    latitude: 28.5994,
+    longitude: -81.3500,
   },
   {
     id: "2",
@@ -48,6 +52,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     propertyType: "Single Family",
     status: "For Sale",
     imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=75",
+    latitude: 28.5237,
+    longitude: -81.4705,
     daysOnMarket: 18,
     featured: true,
   },
@@ -67,6 +73,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     imageUrl: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 7,
     featured: true,
+    latitude: 28.6536,
+    longitude: -81.2084,
   },
   {
     id: "4",
@@ -84,6 +92,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     imageUrl: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 22,
     featured: true,
+    latitude: 28.6932,
+    longitude: -81.3297,
   },
   {
     id: "5",
@@ -100,6 +110,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     status: "Pending",
     imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 14,
+    latitude: 28.5382,
+    longitude: -81.3792,
   },
   {
     id: "6",
@@ -116,6 +128,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     status: "For Sale",
     imageUrl: "https://images.unsplash.com/photo-1576941089067-2de3c901e126?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 31,
+    latitude: 28.3031,
+    longitude: -81.7684,
   },
   {
     id: "7",
@@ -132,6 +146,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     status: "New Listing",
     imageUrl: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 2,
+    latitude: 28.5503,
+    longitude: -81.7817,
   },
   {
     id: "8",
@@ -148,6 +164,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     status: "For Sale",
     imageUrl: "https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 45,
+    latitude: 28.7039,
+    longitude: -81.5133,
   },
   {
     id: "9",
@@ -164,6 +182,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     status: "For Sale",
     imageUrl: "https://images.unsplash.com/photo-1449844908441-8829872d2607?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 29,
+    latitude: 28.8005,
+    longitude: -81.2755,
   },
   {
     id: "10",
@@ -180,6 +200,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     status: "Pending",
     imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 8,
+    latitude: 28.8965,
+    longitude: -81.2432,
   },
   {
     id: "11",
@@ -196,6 +218,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     status: "For Sale",
     imageUrl: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 55,
+    latitude: 28.2987,
+    longitude: -81.4313,
   },
   {
     id: "12",
@@ -212,6 +236,8 @@ export const MOCK_LISTINGS: MockListing[] = [
     status: "For Sale",
     imageUrl: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=75",
     daysOnMarket: 38,
+    latitude: 29.2108,
+    longitude: -80.9784,
   },
 ];
 

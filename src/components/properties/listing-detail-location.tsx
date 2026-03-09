@@ -28,11 +28,14 @@ export function ListingDetailLocation({ property, schools }: ListingDetailLocati
 
       {/* Walk Score */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-card p-6 sm:p-8">
-        <h2 className="font-serif text-2xl font-semibold text-navy-700 mb-4">Walk Score</h2>
+        <h2 className="font-serif text-2xl font-semibold text-navy-700 mb-4">Walkability & Transportation</h2>
         <WalkScoreDisplay
           walkScore={property.walkScore ?? null}
+          walkScoreDescription={(property as any).walkScoreDescription ?? null}
           transitScore={property.transitScore ?? null}
+          transitScoreDescription={(property as any).transitScoreDescription ?? null}
           bikeScore={property.bikeScore ?? null}
+          bikeScoreDescription={(property as any).bikeScoreDescription ?? null}
         />
       </div>
 
