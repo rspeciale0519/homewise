@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { loginSchema, magicLinkSchema, type LoginInput } from "@/schemas/login.schema";
+import { loginSchema, magicLinkSchema } from "@/schemas/login.schema";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { cn } from "@/lib/utils";
 

@@ -37,7 +37,7 @@ export default async function AgentOgImage({ params }: { params: Promise<{ slug:
         {/* Avatar or initials */}
         <div style={{ width: 200, height: 200, borderRadius: 24, overflow: "hidden", marginRight: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #1e3a5f, #2d4a6f)", border: "3px solid rgba(255,255,255,0.1)", flexShrink: 0 }}>
           {agent.photoUrl ? (
-            <img src={agent.photoUrl} width={200} height={200} style={{ objectFit: "cover" }} />
+            <img src={agent.photoUrl} alt="" width={200} height={200} style={{ objectFit: "cover" }} />
           ) : (
             <div style={{ fontFamily: "Cormorant Garamond", fontSize: 80, fontWeight: 700, color: "rgba(255,255,255,0.2)" }}>{initials}</div>
           )}

@@ -23,7 +23,13 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   const { user, supabase, loading } = useSupabase();
 
   useEffect(() => {
-    if (!open) setExpandedItem(null);
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      requestAnimationFrame(() => setExpandedItem(null));
+    }
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   useEffect(() => {

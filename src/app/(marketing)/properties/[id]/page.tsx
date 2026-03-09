@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
@@ -107,10 +108,13 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
         </div>
       ) : (
         <div className="relative aspect-[21/9] md:aspect-[3/1] bg-slate-100 overflow-hidden">
-          <img
+          <Image
             src={property.imageUrl}
             alt={`${property.address}, ${property.city}`}
-            className="object-cover w-full h-full"
+            fill
+            className="object-cover"
+            sizes="100vw"
+            priority
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
         </div>

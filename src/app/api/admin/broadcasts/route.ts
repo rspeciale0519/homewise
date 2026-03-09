@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
-import { pickVariant } from "@/lib/email/ab-testing";
 
 export async function GET() {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const broadcasts = await prisma.broadcast.findMany({
     orderBy: { createdAt: "desc" },
   });
@@ -11,6 +14,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   try {
     const body = (await request.json()) as {
       name: string;

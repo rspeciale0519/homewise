@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const { searchParams } = request.nextUrl;
   const status = searchParams.get("status");
   const type = searchParams.get("type");
@@ -23,6 +27,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   try {
     const body = (await request.json()) as {
       name: string;

@@ -27,7 +27,7 @@ export function RegistrationWall({ threshold = 5, mode = "soft" }: RegistrationW
     // Check listing view count
     const views = parseInt(getCookie("hw_listing_views") ?? "0", 10);
     if (views >= threshold && !dismissed) {
-      setShowModal(true);
+      requestAnimationFrame(() => setShowModal(true));
     }
   }, [pathname, threshold, dismissed]);
 

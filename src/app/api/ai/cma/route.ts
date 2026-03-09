@@ -1,22 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+export const maxDuration = 60;
+
+const cmaSchema = z.object({
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  zip: z.string().min(1, "ZIP code is required"),
+  beds: z.number().int().positive().optional(),
+  baths: z.number().positive().optional(),
+  sqft: z.number().int().positive().optional(),
+  propertyType: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = (await request.json()) as {
-      address: string;
-      city: string;
-      zip: string;
-      beds?: number;
-      baths?: number;
-      sqft?: number;
-      propertyType?: string;
-    };
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
 
-    if (!body.address || !body.city || !body.zip) {
-      return NextResponse.json({ error: "Address, city, and zip are required" }, { status: 400 });
+  try {
+    const raw: unknown = await request.json();
+    const input = cmaSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
+    const body = input.data;
 
     const comps = await prisma.listing.findMany({
       where: {

@@ -28,7 +28,7 @@ describe("contactSchema", () => {
   });
 
   it("allows missing phone", () => {
-    const { phone: _, ...noPhone } = valid;
+    const { phone: _phone, ...noPhone } = valid;
     const result = contactSchema.safeParse(noPhone);
     expect(result.success).toBe(true);
   });

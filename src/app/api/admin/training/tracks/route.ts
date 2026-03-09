@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -13,6 +14,9 @@ const createTrackSchema = z.object({
 });
 
 export async function GET() {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const tracks = await prisma.trainingTrack.findMany({
     include: {
       items: {
@@ -27,6 +31,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const body = await request.json();
   const parsed = createTrackSchema.safeParse(body);
   if (!parsed.success) {

@@ -1,29 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+export const maxDuration = 60;
+
+const mortgageAdvisorSchema = z.object({
+  annualIncome: z.number().positive().optional(),
+  monthlyDebt: z.number().min(0).optional(),
+  downPayment: z.number().min(0).optional(),
+  creditScore: z.string().optional(),
+  homePrice: z.number().positive().optional(),
+  description: z.string().max(2000).optional(),
+  userId: z.string().optional(),
+}).refine(
+  (data) => data.annualIncome || data.monthlyDebt || data.downPayment || data.creditScore || data.homePrice || data.description,
+  { message: "Please provide at least one financial field" },
+);
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
-      annualIncome?: number;
-      monthlyDebt?: number;
-      downPayment?: number;
-      creditScore?: string;
-      homePrice?: number;
-      description?: string;
-      userId?: string;
-    };
+    const raw: unknown = await request.json();
+    const input = mortgageAdvisorSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const body = input.data;
 
-    const inputs = [];
+    const inputs: string[] = [];
     if (body.annualIncome) inputs.push(`Annual income: $${body.annualIncome.toLocaleString()}`);
     if (body.monthlyDebt) inputs.push(`Monthly debt: $${body.monthlyDebt.toLocaleString()}`);
     if (body.downPayment) inputs.push(`Down payment: $${body.downPayment.toLocaleString()}`);
     if (body.creditScore) inputs.push(`Credit score range: ${body.creditScore}`);
     if (body.homePrice) inputs.push(`Target home price: $${body.homePrice.toLocaleString()}`);
     if (body.description) inputs.push(`Additional info: ${body.description}`);
-
-    if (inputs.length === 0) {
-      return NextResponse.json({ error: "Please provide financial information" }, { status: 400 });
-    }
 
     const prompt = `Based on this financial profile:
 ${inputs.join("\n")}

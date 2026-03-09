@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface RegConfig {
   id: string;
@@ -14,14 +14,17 @@ export function SettingsView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const fetchConfig = useCallback(async () => {
-    setLoading(true);
-    const res = await fetch("/api/admin/settings");
-    if (res.ok) setConfig(await res.json());
-    setLoading(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      const res = await fetch("/api/admin/settings");
+      if (!cancelled && res.ok) setConfig(await res.json());
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
   const handleSave = async () => {
     if (!config) return;

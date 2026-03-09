@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface DailyData {
   day: string;
@@ -55,14 +55,17 @@ export function AiUsageView() {
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const res = await fetch(`/api/admin/ai-usage?days=${days}`);
-    if (res.ok) setData(await res.json());
-    setLoading(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      const res = await fetch(`/api/admin/ai-usage?days=${days}`);
+      if (!cancelled && res.ok) setData(await res.json());
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
   }, [days]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const maxCalls = data ? Math.max(...data.byFeature.map((f) => f.calls), 1) : 1;
 

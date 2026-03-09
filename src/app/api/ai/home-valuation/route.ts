@@ -1,12 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { z } from "zod";
+
+export const maxDuration = 60;
+
+const homeValuationSchema = z.object({
+  evaluationId: z.string().min(1, "evaluationId is required"),
+});
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthApi();
+  if (isError(auth)) return auth.error;
+
   try {
-    const body = (await request.json()) as {
-      evaluationId: string;
-    };
+    const raw: unknown = await request.json();
+    const input = homeValuationSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const body = input.data;
 
     const evaluation = await prisma.homeEvaluation.findUnique({
       where: { id: body.evaluationId },

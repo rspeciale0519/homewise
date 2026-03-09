@@ -120,7 +120,8 @@ export function FeaturedListings({ listings }: FeaturedListingsProps) {
 
   useEffect(() => {
     if (!emblaApi) return;
-    setScrollSnaps(emblaApi.scrollSnapList());
+    const snaps = emblaApi.scrollSnapList();
+    requestAnimationFrame(() => setScrollSnaps(snaps));
     emblaApi.on("select", () => setSelectedIndex(emblaApi.selectedScrollSnap()));
   }, [emblaApi]);
 
