@@ -180,7 +180,7 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                className="fixed inset-0 z-50 bg-black/95"
+                className="fixed inset-0 z-[100] bg-black/95"
               />
             </Dialog.Overlay>
             <Dialog.Content
@@ -193,7 +193,7 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                className="fixed inset-0 z-50 flex flex-col outline-none"
+                className="fixed inset-0 z-[101] flex flex-col outline-none"
               >
                 <Dialog.Title className="sr-only">
                   {address} — photo gallery
