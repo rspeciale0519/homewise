@@ -270,7 +270,7 @@ function DesktopMosaic({
         sizes={thumbSizes}
         index={4}
         overlay={<ViewAllOverlay remaining={remaining} />}
-        onClick={() => onOpen(4)}
+        onClick={() => onOpen(0)}
       />
     </div>
   );
