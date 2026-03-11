@@ -180,7 +180,7 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                className="fixed inset-0 z-[100] bg-black/95"
+                className="fixed inset-0 z-[100] bg-black/80"
               />
             </Dialog.Overlay>
             <Dialog.Content
