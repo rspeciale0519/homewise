@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -279,6 +279,17 @@ function DesktopMosaic({
 export function PhotoGallery({ photos, address }: PhotoGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
+
+  useEffect(() => {
+    const header = document.querySelector("header");
+    if (!header) return;
+    if (lightboxOpen) {
+      header.style.visibility = "hidden";
+    } else {
+      header.style.visibility = "";
+    }
+    return () => { header.style.visibility = ""; };
+  }, [lightboxOpen]);
 
   if (photos.length === 0) return null;
 
