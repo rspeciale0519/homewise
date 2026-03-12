@@ -53,7 +53,7 @@ function ZoomableSlide({
   };
 
   return (
-    <div className="flex-[0_0_100%] min-w-0 flex items-center justify-center h-full px-4">
+    <div className="flex-[0_0_100%] min-w-0 flex items-center justify-center h-full px-4 sm:px-8">
       <motion.div
         style={{ y: zoomed ? 0 : dragY, scale: zoomed ? 1 : imageScale, opacity: zoomed ? 1 : backdropOpacity }}
         drag={zoomed ? false : "y"}
@@ -67,7 +67,7 @@ function ZoomableSlide({
             src={src}
             alt={alt}
             fill
-            className="object-contain pointer-events-none"
+            className="object-contain pointer-events-none drop-shadow-2xl"
             sizes="100vw"
             draggable={false}
           />
@@ -101,16 +101,16 @@ function ThumbnailStrip({
   return (
     <div className="w-full max-w-3xl mx-auto px-4">
       <div ref={thumbRef} className="overflow-hidden">
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           {photos.map((photo, i) => (
             <button
               key={`thumb-${i}`}
               onClick={() => onSelect(i)}
               className={cn(
-                "relative flex-[0_0_72px] h-[48px] rounded-lg overflow-hidden transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
+                "relative flex-[0_0_76px] h-[52px] rounded-lg overflow-hidden transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
                 i === activeIndex
-                  ? "ring-2 ring-white opacity-100 scale-105"
-                  : "opacity-40 hover:opacity-70"
+                  ? "ring-2 ring-white/90 opacity-100 scale-110 shadow-lg"
+                  : "opacity-35 hover:opacity-60 hover:scale-105"
               )}
               aria-label={`Go to photo ${i + 1} of ${photos.length}`}
               aria-current={i === activeIndex ? "true" : undefined}
@@ -120,7 +120,7 @@ function ThumbnailStrip({
                 alt={`${address} thumbnail ${i + 1}`}
                 fill
                 className="object-cover"
-                sizes="72px"
+                sizes="76px"
               />
             </button>
           ))}
@@ -179,7 +179,7 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm"
               />
             </Dialog.Overlay>
@@ -189,10 +189,10 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
               aria-describedby={undefined}
             >
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="fixed inset-0 z-[101] flex flex-col outline-none"
               >
                 <Dialog.Title className="sr-only">
@@ -200,19 +200,19 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                 </Dialog.Title>
 
                 {/* Top bar */}
-                <div className="relative z-10 flex items-center justify-between px-4 py-3 sm:px-6">
+                <div className="relative z-10 flex items-center justify-between px-4 py-3.5 sm:px-6">
                   <div
-                    className="text-white/70 text-sm font-medium tabular-nums"
+                    className="text-white/60 text-sm font-medium tabular-nums tracking-wide"
                     aria-live="polite"
                     aria-atomic="true"
                   >
-                    <span className="text-white">{currentIndex + 1}</span>
-                    {" / "}
+                    <span className="text-white font-semibold">{currentIndex + 1}</span>
+                    <span className="mx-1.5">/</span>
                     {photos.length}
                   </div>
                   <Dialog.Close asChild>
                     <button
-                      className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                      className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                       aria-label="Close photo gallery"
                     >
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -223,12 +223,12 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                 </div>
 
                 {/* Progress bar */}
-                <div className="h-[3px] bg-white/10 mx-4 sm:mx-6 rounded-full overflow-hidden">
+                <div className="h-[2px] bg-white/[0.08] mx-4 sm:mx-6 rounded-full overflow-hidden">
                   <motion.div
-                    className="h-full bg-white/50 rounded-full"
+                    className="h-full bg-white/40 rounded-full"
                     initial={false}
                     animate={{ width: `${progressWidth}%` }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
                   />
                 </div>
 
@@ -239,19 +239,19 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                     <>
                       <button
                         onClick={scrollPrev}
-                        className="hidden sm:flex absolute left-3 z-10 h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        className="hidden sm:flex absolute left-3 z-10 h-12 w-12 items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/15 text-white/70 hover:text-white transition-all duration-300 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white backdrop-blur-sm"
                         aria-label="Previous photo"
                       >
-                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
                       <button
                         onClick={scrollNext}
-                        className="hidden sm:flex absolute right-3 z-10 h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        className="hidden sm:flex absolute right-3 z-10 h-12 w-12 items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/15 text-white/70 hover:text-white transition-all duration-300 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white backdrop-blur-sm"
                         aria-label="Next photo"
                       >
-                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
@@ -275,7 +275,7 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
 
                 {/* Thumbnail strip */}
                 {photos.length > 1 && (
-                  <div className="py-3">
+                  <div className="py-3.5">
                     <ThumbnailStrip
                       photos={photos}
                       address={address}
