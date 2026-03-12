@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
+import Fade from "embla-carousel-fade";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -132,7 +133,7 @@ function ThumbnailStrip({
 
 export function Lightbox({ photos, address, open, onOpenChange, startIndex }: LightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
-  const [mainRef, mainApi] = useEmblaCarousel({ loop: true, startIndex });
+  const [mainRef, mainApi] = useEmblaCarousel({ loop: true, startIndex }, [Fade()]);
 
   useEffect(() => {
     if (open && mainApi) {
