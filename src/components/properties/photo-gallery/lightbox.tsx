@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
-import Fade from "embla-carousel-fade";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -16,12 +15,10 @@ const SWIPE_VELOCITY_THRESHOLD = 400;
 function ZoomableSlide({
   src,
   alt,
-  isActive,
   onSwipeClose,
 }: {
   src: string;
   alt: string;
-  isActive: boolean;
   onSwipeClose: () => void;
 }) {
   const { containerRef, style: zoomStyle, getIsZoomed, resetZoom } = useZoom();
@@ -31,8 +28,8 @@ function ZoomableSlide({
   const imageScale = useTransform(dragY, [-200, 0, 200], [0.92, 1, 0.92]);
 
   useEffect(() => {
-    if (!isActive) resetZoom();
-  }, [isActive, resetZoom]);
+    resetZoom();
+  }, [src, resetZoom]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -54,7 +51,14 @@ function ZoomableSlide({
   };
 
   return (
-    <div className="flex-[0_0_100%] min-w-0 flex items-center justify-center h-full px-4 sm:px-8">
+    <motion.div
+      key={src}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="absolute inset-0 flex items-center justify-center px-4 sm:px-8"
+    >
       <motion.div
         style={{ y: zoomed ? 0 : dragY, scale: zoomed ? 1 : imageScale, opacity: zoomed ? 1 : backdropOpacity }}
         drag={zoomed ? false : "y"}
@@ -74,7 +78,7 @@ function ZoomableSlide({
           />
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -133,37 +137,27 @@ function ThumbnailStrip({
 
 export function Lightbox({ photos, address, open, onOpenChange, startIndex }: LightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
-  const [mainRef, mainApi] = useEmblaCarousel({ loop: true, startIndex }, [Fade()]);
 
   useEffect(() => {
-    if (open && mainApi) {
-      mainApi.scrollTo(startIndex, true);
-    }
-  }, [open, mainApi, startIndex]);
+    if (open) setCurrentIndex(startIndex); // eslint-disable-line react-hooks/set-state-in-effect -- reset index when lightbox opens at a new position
+  }, [open, startIndex]);
 
-  useEffect(() => {
-    if (!mainApi) return;
-    const onSelect = () => setCurrentIndex(mainApi.selectedScrollSnap());
-    mainApi.on("select", onSelect);
-    return () => { mainApi.off("select", onSelect); };
-  }, [mainApi]);
+  const goTo = useCallback((index: number) => {
+    const wrapped = ((index % photos.length) + photos.length) % photos.length;
+    setCurrentIndex(wrapped);
+  }, [photos.length]);
 
-  const scrollPrev = useCallback(() => mainApi?.scrollPrev(), [mainApi]);
-  const scrollNext = useCallback(() => mainApi?.scrollNext(), [mainApi]);
+  const scrollPrev = useCallback(() => goTo(currentIndex - 1), [goTo, currentIndex]);
+  const scrollNext = useCallback(() => goTo(currentIndex + 1), [goTo, currentIndex]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowLeft") { e.preventDefault(); scrollPrev(); }
       if (e.key === "ArrowRight") { e.preventDefault(); scrollNext(); }
-      if (e.key === "Home") { e.preventDefault(); mainApi?.scrollTo(0); }
-      if (e.key === "End") { e.preventDefault(); mainApi?.scrollTo(photos.length - 1); }
+      if (e.key === "Home") { e.preventDefault(); goTo(0); }
+      if (e.key === "End") { e.preventDefault(); goTo(photos.length - 1); }
     },
-    [scrollPrev, scrollNext, mainApi, photos.length]
-  );
-
-  const handleThumbSelect = useCallback(
-    (index: number) => mainApi?.scrollTo(index),
-    [mainApi]
+    [scrollPrev, scrollNext, goTo, photos.length]
   );
 
   const handleSwipeClose = useCallback(() => onOpenChange(false), [onOpenChange]);
@@ -233,14 +227,14 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                   />
                 </div>
 
-                {/* Main carousel area */}
-                <div className="flex-1 relative flex items-center min-h-0">
+                {/* Main photo area */}
+                <div className="flex-1 relative min-h-0">
                   {/* Navigation arrows (desktop) */}
                   {photos.length > 1 && (
                     <>
                       <button
                         onClick={scrollPrev}
-                        className="hidden sm:flex absolute left-3 z-10 h-12 w-12 items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/15 text-white/70 hover:text-white transition-all duration-300 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white backdrop-blur-sm"
+                        className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 h-12 w-12 items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/15 text-white/70 hover:text-white transition-all duration-300 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white backdrop-blur-sm"
                         aria-label="Previous photo"
                       >
                         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -249,7 +243,7 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                       </button>
                       <button
                         onClick={scrollNext}
-                        className="hidden sm:flex absolute right-3 z-10 h-12 w-12 items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/15 text-white/70 hover:text-white transition-all duration-300 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white backdrop-blur-sm"
+                        className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 h-12 w-12 items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/15 text-white/70 hover:text-white transition-all duration-300 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white backdrop-blur-sm"
                         aria-label="Next photo"
                       >
                         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -259,19 +253,14 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                     </>
                   )}
 
-                  <div ref={mainRef} className="overflow-hidden w-full h-full">
-                    <div className="flex h-full">
-                      {photos.map((photo, i) => (
-                        <ZoomableSlide
-                          key={`slide-${i}`}
-                          src={photo}
-                          alt={`${address} - Photo ${i + 1} of ${photos.length}`}
-                          isActive={i === currentIndex}
-                          onSwipeClose={handleSwipeClose}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  <AnimatePresence mode="wait">
+                    <ZoomableSlide
+                      key={`slide-${currentIndex}`}
+                      src={photos[currentIndex]!}
+                      alt={`${address} - Photo ${currentIndex + 1} of ${photos.length}`}
+                      onSwipeClose={handleSwipeClose}
+                    />
+                  </AnimatePresence>
                 </div>
 
                 {/* Thumbnail strip */}
@@ -281,7 +270,7 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
                       photos={photos}
                       address={address}
                       activeIndex={currentIndex}
-                      onSelect={handleThumbSelect}
+                      onSelect={goTo}
                     />
                   </div>
                 )}
@@ -293,3 +282,4 @@ export function Lightbox({ photos, address, open, onOpenChange, startIndex }: Li
     </AnimatePresence>
   );
 }
+
