@@ -42,15 +42,18 @@ export function useZoom() {
   }, [scale, translateX, translateY]);
 
   const resetZoom = useCallback(() => {
+    const wasZoomed = isZoomedRef.current;
     scale.set(1);
     translateX.set(0);
     translateY.set(0);
     isZoomedRef.current = false;
     const el = containerRef.current;
     if (el) {
-      el.style.transition = "transform 0.25s ease-out";
+      if (wasZoomed) {
+        el.style.transition = "transform 0.25s ease-out";
+        setTimeout(() => { if (el) el.style.transition = ""; }, 260);
+      }
       el.style.transform = "scale(1) translate(0px, 0px)";
-      setTimeout(() => { if (el) el.style.transition = ""; }, 260);
     }
   }, [scale, translateX, translateY]);
 

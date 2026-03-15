@@ -32,7 +32,7 @@ function MosaicTile({
     <motion.button
       initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, delay: index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 0.6, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
       onClick={onClick}
       className={cn(
         "relative overflow-hidden cursor-zoom-in group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 focus-visible:ring-offset-2",
@@ -45,10 +45,10 @@ function MosaicTile({
         alt={alt}
         fill
         priority={priority}
-        className="object-cover transition-transform duration-700 ease-out will-change-transform group-hover:scale-[1.05]"
+        className="object-cover transition-all duration-700 ease-out will-change-transform group-hover:scale-[1.04] group-hover:brightness-105"
         sizes={sizes}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-white/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       {overlay}
     </motion.button>
   );
@@ -56,22 +56,24 @@ function MosaicTile({
 
 function ViewAllOverlay({ remaining }: { remaining: number }) {
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] transition-all duration-300 group-hover:bg-black/55">
-      <div className="flex flex-col items-center gap-1.5 text-white">
-        <svg
-          className="h-6 w-6 opacity-90"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
-          />
-        </svg>
-        <span className="text-sm font-semibold tracking-wide drop-shadow-sm">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[3px] transition-all duration-500 group-hover:bg-black/60 group-hover:backdrop-blur-[4px]">
+      <div className="flex flex-col items-center gap-2 text-white">
+        <div className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
+          <svg
+            className="h-4.5 w-4.5 opacity-90"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+            />
+          </svg>
+        </div>
+        <span className="text-[13px] font-semibold tracking-wide drop-shadow-sm">
           View all {remaining} photos
         </span>
       </div>
@@ -93,7 +95,7 @@ function MobileGallery({
       <MosaicTile
         src={photos[0]!}
         alt={`${address} - Photo 1`}
-        className="aspect-[16/9] w-full rounded-2xl shadow-lg"
+        className="aspect-[16/9] w-full rounded-2xl shadow-elevated"
         sizes="100vw"
         priority
         index={0}
@@ -102,7 +104,7 @@ function MobileGallery({
       {photos.length > 1 && (
         <button
           onClick={() => onOpen(0)}
-          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-navy-700 text-white text-sm font-semibold tracking-wide hover:bg-navy-800 transition-all duration-200 active:scale-[0.98] shadow-md"
+          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-navy-700 text-white text-sm font-semibold tracking-wide hover:bg-navy-800 transition-all duration-300 active:scale-[0.98] shadow-soft hover:shadow-elevated"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path
@@ -150,7 +152,7 @@ function DesktopMosaic({
 
   if (count === 2) {
     return (
-      <div className="hidden md:grid grid-cols-2 gap-1.5 rounded-2xl overflow-hidden aspect-[21/9] shadow-lg">
+      <div className="hidden md:grid grid-cols-2 gap-1.5 rounded-2xl overflow-hidden aspect-[21/9] shadow-elevated">
         {photos.map((photo, i) => (
           <MosaicTile
             key={photo}
@@ -169,7 +171,7 @@ function DesktopMosaic({
 
   if (count === 3) {
     return (
-      <div className="hidden md:grid grid-cols-5 grid-rows-2 gap-1.5 rounded-2xl overflow-hidden aspect-[21/9] shadow-lg">
+      <div className="hidden md:grid grid-cols-5 grid-rows-2 gap-1.5 rounded-2xl overflow-hidden aspect-[21/9] shadow-elevated">
         <MosaicTile
           src={photos[0]!}
           alt={`${address} - Photo 1`}
@@ -201,7 +203,7 @@ function DesktopMosaic({
 
   if (count === 4) {
     return (
-      <div className="hidden md:grid grid-cols-4 grid-rows-3 gap-1.5 rounded-2xl overflow-hidden aspect-[21/9] shadow-lg">
+      <div className="hidden md:grid grid-cols-4 grid-rows-3 gap-1.5 rounded-2xl overflow-hidden aspect-[21/9] shadow-elevated">
         <MosaicTile
           src={photos[0]!}
           alt={`${address} - Photo 1`}
@@ -229,7 +231,7 @@ function DesktopMosaic({
   // 5+ photos: hero + 2x2 grid with "view all" overlay on last cell
   const visible = photos.slice(0, VISIBLE_COUNT);
   return (
-    <div className="hidden md:grid grid-cols-4 grid-rows-2 gap-1.5 rounded-2xl overflow-hidden aspect-[21/9] shadow-lg">
+    <div className="hidden md:grid grid-cols-4 grid-rows-2 gap-1.5 rounded-2xl overflow-hidden aspect-[21/9] shadow-elevated">
       <MosaicTile
         src={visible[0]!}
         alt={`${address} - Photo 1`}

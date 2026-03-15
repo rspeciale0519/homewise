@@ -20,8 +20,8 @@ Before running the dev server, check if it's already running on a port. Either u
 
 ### Rule 4: Browser Testing
 
-Always use the dev-browser chrome extension to test and check console errors.
-If testing features in Playwright, don't close the browser without explicit approval. Leave it open until you receive confirmation to close it.
+Always use the Playwright MCP browser tools to test and check console errors.
+Don't close the browser without explicit approval. Leave it open until you receive confirmation to close it.
 
 ### Rule 5: Temporary Documentation Location
 
