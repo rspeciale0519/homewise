@@ -1,5 +1,7 @@
 "use client";
 
+import { MarketTrendChart } from "@/components/market/market-trend-chart";
+
 interface StatPeriod {
   id: string;
   period: string;
@@ -67,37 +69,9 @@ export function MarketStatsView({ city, stats, seoContent }: MarketStatsViewProp
         ))}
       </div>
 
-      {/* Trend Table */}
+      {/* Trend Chart */}
       {stats.length > 1 && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-8">
-          <h2 className="text-lg font-semibold text-navy-700 p-4 border-b border-slate-200">6-Month Trends</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="text-left px-4 py-2.5 font-medium text-slate-600 whitespace-nowrap">Period</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600 whitespace-nowrap">Active</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600 whitespace-nowrap">Median Price</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600 whitespace-nowrap">Avg DOM</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600 whitespace-nowrap">Sold</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600 whitespace-nowrap">$/Sqft</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.map((s, i) => (
-                  <tr key={s.id} className={`border-b border-slate-100 ${i === 0 ? "bg-navy-50/30 font-medium" : ""}`}>
-                    <td className="px-4 py-2.5 font-medium whitespace-nowrap">{s.period}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{s.activeCount}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">${s.medianPrice.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{s.avgDom}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{s.soldCount}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">${s.pricePerSqft}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <MarketTrendChart stats={[...stats].reverse()} />
       )}
 
       {/* SEO Content / Neighborhood Guide */}

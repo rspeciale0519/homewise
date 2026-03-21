@@ -134,3 +134,26 @@
 - [x] Archive .eslintrc.json
 - [x] Fix all lint errors
 - [x] Update .env.example with all required environment variables
+
+## Phase 10: Completion Pass — Remaining Feature Gaps
+
+### Gap 1: Trend Charts (feature/trend-charts)
+- [x] Install recharts
+- [x] Create MarketTrendChart component (dual-axis area chart, brand colors, delta indicators)
+- [x] Replace 6-month trends table in market-stats-view.tsx with MarketTrendChart
+- [x] Create TeamPerformanceChart component (bar chart, metric toggle)
+- [x] Add TeamPerformanceChart to team-performance-view.tsx
+
+### Gap 2: CMA PDF Export (feature/cma-pdf-export)
+- [ ] Install @react-pdf/renderer
+- [ ] Create CmaReportDocument PDF component
+- [ ] Create POST /api/ai/cma/pdf route
+- [ ] Create /admin/cma page with CMA tool UI
+
+### Gap 3: AI Model Tiering (feature/ai-model-tiering)
+- [ ] Add AiFeatureConfig Prisma model
+- [ ] Seed 14 feature config rows
+- [ ] Add openAiComplete(), getModelForFeature(), aiCompleteForFeature() to AI service layer
+- [ ] Update 11 AI API routes to use aiCompleteForFeature()
+- [ ] Update ChatbotEngine to resolve model per feature key
+- [ ] Create Model Config tab on /admin/ai-usage

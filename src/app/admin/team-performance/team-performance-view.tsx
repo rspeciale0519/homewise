@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { TeamPerformanceChart } from "@/components/admin/team-performance-chart";
 
 interface AgentMetrics {
   agentId: string;
@@ -238,6 +239,8 @@ export function TeamPerformanceView() {
               <p className="text-slate-500">No active agents found.</p>
             </div>
           )}
+
+          {sorted.length > 0 && <TeamPerformanceChart agents={data.agents} />}
 
           {sorted.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
