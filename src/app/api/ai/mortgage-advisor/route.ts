@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -71,7 +71,7 @@ Format as JSON with this structure:
   "summary": "Brief overall assessment"
 }`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("mortgage_advisor", {
       feature: "mortgage_advisor",
       systemPrompt: "You are a mortgage advisor assistant. Provide helpful financing scenarios. Always output valid JSON. Use current average mortgage rates. This is for educational purposes only, not financial advice.",
       userMessage: prompt,

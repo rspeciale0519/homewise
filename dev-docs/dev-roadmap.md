@@ -151,9 +151,9 @@
 - [x] Create /admin/cma page with CMA tool UI
 
 ### Gap 3: AI Model Tiering (feature/ai-model-tiering)
-- [ ] Add AiFeatureConfig Prisma model
-- [ ] Seed 14 feature config rows
-- [ ] Add openAiComplete(), getModelForFeature(), aiCompleteForFeature() to AI service layer
-- [ ] Update 11 AI API routes to use aiCompleteForFeature()
-- [ ] Update ChatbotEngine to resolve model per feature key
-- [ ] Create Model Config tab on /admin/ai-usage
+- [x] Add AiFeatureConfig Prisma model
+- [x] Seed 14 feature config rows
+- [x] Add openAiComplete(), getModelForFeature(), aiCompleteForFeature() to AI service layer
+- [x] Update 11 AI API routes to use aiCompleteForFeature()
+- [x] Update ChatbotEngine to resolve model per feature key
+- [x] Create Model Config tab on /admin/ai-usage

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -63,7 +63,7 @@ Generate JSON:
   "marketContext": "<brief market context>"
 }`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("listing_insights", {
       feature: "listing_insights",
       systemPrompt: "You are a real estate listing performance analyst. Output valid JSON only.",
       userMessage: prompt,

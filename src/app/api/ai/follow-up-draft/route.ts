@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -66,7 +66,7 @@ ${channel === "email" ? `Generate a JSON response with:
 
 Reference specific listings or activities they've engaged with. Be warm and personal.`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("follow_up_draft", {
       feature: "follow_up_draft",
       systemPrompt: `You are a real estate agent's writing assistant. Write personalized ${channel === "sms" ? "text messages" : "emails"} that reference the lead's specific activity. Be warm, not salesy. Output valid JSON only.`,
       userMessage: prompt,

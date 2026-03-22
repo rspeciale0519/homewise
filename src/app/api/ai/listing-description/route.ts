@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -67,7 +67,7 @@ Return JSON:
 
 Each description should be 150-250 words.`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("listing_description", {
       feature: "listing_description",
       systemPrompt: "You are a real estate copywriter. Write compelling listing descriptions. Output valid JSON only.",
       userMessage: prompt,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -70,7 +70,7 @@ Write a professional, warm narrative (3-4 paragraphs) that:
 
 Do NOT include any disclaimers about being AI. Write as a real estate professional.`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("home_valuation", {
       feature: "home_valuation",
       systemPrompt: "You are a real estate market analyst writing home valuation narratives for Homewise FL. Be data-driven but warm and personal.",
       userMessage: prompt,

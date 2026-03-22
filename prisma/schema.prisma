@@ -832,3 +832,14 @@ model MarketStats {
   @@index([area])
   @@index([period])
 }
+
+model AiFeatureConfig {
+  id         String   @id @default(cuid())
+  featureKey String   @unique
+  label      String
+  model      String
+  tier       String
+  updatedAt  DateTime @updatedAt
+
+  @@index([featureKey])
+}

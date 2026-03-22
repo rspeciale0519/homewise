@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -87,7 +87,7 @@ Generate a JSON meeting prep brief:
   "competitiveContext": "<market position of the property>"
 }`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("meeting_prep", {
       feature: "meeting_prep",
       systemPrompt: "You are a real estate agent's preparation assistant. Create concise, actionable meeting briefs. Output valid JSON only.",
       userMessage: prompt,

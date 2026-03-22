@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
 Make it informative and include a subtle call to action to work with a local agent.`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("market_insights", {
       feature: "market_insights",
       systemPrompt: "You are a real estate market analyst for Central Florida. Write concise, data-driven insights. No disclaimers.",
       userMessage: prompt,

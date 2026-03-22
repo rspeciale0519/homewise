@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -95,7 +95,7 @@ Generate a JSON response:
   "keyFindings": ["<finding 1>", "<finding 2>", "<finding 3>"]
 }`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("cma_report", {
       feature: "cma_report",
       systemPrompt: "You are a real estate market analyst generating CMA reports. Be data-driven and specific. Output valid JSON only.",
       userMessage: prompt,

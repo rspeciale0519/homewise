@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -48,7 +48,7 @@ Return JSON:
   "summary": "<brief campaign strategy description>"
 }`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("campaign_generator", {
       feature: "campaign_generator",
       systemPrompt: "You are an email marketing specialist for real estate. Generate warm, professional drip campaigns. Output valid JSON only.",
       userMessage: prompt,

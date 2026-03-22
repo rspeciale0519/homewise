@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { getModelForFeature } from "@/lib/ai";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
 
@@ -39,6 +40,10 @@ export class ChatbotEngine {
   }
 
   async chat(input: ChatInput): Promise<ChatResponse> {
+    const featureKeyMap = { public: "public_chatbot", agent: "agent_website_chatbot", dashboard: "dashboard_chatbot" } as const;
+    const featureKey = featureKeyMap[this.context.config];
+    const model = await getModelForFeature(featureKey);
+
     let conversationId = input.conversationId;
 
     if (!conversationId) {
@@ -70,7 +75,7 @@ export class ChatbotEngine {
     }));
 
     let response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model,
       max_tokens: 2048,
       system: this.context.systemPrompt,
       tools: this.context.tools.length > 0 ? this.context.tools : undefined,
@@ -107,7 +112,7 @@ export class ChatbotEngine {
       messages.push({ role: "user", content: toolResultContents });
 
       response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model,
         max_tokens: 2048,
         system: this.context.systemPrompt,
         tools: this.context.tools,

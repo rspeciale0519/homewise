@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -68,7 +68,7 @@ Return JSON:
   ]
 }`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("social_post", {
       feature: "social_post",
       systemPrompt: `You are a real estate social media expert. Write engaging ${platform} posts. Output valid JSON only.`,
       userMessage: prompt,

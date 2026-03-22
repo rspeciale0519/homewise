@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { aiComplete } from "@/lib/ai";
+import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -62,7 +62,7 @@ Generate a JSON response:
   "suggestedAction": "<recommended next step>"
 }`;
 
-    const result = await aiComplete({
+    const result = await aiCompleteForFeature("lead_scoring", {
       feature: "lead_scoring",
       systemPrompt: "You are a real estate CRM analyst. Score leads based on engagement, recency, and buying signals. Output valid JSON only.",
       userMessage: prompt,

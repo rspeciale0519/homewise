@@ -6,6 +6,8 @@ export const AI_PRICING = {
   "claude-sonnet": { input: 3, output: 15 },
   "claude-haiku": { input: 0.25, output: 1.25 },
   "gpt-4o-mini": { input: 0.15, output: 0.6 },
+  "gpt-5-mini": { input: 0.25, output: 2.0 },
+  "gpt-5-nano": { input: 0.05, output: 0.4 },
   default: { input: 3, output: 15 },
 } as const;
 
