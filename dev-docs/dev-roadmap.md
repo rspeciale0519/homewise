@@ -145,10 +145,10 @@
 - [x] Add TeamPerformanceChart to team-performance-view.tsx
 
 ### Gap 2: CMA PDF Export (feature/cma-pdf-export)
-- [ ] Install @react-pdf/renderer
-- [ ] Create CmaReportDocument PDF component
-- [ ] Create POST /api/ai/cma/pdf route
-- [ ] Create /admin/cma page with CMA tool UI
+- [x] Install @react-pdf/renderer
+- [x] Create CmaReportDocument PDF component
+- [x] Create POST /api/ai/cma/pdf route
+- [x] Create /admin/cma page with CMA tool UI
 
 ### Gap 3: AI Model Tiering (feature/ai-model-tiering)
 - [ ] Add AiFeatureConfig Prisma model
