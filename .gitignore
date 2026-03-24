@@ -66,3 +66,5 @@ docs/temp/
 /archive/*.jpg
 /*.png
 /*.jpg
+
+.vercel
