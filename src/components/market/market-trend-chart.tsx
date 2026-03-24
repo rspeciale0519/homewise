@@ -116,12 +116,13 @@ export function MarketTrendChart({ stats }: MarketTrendChartProps) {
             />
 
             <Tooltip
-              formatter={(value: number, name: string) => {
+              formatter={(value, name) => {
+                const v = Number(value);
                 if (name === "medianPrice")
-                  return [`$${value.toLocaleString()}`, "Median Price"];
-                return [`${value} days`, "Avg Days on Market"];
+                  return [`$${v.toLocaleString()}`, "Median Price"];
+                return [`${v} days`, "Avg Days on Market"];
               }}
-              labelFormatter={formatPeriod}
+              labelFormatter={(label) => formatPeriod(String(label))}
               contentStyle={{
                 fontSize: 12,
                 borderRadius: 8,
