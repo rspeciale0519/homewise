@@ -36,6 +36,7 @@ export function MortgageAdvisor() {
   const [description, setDescription] = useState("");
   const [result, setResult] = useState<AdvisorResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { user, loading } = useSupabase();
   const [gated, setGated] = useState(false);
 
@@ -52,6 +53,7 @@ export function MortgageAdvisor() {
 
     setIsSubmitting(true);
     setResult(null);
+    setError(null);
     setGated(false);
 
     try {
@@ -70,7 +72,7 @@ export function MortgageAdvisor() {
       const data = (await res.json()) as AdvisorResult;
       setResult(data);
     } catch {
-      /* ignore */
+      setError("Something went wrong generating your scenarios. Please try again.");
     }
     setIsSubmitting(false);
   };
@@ -137,6 +139,9 @@ export function MortgageAdvisor() {
             </span>
           ) : "Get My Scenarios"}
         </button>
+        {error && (
+          <p className="mt-3 text-sm text-crimson-600 text-center">{error}</p>
+        )}
       </form>
 
       {gated && (
@@ -226,6 +231,25 @@ export function MortgageAdvisor() {
               Get Pre-Approved
             </a>
           </div>
+        </div>
+      )}
+
+      {isSubmitting && !result && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-xl border border-slate-100 bg-slate-50 p-5 space-y-3">
+              <div className="h-3 w-16 bg-slate-200 rounded-full" />
+              <div className="h-4 w-3/4 bg-slate-200 rounded-full" />
+              <div className="space-y-2 pt-2">
+                <div className="h-3 w-full bg-slate-100 rounded-full" />
+                <div className="h-3 w-5/6 bg-slate-100 rounded-full" />
+                <div className="h-3 w-4/6 bg-slate-100 rounded-full" />
+              </div>
+              <div className="pt-3 border-t border-slate-100">
+                <div className="h-6 w-1/2 bg-slate-200 rounded-full" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
