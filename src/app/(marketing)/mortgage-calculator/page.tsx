@@ -98,7 +98,26 @@ export default function MortgageCalculatorPage() {
         </Container>
       </div>
 
-      {/* TODO: Quick Calculator section */}
+      {/* ── Quick Calculator ── */}
+      <section className="section-padding bg-white">
+        <Container size="md">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-3">
+              Instant Estimate
+            </p>
+            <h2 className="font-serif text-display-md font-semibold text-navy-700 mb-3">
+              Run the Numbers
+            </h2>
+            <p className="text-slate-500 max-w-xl mx-auto text-sm leading-relaxed">
+              Adjust the sliders to estimate your monthly payment. Includes principal, interest,
+              property taxes, and home insurance.
+            </p>
+          </div>
+          <div className="max-w-lg mx-auto">
+            <MortgageCalculator />
+          </div>
+        </Container>
+      </section>
       {/* TODO: AI Advisor section */}
       {/* TODO: CTA Banner */}
     </>
