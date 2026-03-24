@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useSupabase } from "@/components/providers/supabase-provider";
 
 interface Scenario {
   name: string;
@@ -34,11 +36,21 @@ export function MortgageAdvisor() {
   const [description, setDescription] = useState("");
   const [result, setResult] = useState<AdvisorResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const { user } = useSupabase();
+  const [gated, setGated] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Gate: unauthenticated users see an inline signup prompt instead
+    if (!user) {
+      setGated(true);
+      return;
+    }
+
     setLoading(true);
     setResult(null);
+    setGated(false);
 
     try {
       const res = await fetch("/api/ai/mortgage-advisor", {
@@ -63,16 +75,30 @@ export function MortgageAdvisor() {
 
   return (
     <div>
+      {!user && (
+        <div className="flex items-center gap-3 bg-navy-50 border border-navy-100 rounded-xl px-4 py-3 mb-5 text-sm">
+          <svg className="h-4 w-4 text-navy-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <span className="text-slate-600">
+            A free account is required to generate AI scenarios.{" "}
+            <Link href="/register" className="font-medium text-navy-700 underline underline-offset-2 hover:text-crimson-600 transition-colors">
+              Sign up free
+            </Link>{" "}
+            — takes less than a minute.
+          </span>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 mb-8 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InputField label="Annual Income" value={income} onChange={setIncome} placeholder="75000" prefix="$" type="number" />
-          <InputField label="Monthly Debt Payments" value={debt} onChange={setDebt} placeholder="500" prefix="$" type="number" />
-          <InputField label="Down Payment Available" value={downPayment} onChange={setDownPayment} placeholder="20000" prefix="$" type="number" />
+          <InputField label="Annual Income" value={income} onChange={(v) => { setIncome(v); setGated(false); }} placeholder="75000" prefix="$" type="number" />
+          <InputField label="Monthly Debt Payments" value={debt} onChange={(v) => { setDebt(v); setGated(false); }} placeholder="500" prefix="$" type="number" />
+          <InputField label="Down Payment Available" value={downPayment} onChange={(v) => { setDownPayment(v); setGated(false); }} placeholder="20000" prefix="$" type="number" />
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Credit Score Range</label>
             <select
               value={creditScore}
-              onChange={(e) => setCreditScore(e.target.value)}
+              onChange={(e) => { setCreditScore(e.target.value); setGated(false); }}
               className="w-full h-11 px-3 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-navy-600 transition-colors"
             >
               <option value="">Select range</option>
@@ -83,12 +109,12 @@ export function MortgageAdvisor() {
               <option value="below 620">Poor (below 620)</option>
             </select>
           </div>
-          <InputField label="Target Home Price (optional)" value={homePrice} onChange={setHomePrice} placeholder="350000" prefix="$" type="number" />
+          <InputField label="Target Home Price (optional)" value={homePrice} onChange={(v) => { setHomePrice(v); setGated(false); }} placeholder="350000" prefix="$" type="number" />
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Additional Details</label>
             <input
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => { setDescription(e.target.value); setGated(false); }}
               placeholder="First-time buyer, VA eligible, etc."
               className="w-full h-11 px-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-600 transition-colors"
             />
@@ -110,6 +136,40 @@ export function MortgageAdvisor() {
           ) : "Get My Scenarios"}
         </button>
       </form>
+
+      {gated && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-sm">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-navy-50 mb-4">
+            <svg className="h-6 w-6 text-navy-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h3 className="font-serif text-xl font-bold text-navy-700 mb-2">
+            Your scenarios are ready to generate
+          </h3>
+          <p className="text-slate-500 text-sm max-w-sm mx-auto mb-6 leading-relaxed">
+            Create a free account to unlock your personalized AI mortgage scenarios — it takes less
+            than a minute.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/register"
+              className="px-6 py-3 bg-navy-600 text-white font-semibold rounded-xl hover:bg-navy-700 transition-colors text-sm"
+            >
+              Create Free Account
+            </Link>
+            <Link
+              href="/login"
+              className="px-6 py-3 bg-white text-navy-700 font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors text-sm"
+            >
+              Log In
+            </Link>
+          </div>
+          <p className="text-xs text-slate-400 mt-4">
+            Your details above are saved — just sign in and submit again.
+          </p>
+        </div>
+      )}
 
       {result?.scenarios && (
         <div>
