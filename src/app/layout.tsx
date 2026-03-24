@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SITE_NAME, DESCRIPTION, SITE_URL } from "@/lib/constants";
 import { SupabaseProvider } from "@/components/providers/supabase-provider";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
 
 // Font variables (--font-dm-sans, --font-cormorant) are defined in globals.css.
 // Google Fonts loaded via <link> in <head> below.
@@ -31,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn("font-sans", geist.variable)}>
       <head>
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://api.mapbox.com" />

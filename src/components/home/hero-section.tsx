@@ -1,19 +1,20 @@
-import Image from "next/image";
 import { SearchWidget } from "./search-widget";
 
 export function HeroSection() {
   return (
     <section className="relative h-[calc(100svh-5rem)] md:h-[calc(100svh-6rem)] min-h-[560px] flex flex-col overflow-hidden">
-      {/* Background image */}
+      {/* Background video */}
       <div className="absolute inset-0">
-        <Image
-          src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1920&q=80"
-          alt="Luxury Florida home"
-          fill
-          priority
-          className="object-cover object-center"
-          sizes="100vw"
-        />
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          poster="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1920&q=80"
+        >
+          <source src="/videos/hero.mp4" type="video/mp4" />
+        </video>
         {/* Layered gradient: vignette + bottom darkening */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(46,39,109,0.35)_0%,rgba(20,18,47,0.78)_100%)]" />
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950/90 via-transparent to-navy-950/20" />

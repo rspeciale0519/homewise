@@ -20,7 +20,7 @@ export function AgentCard({ agent }: AgentCardProps) {
       className="group block rounded-2xl bg-white border border-slate-100 overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
     >
       {/* Photo area */}
-      <div className="relative aspect-[4/5] bg-gradient-to-br from-navy-600 to-navy-800 overflow-hidden">
+      <div className="relative aspect-[3/4] bg-gradient-to-br from-navy-600 to-navy-800 overflow-hidden">
         {agent.photoUrl ? (
           <Image
             src={agent.photoUrl}
@@ -31,7 +31,7 @@ export function AgentCard({ agent }: AgentCardProps) {
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="font-serif text-5xl font-bold text-white/30">{initials}</span>
+            <span className="font-serif text-4xl font-bold text-white/30">{initials}</span>
           </div>
         )}
         {/* Gradient overlay on hover */}
@@ -63,14 +63,14 @@ export function AgentCard({ agent }: AgentCardProps) {
       </div>
 
       {/* Info area */}
-      <div className="p-5">
-        <h3 className="font-serif text-lg font-semibold text-navy-700 group-hover:text-crimson-600 transition-colors">
+      <div className="p-4">
+        <h3 className="font-serif text-base font-semibold text-navy-700 group-hover:text-crimson-600 transition-colors">
           {fullName}
         </h3>
 
         {/* Designations */}
         {agent.designations.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
             {agent.designations.map((d) => (
               <span
                 key={d}
@@ -84,7 +84,7 @@ export function AgentCard({ agent }: AgentCardProps) {
 
         {/* Phone */}
         {agent.phone && (
-          <div className="flex items-center gap-2 mt-3 text-sm text-slate-500">
+          <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
             <svg className="h-3.5 w-3.5 text-crimson-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
