@@ -35,12 +35,14 @@ export function MortgageAdvisor() {
   const [homePrice, setHomePrice] = useState("");
   const [description, setDescription] = useState("");
   const [result, setResult] = useState<AdvisorResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { user } = useSupabase();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, loading } = useSupabase();
   const [gated, setGated] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (loading) return;
 
     // Gate: unauthenticated users see an inline signup prompt instead
     if (!user) {
@@ -48,7 +50,7 @@ export function MortgageAdvisor() {
       return;
     }
 
-    setLoading(true);
+    setIsSubmitting(true);
     setResult(null);
     setGated(false);
 
@@ -70,12 +72,12 @@ export function MortgageAdvisor() {
     } catch {
       /* ignore */
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   return (
     <div>
-      {!user && (
+      {!loading && !user && (
         <div className="flex items-center gap-3 bg-navy-50 border border-navy-100 rounded-xl px-4 py-3 mb-5 text-sm">
           <svg className="h-4 w-4 text-navy-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -122,10 +124,10 @@ export function MortgageAdvisor() {
         </div>
         <button
           type="submit"
-          disabled={loading || (!income && !description)}
+          disabled={isSubmitting || (!income && !description)}
           className="mt-5 w-full px-6 py-3.5 bg-navy-600 text-white font-semibold rounded-xl hover:bg-navy-700 transition-all disabled:opacity-50 active:scale-[0.99]"
         >
-          {loading ? (
+          {isSubmitting ? (
             <span className="inline-flex items-center gap-2">
               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
