@@ -84,6 +84,11 @@ export const NAV_ITEMS: NavItem[] = [
         href: "/buyers/condo-vs-house",
         description: "Compare your options with confidence",
       },
+      {
+        label: "Mortgage Calculator",
+        href: "/mortgage-calculator",
+        description: "Estimate your monthly payments instantly",
+      },
     ],
   },
   {
