@@ -102,8 +102,8 @@ export function TeamPerformanceChart({ agents }: TeamPerformanceChartProps) {
             width={48}
           />
           <Tooltip
-            formatter={(value: number) => [
-              formatMetricValue(value, activeMetric),
+            formatter={(value) => [
+              formatMetricValue(Number(value), activeMetric),
               METRICS.find((m) => m.key === activeMetric)?.label ?? activeMetric,
             ]}
             contentStyle={{
