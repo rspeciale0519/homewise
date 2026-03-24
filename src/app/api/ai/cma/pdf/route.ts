@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
-import { renderToBuffer } from "@react-pdf/renderer";
+import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import { CmaReportDocument } from "@/components/pdf/cma-report-document";
-import { createElement } from "react";
+import { createElement, type ReactElement } from "react";
 import type { CmaReportProps } from "@/components/pdf/cma-report-document";
 
 export const maxDuration = 60;
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     agentPhone: auth.profile.phone ?? undefined,
   };
 
-  const buffer = await renderToBuffer(createElement(CmaReportDocument, props));
+  const buffer = await renderToBuffer(createElement(CmaReportDocument, props) as ReactElement<DocumentProps>);
 
   const rawAddress = cma.subjectProperty?.address ?? "property";
   const slug = rawAddress.replace(/[^a-z0-9]/gi, "-").toLowerCase().slice(0, 60);
