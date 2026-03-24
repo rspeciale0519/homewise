@@ -117,8 +117,8 @@ export function TeamPerformanceChart({ agents }: TeamPerformanceChartProps) {
           <Bar
             dataKey="value"
             radius={[4, 4, 0, 0]}
-            onMouseEnter={(entry: { agentId: string }) =>
-              setHoveredBar(entry.agentId)
+            onMouseEnter={(entry) =>
+              setHoveredBar((entry as unknown as { agentId: string }).agentId)
             }
             onMouseLeave={() => setHoveredBar(null)}
           >
