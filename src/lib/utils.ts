@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function generateSlug(text: string): string {
-  return text
+export function generateSlug(firstName: string, lastName: string): string {
+  return `${firstName} ${lastName}`
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, "")
