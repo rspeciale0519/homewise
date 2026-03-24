@@ -118,8 +118,36 @@ export default function MortgageCalculatorPage() {
           </div>
         </Container>
       </section>
-      {/* TODO: AI Advisor section */}
-      {/* TODO: CTA Banner */}
+
+      {/* ── AI Scenario Advisor ── */}
+      <section className="section-padding bg-cream-50">
+        <Container size="lg">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-3">
+              AI-Powered
+            </p>
+            <h2 className="font-serif text-display-md font-semibold text-navy-700 mb-3">
+              Get Personalized Scenarios
+            </h2>
+            <p className="text-slate-500 max-w-2xl mx-auto text-sm leading-relaxed">
+              Tell us about your financial situation and our AI will generate three tailored mortgage
+              scenarios — Conservative, Moderate, and Stretch — with full breakdowns of loan type,
+              payment, and key tradeoffs.
+            </p>
+          </div>
+          <MortgageAdvisor />
+        </Container>
+      </section>
+
+      {/* ── CTA Banner ── */}
+      <CtaBanner
+        eyebrow="Ready to Take the Next Step?"
+        title="Get Pre-Approved Today"
+        subtitle="Our mortgage partners can provide a full pre-approval — not just a pre-qualification — so you can make strong offers with confidence."
+        primaryCta={{ label: "Get Pre-Approved", href: "/contact" }}
+        secondaryCta={{ label: "Find an Agent", href: "/agents" }}
+        variant="navy"
+      />
     </>
   );
 }
