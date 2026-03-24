@@ -38,11 +38,11 @@ export default function MortgageCalculatorPage() {
         <div className="absolute inset-0 opacity-[0.04]" aria-hidden="true">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <pattern id="mortgage-hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
                 <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
+            <rect width="100%" height="100%" fill="url(#mortgage-hero-grid)" />
           </svg>
         </div>
         {/* Crimson glow orb */}
@@ -61,7 +61,7 @@ export default function MortgageCalculatorPage() {
                 <svg className="h-3 w-3 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <span className="text-slate-300">Mortgage Calculator</span>
+                <span aria-current="page" className="text-slate-300">Mortgage Calculator</span>
               </li>
             </ol>
           </nav>
