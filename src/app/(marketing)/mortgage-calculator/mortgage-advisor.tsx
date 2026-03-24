@@ -69,6 +69,10 @@ export function MortgageAdvisor() {
           description: description || undefined,
         }),
       });
+      if (!res.ok) {
+        setError("Something went wrong generating your scenarios. Please try again.");
+        return;
+      }
       const data = (await res.json()) as AdvisorResult;
       setResult(data);
     } catch {
