@@ -218,10 +218,6 @@ function InlineNumberInput({
   const [draft, setDraft] = useState("");
   const ref = useRef<HTMLInputElement>(null);
 
-  const precision = String(step).includes(".")
-    ? (String(step).split(".")[1]?.length ?? 0)
-    : 0;
-
   return (
     <input
       ref={ref}
@@ -239,9 +235,7 @@ function InlineNumberInput({
         setIsFocused(false);
         const parsed = parseFloat(draft.replace(/[^0-9.]/g, ""));
         if (!isNaN(parsed)) {
-          const clamped = Math.min(max, Math.max(min, parsed));
-          const rounded = Math.round(clamped / step) * step;
-          onChange(Number(rounded.toFixed(precision)));
+          onChange(Math.min(max, Math.max(min, parsed)));
         }
       }}
       onKeyDown={(e) => {
