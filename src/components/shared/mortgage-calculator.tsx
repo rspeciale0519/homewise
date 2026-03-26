@@ -219,7 +219,7 @@ function InlineNumberInput({
   const ref = useRef<HTMLInputElement>(null);
 
   const precision = String(step).includes(".")
-    ? String(step).split(".")[1].length
+    ? (String(step).split(".")[1]?.length ?? 0)
     : 0;
 
   return (
