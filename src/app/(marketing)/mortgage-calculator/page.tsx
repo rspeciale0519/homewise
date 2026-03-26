@@ -66,7 +66,7 @@ export default function MortgageCalculatorPage() {
             </ol>
           </nav>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10 lg:gap-12 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10 lg:gap-12 lg:items-center">
             {/* Left: Headline block */}
             <div>
               <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-400 mb-3">
@@ -82,7 +82,7 @@ export default function MortgageCalculatorPage() {
             </div>
 
             {/* Right: How It Works badges */}
-            <div className="flex flex-col gap-3 lg:pt-6">
+            <div className="flex flex-col gap-3">
               {HOW_IT_WORKS.map((item, i) => (
                 <div
                   key={item.step}
