@@ -9,10 +9,7 @@ export function useImageColor(src: string): string {
   const [color, setColor] = useState(DEFAULT_COLOR);
 
   useEffect(() => {
-    if (!src) {
-      setColor(DEFAULT_COLOR);
-      return;
-    }
+    if (!src) return;
 
     const img = document.createElement("img");
     img.crossOrigin = "anonymous";
