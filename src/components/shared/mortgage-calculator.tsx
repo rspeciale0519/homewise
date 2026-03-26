@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 const LOAN_TERMS = [
@@ -57,7 +57,16 @@ export function MortgageCalculator() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-navy-700">Home Price</label>
-              <span className="text-sm font-semibold text-navy-700">${price.toLocaleString()}</span>
+              <InlineNumberInput
+                value={price}
+                onChange={setPrice}
+                min={100000}
+                max={2000000}
+                step={5000}
+                format={(v) => `$${v.toLocaleString()}`}
+                ariaLabel="Home price in dollars"
+                inputWidth="w-[7.5rem]"
+              />
             </div>
             <input
               type="range"
@@ -78,8 +87,20 @@ export function MortgageCalculator() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-navy-700">Down Payment</label>
-              <span className="text-sm font-semibold text-navy-700">
-                {downPercent}% (${result.downPayment.toLocaleString()})
+              <span className="flex items-center gap-1.5">
+                <InlineNumberInput
+                  value={downPercent}
+                  onChange={setDownPercent}
+                  min={0}
+                  max={50}
+                  step={1}
+                  format={(v) => `${v}%`}
+                  ariaLabel="Down payment percentage"
+                  inputWidth="w-14"
+                />
+                <span className="text-xs text-slate-400 font-normal">
+                  (${result.downPayment.toLocaleString()})
+                </span>
               </span>
             </div>
             <input
@@ -101,7 +122,16 @@ export function MortgageCalculator() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-navy-700">Interest Rate</label>
-              <span className="text-sm font-semibold text-navy-700">{rate.toFixed(1)}%</span>
+              <InlineNumberInput
+                value={rate}
+                onChange={setRate}
+                min={2}
+                max={12}
+                step={0.1}
+                format={(v) => `${v.toFixed(1)}%`}
+                ariaLabel="Annual interest rate"
+                inputWidth="w-[4.5rem]"
+              />
             </div>
             <input
               type="range"
@@ -162,6 +192,76 @@ export function MortgageCalculator() {
         </div>
       </div>
     </div>
+  );
+}
+
+function InlineNumberInput({
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  format,
+  ariaLabel,
+  inputWidth,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  format: (v: number) => string;
+  ariaLabel: string;
+  inputWidth: string;
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+  const [draft, setDraft] = useState("");
+  const ref = useRef<HTMLInputElement>(null);
+
+  const precision = String(step).includes(".")
+    ? String(step).split(".")[1].length
+    : 0;
+
+  return (
+    <input
+      ref={ref}
+      type="text"
+      inputMode="decimal"
+      aria-label={ariaLabel}
+      value={isFocused ? draft : format(value)}
+      onChange={(e) => setDraft(e.target.value)}
+      onFocus={() => {
+        setIsFocused(true);
+        setDraft(String(value));
+        requestAnimationFrame(() => ref.current?.select());
+      }}
+      onBlur={() => {
+        setIsFocused(false);
+        const parsed = parseFloat(draft.replace(/[^0-9.]/g, ""));
+        if (!isNaN(parsed)) {
+          const clamped = Math.min(max, Math.max(min, parsed));
+          const rounded = Math.round(clamped / step) * step;
+          onChange(Number(rounded.toFixed(precision)));
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") ref.current?.blur();
+        if (e.key === "Escape") {
+          setDraft(String(value));
+          ref.current?.blur();
+        }
+      }}
+      className={cn(
+        "text-sm font-semibold text-navy-700 text-right bg-transparent",
+        "rounded-md px-2 py-0.5 -my-0.5",
+        "border border-dashed border-slate-200",
+        "hover:border-solid hover:border-slate-300 hover:bg-slate-50/80",
+        "focus:border-solid focus:border-crimson-500 focus:bg-white focus:outline-none",
+        "focus:shadow-[0_0_0_2px_rgba(192,38,55,0.1)]",
+        "transition-all duration-150 cursor-text",
+        inputWidth
+      )}
+    />
   );
 }
 
