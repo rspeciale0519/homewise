@@ -66,34 +66,39 @@ export default function MortgageCalculatorPage() {
             </ol>
           </nav>
 
-          {/* Headline block */}
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-400 mb-3">
-            For Buyers
-          </p>
-          <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-semibold text-white leading-tight text-balance max-w-3xl mb-4">
-            Know Your Numbers Before You Shop
-          </h1>
-          <p className="text-slate-300 text-lg max-w-2xl leading-relaxed mb-10">
-            Run a quick payment estimate or let our AI build personalized mortgage scenarios around
-            your actual financial profile — so you walk into every showing with confidence.
-          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10 lg:gap-12 items-center">
+            {/* Left: Headline block */}
+            <div>
+              <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-400 mb-3">
+                For Buyers
+              </p>
+              <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-semibold text-white leading-tight text-balance max-w-3xl mb-4">
+                Know Your Numbers Before You Shop
+              </h1>
+              <p className="text-slate-300 text-lg max-w-2xl leading-relaxed">
+                Run a quick payment estimate or let our AI build personalized mortgage scenarios around
+                your actual financial profile — so you walk into every showing with confidence.
+              </p>
+            </div>
 
-          {/* How It Works row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {HOW_IT_WORKS.map((item) => (
-              <div
-                key={item.step}
-                className="flex gap-4 bg-white/5 border border-white/10 rounded-xl px-5 py-4"
-              >
-                <span className="font-serif text-3xl font-bold text-white/20 leading-none shrink-0 w-10 text-right">
-                  {item.step}
-                </span>
-                <div className="pt-0.5">
-                  <p className="text-sm font-semibold text-white mb-1">{item.title}</p>
-                  <p className="text-xs text-slate-400 leading-relaxed">{item.body}</p>
+            {/* Right: How It Works badges */}
+            <div className="flex flex-col gap-3">
+              {HOW_IT_WORKS.map((item, i) => (
+                <div
+                  key={item.step}
+                  className="flex gap-4 items-center bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-5 py-4"
+                  style={{ opacity: 1 - i * 0.15 }}
+                >
+                  <span className="font-serif text-3xl font-bold text-crimson-500/60 leading-none shrink-0 w-10 text-center">
+                    {item.step}
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-white mb-0.5">{item.title}</p>
+                    <p className="text-xs text-slate-400 leading-relaxed">{item.body}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Container>
       </div>
