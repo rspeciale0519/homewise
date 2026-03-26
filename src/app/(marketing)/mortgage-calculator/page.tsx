@@ -48,7 +48,7 @@ export default function MortgageCalculatorPage() {
         {/* Crimson glow orb */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-crimson-600/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
 
-        <Container className="pt-16 pb-14 relative z-10">
+        <Container size="xl" className="pt-16 pb-14 relative z-10">
           {/* Breadcrumb */}
           <nav aria-label="Breadcrumb" className="mb-6">
             <ol className="flex items-center gap-2 text-xs text-slate-400">
@@ -66,7 +66,7 @@ export default function MortgageCalculatorPage() {
             </ol>
           </nav>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10 lg:gap-12 items-start">
             {/* Left: Headline block */}
             <div>
               <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-400 mb-3">
@@ -82,7 +82,7 @@ export default function MortgageCalculatorPage() {
             </div>
 
             {/* Right: How It Works badges */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 lg:pt-6">
               {HOW_IT_WORKS.map((item, i) => (
                 <div
                   key={item.step}
