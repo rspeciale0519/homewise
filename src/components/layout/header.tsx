@@ -119,10 +119,11 @@ export function Header() {
                   {/* Dropdown */}
                   {item.children && openDropdown === item.label && (
                     <div
-                      className="absolute top-full left-1/2 -translate-x-1/2 pt-2 animate-slide-down"
+                      className="absolute top-full left-1/2 -translate-x-1/2 pt-2"
                       onMouseEnter={() => handleMouseEnter(item.label)}
                       onMouseLeave={handleMouseLeave}
                     >
+                      <div className="animate-slide-down">
                       <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-dropdown border border-slate-100 p-2 min-w-[240px]">
                         <div className="h-0.5 w-8 bg-crimson-600 rounded-full mx-3 mb-2" />
                         {item.children.map((child) => (
@@ -151,6 +152,7 @@ export function Header() {
                             )}
                           </Link>
                         ))}
+                      </div>
                       </div>
                     </div>
                   )}
