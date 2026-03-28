@@ -13,7 +13,7 @@ interface BillingSettingsDefaults {
   gracePeriodLockoutDays: number;
 }
 
-async function getBillingSettings(): Promise<BillingSettingsDefaults> {
+export async function getBillingSettings(): Promise<BillingSettingsDefaults> {
   const settings = await prisma.billingSettings.findFirst();
 
   return {
