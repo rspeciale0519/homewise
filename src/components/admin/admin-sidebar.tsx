@@ -52,6 +52,16 @@ const ADMIN_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "Billing",
+    items: [
+      { href: "/admin/billing", label: "Revenue", icon: "chart", exact: true },
+      { href: "/admin/billing/agents", label: "Agent Billing", icon: "credit-card" },
+      { href: "/admin/billing/bundles", label: "Bundles", icon: "package" },
+      { href: "/admin/billing/features", label: "Features", icon: "toggle" },
+      { href: "/admin/billing/settings", label: "Billing Settings", icon: "gear" },
+    ],
+  },
+  {
     title: "System",
     items: [
       { href: "/admin/submissions", label: "Submissions", icon: "inbox" },
