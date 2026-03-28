@@ -31,9 +31,14 @@ model Agent {
   userId           String?       @unique
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  preferredByUsers UserProfile[]
-  user             UserProfile?  @relation("AgentUser", fields: [userId], references: [id])
-  contacts         Contact[]
+  preferredByUsers     UserProfile[]
+  user                 UserProfile?        @relation("AgentUser", fields: [userId], references: [id])
+  contacts             Contact[]
+  stripeCustomer       StripeCustomer?
+  subscription         Subscription?
+  usageRecords         UsageRecord[]
+  paymentRecords       PaymentRecord[]
+  gracePeriodOverrides GracePeriodOverride[]
 
   @@index([lastName])
   @@index([active])
@@ -842,4 +847,148 @@ model AiFeatureConfig {
   updatedAt  DateTime @updatedAt
 
   @@index([featureKey])
+}
+
+// ─── Billing & Subscriptions ───────────────────────────────────
+
+model StripeCustomer {
+  id                   String   @id @default(cuid())
+  agentId              String   @unique
+  agent                Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String   @unique
+  defaultPaymentMethod String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([stripeCustomerId])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  agentId              String             @unique
+  agent                Agent              @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String             @unique
+  status               String             @default("active")
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean            @default(false)
+  trialEnd             DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  items                SubscriptionItem[]
+
+  @@index([status])
+  @@index([stripeSubscriptionId])
+}
+
+model SubscriptionItem {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  stripeItemId   String       @unique
+  productType    String
+  productName    String
+  stripePriceId  String
+  quantity       Int          @default(1)
+  createdAt      DateTime     @default(now())
+
+  @@index([subscriptionId])
+  @@index([productType])
+}
+
+model EntitlementConfig {
+  id              String   @id @default(cuid())
+  featureKey      String   @unique
+  featureName     String
+  requiredProduct String?
+  freeLimit       Int?
+  description     String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model BundleConfig {
+  id              String          @id @default(cuid())
+  name            String
+  slug            String          @unique
+  description     String
+  stripeProductId String?
+  monthlyPriceId  String?
+  annualPriceId   String?
+  monthlyAmount   Int
+  annualAmount    Int
+  productType     String
+  isActive        Boolean         @default(true)
+  sortOrder       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  features        BundleFeature[]
+}
+
+model BundleFeature {
+  id         String       @id @default(cuid())
+  bundleId   String
+  bundle     BundleConfig @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  featureKey String
+  limit      Int?
+  createdAt  DateTime     @default(now())
+
+  @@unique([bundleId, featureKey])
+  @@index([bundleId])
+}
+
+model UsageRecord {
+  id                 String   @id @default(cuid())
+  agentId            String
+  agent              Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  featureKey         String
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  usageCount         Int      @default(0)
+  updatedAt          DateTime @updatedAt
+
+  @@unique([agentId, featureKey, billingPeriodStart])
+  @@index([agentId])
+}
+
+model PaymentRecord {
+  id                    String   @id @default(cuid())
+  agentId               String
+  agent                 Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  stripePaymentIntentId String?
+  amount                Int
+  currency              String   @default("usd")
+  paymentType           String
+  status                String   @default("succeeded")
+  processedBy           String?
+  notes                 String?
+  createdAt             DateTime @default(now())
+
+  @@index([agentId])
+  @@index([status])
+}
+
+model GracePeriodOverride {
+  id            String   @id @default(cuid())
+  agentId       String
+  agent         Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  extendedUntil DateTime
+  reason        String
+  grantedBy     String
+  createdAt     DateTime @default(now())
+
+  @@index([agentId])
+}
+
+model BillingSettings {
+  id                     String   @id @default(cuid())
+  gracePeriodWarningDays Int      @default(7)
+  gracePeriodUrgentDays  Int      @default(14)
+  gracePeriodLockoutDays Int      @default(15)
+  invoiceNotifyDays      Int      @default(7)
+  trialDurationDays      Int      @default(14)
+  transitionGraceDays    Int      @default(30)
+  loyaltyDiscountPercent Int      @default(20)
+  updatedAt              DateTime @updatedAt
 }
