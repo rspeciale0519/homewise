@@ -23,9 +23,10 @@ async function getOrCreateStripeProduct(
     limit: 1,
   });
 
-  if (existing.data.length > 0) {
-    console.log(`  Stripe product already exists: ${name} (${existing.data[0].id})`);
-    return existing.data[0].id;
+  const first = existing.data[0];
+  if (first) {
+    console.log(`  Stripe product already exists: ${name} (${first.id})`);
+    return first.id;
   }
 
   const product = await stripe.products.create({ name, description, metadata });
