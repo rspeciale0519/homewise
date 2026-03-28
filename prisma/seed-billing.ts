@@ -1,3 +1,6 @@
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 import { PrismaClient } from "@prisma/client";
 import Stripe from "stripe";
 import { PRODUCTS, ENTITLEMENTS, BUNDLE_FEATURES } from "./seed-billing-data";
