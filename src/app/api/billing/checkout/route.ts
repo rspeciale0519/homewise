@@ -5,9 +5,18 @@ import { stripe } from "@/lib/stripe";
 import { getOrCreateStripeCustomer } from "@/lib/billing/stripe-sync";
 import { checkoutSessionSchema } from "@/schemas/billing.schema";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+function getSiteUrl(request: NextRequest): string {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (envUrl && envUrl.startsWith("http")) return envUrl;
+  const origin = request.headers.get("origin") || request.headers.get("referer");
+  if (origin) {
+    try { return new URL(origin).origin; } catch { /* fall through */ }
+  }
+  return "https://app.homewisefl.com";
+}
 
 export async function POST(request: NextRequest) {
+  const siteUrl = getSiteUrl(request);
   const auth = await requireAuthApi();
   if (isError(auth)) return auth.error;
 
@@ -94,8 +103,8 @@ export async function POST(request: NextRequest) {
         metadata: { agentId: agent.id },
       },
       success_url:
-        successUrl ?? `${SITE_URL}/dashboard/billing?checkout=success`,
-      cancel_url: cancelUrl ?? `${SITE_URL}/dashboard/billing?checkout=cancel`,
+        successUrl ?? `${siteUrl}/dashboard/billing?checkout=success`,
+      cancel_url: cancelUrl ?? `${siteUrl}/dashboard/billing?checkout=cancel`,
     });
 
     console.log("[checkout] Session created:", session.id);
