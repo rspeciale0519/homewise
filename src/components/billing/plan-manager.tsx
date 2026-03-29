@@ -108,11 +108,16 @@ export function PlanManager({
           billingInterval,
         }),
       });
+      const text = await res.text();
+      let data: { url?: string; error?: string };
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Server error (${res.status}): ${text.slice(0, 200)}`);
+      }
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error ?? "Failed to start checkout");
       }
-      const data = await res.json();
       if (data.url) window.location.href = data.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
