@@ -8,6 +8,7 @@ function getStripeClient(): Stripe {
   return new Stripe(key, {
     apiVersion: "2026-03-25.dahlia",
     typescript: true,
+    httpClient: Stripe.createNodeHttpClient(),
   });
 }
 
