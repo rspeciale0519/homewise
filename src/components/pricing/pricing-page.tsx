@@ -149,14 +149,14 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
         </div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-crimson-600/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
 
-        <Container size="lg" className="pt-16 pb-14 relative z-10 text-center">
+        <Container size="xl" className="pt-20 pb-16 relative z-10 text-center">
           <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-400 mb-3">
             Agent Membership
           </p>
-          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-white leading-tight text-balance mb-4">
+          <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-white leading-tight text-balance mb-5">
             Choose Your Plan
           </h1>
-          <p className="text-slate-300 text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-300 text-lg sm:text-xl max-w-3xl mx-auto leading-relaxed">
             Start with the Annual Brokerage Membership, then add the feature bundles that
             match your business — AI tools, marketing automation, or growth analytics.
           </p>
@@ -165,7 +165,7 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
 
       {/* Billing interval toggle */}
       <div className="bg-white border-b border-slate-100 sticky top-0 z-20 shadow-soft">
-        <Container size="lg" className="py-4 flex items-center justify-between flex-wrap gap-3">
+        <Container size="xl" className="py-4 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
             <button
               onClick={() => setBillingInterval("monthly")}
@@ -222,7 +222,7 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
 
       {/* Main content */}
       <div className="bg-cream-50 min-h-screen">
-        <Container size="lg" className="py-14 space-y-16">
+        <Container size="xl" className="py-16 sm:py-20 space-y-20 sm:space-y-24">
 
           {/* Membership card */}
           {membership && (
@@ -231,7 +231,7 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
                 <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-2">
                   Required
                 </p>
-                <h2 className="font-serif text-display-sm font-semibold text-navy-700">
+                <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-navy-700">
                   Base Membership
                 </h2>
                 <p className="text-slate-500 text-sm mt-1 max-w-lg mx-auto">
@@ -239,30 +239,30 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
                 </p>
               </div>
 
-              <div className="max-w-md mx-auto">
-                <div className="relative rounded-xl border-2 border-navy-600 bg-white shadow-elevated overflow-hidden">
-                  <div className="bg-navy-700 px-6 py-4 text-white flex items-center justify-between">
+              <div className="max-w-2xl mx-auto">
+                <div className="relative rounded-2xl border-2 border-navy-600 bg-white shadow-elevated overflow-hidden">
+                  <div className="bg-navy-700 px-8 py-5 text-white flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-navy-200 mb-0.5">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-navy-200 mb-1">
                         Annual Membership
                       </p>
-                      <h3 className="font-serif text-xl font-semibold">{membership.name}</h3>
+                      <h3 className="font-serif text-2xl font-semibold">{membership.name}</h3>
                     </div>
-                    <span className="text-3xl" aria-hidden="true">🏠</span>
+                    <span className="text-4xl" aria-hidden="true">🏠</span>
                   </div>
 
-                  <div className="px-6 py-5">
-                    <div className="flex items-end gap-1 mb-1">
-                      <span className="font-serif text-4xl font-bold text-navy-700">
-                        {formatDollars(Math.round(membershipAnnualPrice / 12))}
+                  <div className="px-8 py-8">
+                    <div className="flex items-end gap-2 mb-2">
+                      <span className="font-serif text-5xl font-bold text-navy-700">
+                        {formatDollars(membershipAnnualPrice)}
                       </span>
-                      <span className="text-slate-400 text-sm mb-1.5">/mo</span>
+                      <span className="text-slate-400 text-base mb-2">/year</span>
                     </div>
-                    <p className="text-xs text-slate-400 mb-5">
-                      Billed annually — {formatDollars(membershipAnnualPrice)}/yr
+                    <p className="text-sm text-slate-500 mb-8">
+                      Billed once annually. Required for all agents.
                     </p>
 
-                    <ul className="space-y-2.5 mb-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 mb-8">
                       {[
                         "CRM with up to 500 contacts",
                         "Property search & listing tools",
@@ -272,9 +272,9 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
                         "Training library access",
                         "Brokerage support & onboarding",
                       ].map((feature) => (
-                        <li key={feature} className="flex items-start gap-2.5 text-sm text-slate-600">
+                        <div key={feature} className="flex items-start gap-3 text-sm text-slate-600">
                           <svg
-                            className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5"
+                            className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -283,12 +283,12 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
                           {feature}
-                        </li>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
 
-                    <p className="text-xs text-slate-400 italic">
-                      Annual-only. Enhanceable with optional bundles below.
+                    <p className="text-sm text-slate-400">
+                      Enhance your membership with optional feature bundles below.
                     </p>
                   </div>
                 </div>
@@ -303,7 +303,7 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
                 <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-2">
                   Optional
                 </p>
-                <h2 className="font-serif text-display-sm font-semibold text-navy-700">
+                <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-navy-700">
                   Feature Bundles
                 </h2>
                 <p className="text-slate-500 text-sm mt-1 max-w-lg mx-auto">
@@ -311,7 +311,7 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {bundles.map((bundle) => (
                   <BundleCard
                     key={bundle.id}
@@ -334,7 +334,7 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
                 <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-2">
                   Enhancements
                 </p>
-                <h2 className="font-serif text-display-sm font-semibold text-navy-700">
+                <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-navy-700">
                   Add-Ons
                 </h2>
                 <p className="text-slate-500 text-sm mt-1 max-w-lg mx-auto">
@@ -342,7 +342,7 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {addOns.map((addon) => (
                   <AddonCard
                     key={addon.id}
@@ -398,12 +398,12 @@ export function PricingPage({ membership, bundles, addOns }: PricingPageProps) {
           {/* FAQ */}
           <section>
             <div className="text-center mb-8">
-              <h2 className="font-serif text-display-sm font-semibold text-navy-700">
+              <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-navy-700">
                 Frequently Asked Questions
               </h2>
             </div>
 
-            <div className="max-w-2xl mx-auto space-y-3">
+            <div className="max-w-3xl mx-auto space-y-3">
               {FAQ_ITEMS.map((item, index) => (
                 <div
                   key={index}

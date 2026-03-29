@@ -103,21 +103,21 @@ export function BundleCard({
         </div>
       )}
 
-      <div className="p-6 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-3xl leading-none" aria-hidden="true">{icon}</span>
+      <div className="p-7 pb-5 border-b border-slate-100">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-4xl leading-none" aria-hidden="true">{icon}</span>
           <div>
-            <h3 className="font-semibold text-navy-700 text-base leading-tight">{bundle.name}</h3>
+            <h3 className="font-semibold text-navy-700 text-lg leading-tight">{bundle.name}</h3>
           </div>
         </div>
 
-        <p className="text-slate-500 text-sm leading-relaxed mb-4">{bundle.description}</p>
+        <p className="text-slate-500 text-sm leading-relaxed mb-5">{bundle.description}</p>
 
         <div className="flex items-end gap-1">
-          <span className="text-3xl font-bold text-navy-700 font-serif">
+          <span className="text-4xl font-bold text-navy-700 font-serif">
             {formatDollars(displayedPrice)}
           </span>
-          <span className="text-slate-400 text-sm mb-1">/mo</span>
+          <span className="text-slate-400 text-sm mb-1.5">/mo</span>
         </div>
         {billingInterval === "annual" && (
           <p className="text-xs text-slate-400 mt-1">
@@ -134,8 +134,8 @@ export function BundleCard({
         )}
       </div>
 
-      <div className="p-6 flex-1">
-        <ul className="space-y-2.5">
+      <div className="p-7 flex-1">
+        <ul className="space-y-3">
           {features.map((feature) => (
             <li key={feature} className="flex items-start gap-2.5 text-sm text-slate-600">
               <svg
@@ -153,7 +153,7 @@ export function BundleCard({
         </ul>
       </div>
 
-      <div className="p-6 pt-0">
+      <div className="p-7 pt-0">
         <Button
           variant={selected ? "crimson" : recommended ? "primary" : "outline"}
           size="md"

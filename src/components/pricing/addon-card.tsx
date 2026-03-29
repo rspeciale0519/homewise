@@ -40,7 +40,7 @@ export function AddonCard({ addon, selected, onToggle, loading }: AddonCardProps
   return (
     <div
       className={cn(
-        "relative rounded-xl border p-5 transition-all duration-200",
+        "relative rounded-xl border p-6 transition-all duration-200",
         selected
           ? "border-crimson-500 bg-crimson-50 shadow-md"
           : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-soft",
