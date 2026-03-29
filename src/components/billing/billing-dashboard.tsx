@@ -154,8 +154,14 @@ export function BillingDashboard({
     }, 0);
   }, [subscription, bundleConfigs, currentInterval]);
 
-  // No subscription state
+  // No subscription state — show plan selection inline
   if (!subscription) {
+    const membershipConfig = bundleConfigs.find((b) => b.productType === "membership");
+    const bundleOrder = ["marketing_suite", "ai_power_tools", "growth_engine"];
+    const availableBundles = bundleConfigs
+      .filter((b) => bundleOrder.includes(b.productType))
+      .sort((a, b) => bundleOrder.indexOf(a.productType) - bundleOrder.indexOf(b.productType));
+
     return (
       <div className="space-y-6">
         <div className="rounded-xl bg-navy-800 px-6 py-5 text-white flex items-center justify-between">
@@ -166,33 +172,24 @@ export function BillingDashboard({
             </span>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-          <h3 className="font-serif text-lg font-semibold text-navy-700 mb-2">
-            Get started with a plan
-          </h3>
-          <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">
-            Choose a membership and optional bundles to unlock AI tools,
-            marketing automation, and growth analytics.
-          </p>
-          <Link
-            href="/pricing"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-crimson-600 text-white hover:bg-crimson-700 transition-colors"
-          >
-            View Plans
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8.25 4.5l7.5 7.5-7.5 7.5"
-              />
-            </svg>
-          </Link>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
+          <div className="text-center mb-8">
+            <h3 className="font-serif text-xl font-semibold text-navy-700 mb-2">
+              Get started with a plan
+            </h3>
+            <p className="text-sm text-slate-500 max-w-md mx-auto">
+              Select the Annual Brokerage Membership and optional bundles to unlock
+              AI tools, marketing automation, and growth analytics.
+            </p>
+          </div>
+
+          <PlanManager
+            subscription={null}
+            bundleConfigs={bundleConfigs}
+            entitlements={entitlements}
+            isNewSubscription
+          />
         </div>
       </div>
     );

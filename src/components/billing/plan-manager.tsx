@@ -20,11 +20,13 @@ interface SubscriptionItem {
 }
 
 interface PlanManagerProps {
-  items: SubscriptionItem[];
+  subscription: { items: SubscriptionItem[] } | null;
+  items?: SubscriptionItem[];
   bundleConfigs: BundleWithFeatures[];
   entitlements: FeatureEntitlement[];
-  billingInterval: BillingInterval;
-  onBillingIntervalChange: (interval: BillingInterval) => void;
+  billingInterval?: BillingInterval;
+  onBillingIntervalChange?: (interval: BillingInterval) => void;
+  isNewSubscription?: boolean;
 }
 
 interface ConfirmDialog {
@@ -36,13 +38,17 @@ interface ConfirmDialog {
 const BUNDLE_ORDER = ["marketing_suite", "ai_power_tools", "growth_engine"];
 
 export function PlanManager({
-  items,
+  subscription,
+  items: itemsProp,
   bundleConfigs,
   entitlements,
-  billingInterval,
+  billingInterval: billingIntervalProp,
   onBillingIntervalChange,
+  isNewSubscription = false,
 }: PlanManagerProps) {
+  const items = itemsProp ?? subscription?.items ?? [];
   const [mode, setMode] = useState<PlanMode>("bundles");
+  const [localInterval, setLocalInterval] = useState<BillingInterval>("annual");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(
@@ -51,6 +57,12 @@ export function PlanManager({
   const [selectedFeatures, setSelectedFeatures] = useState<Set<string>>(
     new Set(),
   );
+  const [selectedNewBundles, setSelectedNewBundles] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const billingInterval = billingIntervalProp ?? localInterval;
+  const handleIntervalChange = onBillingIntervalChange ?? setLocalInterval;
 
   const activeBundleSlugs = new Set(
     items
@@ -73,6 +85,41 @@ export function PlanManager({
         BUNDLE_ORDER.indexOf(a.productType) -
         BUNDLE_ORDER.indexOf(b.productType),
     );
+
+  const toggleNewBundle = useCallback((slug: string) => {
+    setSelectedNewBundles((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  }, []);
+
+  const handleNewSubscriptionCheckout = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bundles: Array.from(selectedNewBundles),
+          addOns: [],
+          billingInterval,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to start checkout");
+      }
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedNewBundles, billingInterval]);
 
   const handleConfirmModify = useCallback(async () => {
     if (!confirmDialog) return;
@@ -152,7 +199,7 @@ export function PlanManager({
         <div className="inline-flex rounded-lg border border-slate-200 p-1 bg-slate-50">
           <button
             type="button"
-            onClick={() => onBillingIntervalChange("monthly")}
+            onClick={() => handleIntervalChange("monthly")}
             className={cn(
               "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
               billingInterval === "monthly"
@@ -164,7 +211,7 @@ export function PlanManager({
           </button>
           <button
             type="button"
-            onClick={() => onBillingIntervalChange("annual")}
+            onClick={() => handleIntervalChange("annual")}
             className={cn(
               "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
               billingInterval === "annual"
@@ -185,31 +232,70 @@ export function PlanManager({
 
       {/* Bundles mode */}
       {mode === "bundles" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {bundles.map((bundle) => (
-            <PlanBundleCard
-              key={bundle.id}
-              bundle={bundle}
-              isActive={activeBundleSlugs.has(bundle.slug)}
-              billingInterval={billingInterval}
-              onAdd={() =>
-                setConfirmDialog({
-                  type: "add",
-                  bundleSlug: bundle.slug,
-                  bundleName: bundle.name,
-                })
-              }
-              onRemove={() =>
-                setConfirmDialog({
-                  type: "remove",
-                  bundleSlug: bundle.slug,
-                  bundleName: bundle.name,
-                })
-              }
-              loading={loading}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {bundles.map((bundle) => (
+              <PlanBundleCard
+                key={bundle.id}
+                bundle={bundle}
+                isActive={
+                  isNewSubscription
+                    ? selectedNewBundles.has(bundle.slug)
+                    : activeBundleSlugs.has(bundle.slug)
+                }
+                billingInterval={billingInterval}
+                onAdd={() =>
+                  isNewSubscription
+                    ? toggleNewBundle(bundle.slug)
+                    : setConfirmDialog({
+                        type: "add",
+                        bundleSlug: bundle.slug,
+                        bundleName: bundle.name,
+                      })
+                }
+                onRemove={() =>
+                  isNewSubscription
+                    ? toggleNewBundle(bundle.slug)
+                    : setConfirmDialog({
+                        type: "remove",
+                        bundleSlug: bundle.slug,
+                        bundleName: bundle.name,
+                      })
+                }
+                loading={loading}
+              />
+            ))}
+          </div>
+
+          {/* Checkout button for new subscriptions */}
+          {isNewSubscription && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={handleNewSubscriptionCheckout}
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold bg-crimson-600 text-white hover:bg-crimson-700 transition-colors disabled:opacity-50 shadow-lg"
+              >
+                {loading ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Subscribe & Checkout
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Build Your Own mode */}
