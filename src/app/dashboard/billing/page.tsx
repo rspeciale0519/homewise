@@ -24,21 +24,53 @@ export default async function BillingPage() {
     return <AccessDenied />;
   }
 
-  const agent = await prisma.agent.findFirst({
-    where: {
-      OR: [{ userId: user.id }, { email: user.email ?? "" }],
-    },
-    include: {
-      subscription: {
-        include: { items: true },
+  const [agent, bundleConfigs, entitlements] = await Promise.all([
+    prisma.agent.findFirst({
+      where: {
+        OR: [{ userId: user.id }, { email: user.email ?? "" }],
       },
-      stripeCustomer: true,
-      paymentRecords: {
-        orderBy: { createdAt: "desc" },
-        take: 10,
+      include: {
+        subscription: {
+          include: { items: true },
+        },
+        stripeCustomer: true,
+        paymentRecords: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
       },
-    },
-  });
+    }),
+    prisma.bundleConfig.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        productType: true,
+        monthlyAmount: true,
+        annualAmount: true,
+        monthlyPriceId: true,
+        annualPriceId: true,
+        sortOrder: true,
+        features: {
+          select: { featureKey: true, limit: true },
+        },
+      },
+    }),
+    prisma.entitlementConfig.findMany({
+      where: { isActive: true, requiredProduct: { not: null } },
+      select: {
+        id: true,
+        featureKey: true,
+        featureName: true,
+        requiredProduct: true,
+        freeLimit: true,
+        description: true,
+      },
+    }),
+  ]);
 
   if (!agent) {
     return <AccessDenied />;
@@ -71,7 +103,7 @@ export default async function BillingPage() {
   }));
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 max-w-4xl">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
       <div className="mb-8">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-crimson-600 mb-2">
           Agent Tools
@@ -80,7 +112,7 @@ export default async function BillingPage() {
           Billing
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          Manage your membership, view payment history, and update billing details.
+          Manage your plan, payment methods, invoices, and billing settings.
         </p>
       </div>
 
@@ -88,6 +120,8 @@ export default async function BillingPage() {
         subscription={subscription}
         paymentRecords={paymentRecords}
         hasStripeCustomer={!!agent.stripeCustomer}
+        bundleConfigs={bundleConfigs}
+        entitlements={entitlements}
       />
     </div>
   );
