@@ -359,45 +359,51 @@ export function PricingPage({ membership, bundles, addOns, entitlements }: Prici
         )}
       >
         <div className="bg-white border-t-2 border-slate-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
-          <Container size="xl" className="py-4 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 bg-slate-100 text-navy-700 text-xs font-semibold px-3 py-1.5 rounded-lg">
-                🏠 Membership {formatDollars(membershipPrice)}/yr
-              </span>
-              {selectedItems.map((item) => (
-                <span key={item.label} className="inline-flex items-center gap-1.5">
-                  <span className="text-slate-300">+</span>
-                  <span className="bg-crimson-50 text-crimson-700 text-xs font-semibold px-3 py-1.5 rounded-lg">
-                    {item.label} {item.amount}
+          <Container size="xl" className="py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-4">
+              {/* Left: selected items summary */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="inline-flex items-center gap-1 bg-slate-100 text-navy-700 text-[11px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap">
+                    🏠 {formatDollars(membershipPrice)}/yr
                   </span>
-                </span>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-5">
-              {planMode === "bundles" && grandTotalMonthly > 0 && (
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs text-slate-500">Estimated total</p>
-                  <p className="text-xl font-bold text-navy-700">
-                    {formatDollars(grandTotalMonthly)}
-                    <span className="text-sm font-normal text-slate-400">/mo</span>
-                    <span className="text-sm text-slate-400"> + {formatDollars(membershipPrice)}/yr</span>
-                  </p>
+                  {selectedItems.map((item) => (
+                    <span key={item.label} className="inline-flex items-center gap-1">
+                      <span className="text-slate-300 text-xs">+</span>
+                      <span className="bg-crimson-50 text-crimson-700 text-[11px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap">
+                        {item.label} {item.amount}
+                      </span>
+                    </span>
+                  ))}
                 </div>
-              )}
-              <button
-                onClick={handleSubscribe}
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl bg-crimson-600 px-7 py-3 text-sm font-bold text-white hover:bg-crimson-700 transition-colors disabled:opacity-60 shadow-lg whitespace-nowrap"
-              >
-                {loading && (
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
+              </div>
+
+              {/* Right: total + CTA */}
+              <div className="flex items-center gap-4 shrink-0">
+                {planMode === "bundles" && grandTotalMonthly > 0 && (
+                  <div className="text-right hidden sm:block">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Total</p>
+                    <p className="text-lg font-bold text-navy-700 leading-tight">
+                      {formatDollars(grandTotalMonthly)}
+                      <span className="text-xs font-normal text-slate-400">/mo</span>
+                      <span className="text-xs text-slate-400 ml-1">+ {formatDollars(membershipPrice)}/yr</span>
+                    </p>
+                  </div>
                 )}
-                Subscribe &amp; Checkout
-              </button>
+                <button
+                  onClick={handleSubscribe}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-crimson-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-crimson-700 transition-colors disabled:opacity-60 shadow-lg whitespace-nowrap"
+                >
+                  {loading && (
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  )}
+                  Subscribe &amp; Checkout
+                </button>
+              </div>
             </div>
           </Container>
         </div>
