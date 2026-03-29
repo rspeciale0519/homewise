@@ -22,31 +22,56 @@ export type BundleWithFeatures = {
   features: { featureKey: string; limit: number | null }[];
 };
 
+export type FeatureEntitlement = {
+  id: string;
+  featureKey: string;
+  featureName: string;
+  requiredProduct: string | null;
+  freeLimit: number | null;
+  description: string | null;
+};
+
 export default async function PricingServerPage() {
-  const configs = await prisma.bundleConfig.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      description: true,
-      productType: true,
-      monthlyAmount: true,
-      annualAmount: true,
-      monthlyPriceId: true,
-      annualPriceId: true,
-      sortOrder: true,
-      features: {
-        select: { featureKey: true, limit: true },
+  const [configs, entitlements] = await Promise.all([
+    prisma.bundleConfig.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        productType: true,
+        monthlyAmount: true,
+        annualAmount: true,
+        monthlyPriceId: true,
+        annualPriceId: true,
+        sortOrder: true,
+        features: {
+          select: { featureKey: true, limit: true },
+        },
       },
-    },
-  });
+    }),
+    prisma.entitlementConfig.findMany({
+      where: { isActive: true, requiredProduct: { not: null } },
+      select: {
+        id: true,
+        featureKey: true,
+        featureName: true,
+        requiredProduct: true,
+        freeLimit: true,
+        description: true,
+      },
+    }),
+  ]);
 
   const membership = configs.find((b) => b.productType === "membership") ?? null;
-  const bundles = configs.filter((b) =>
-    ["ai_power_tools", "marketing_suite", "growth_engine"].includes(b.productType),
-  );
+
+  const bundleOrder = ["marketing_suite", "ai_power_tools", "growth_engine"];
+  const bundles = configs
+    .filter((b) => bundleOrder.includes(b.productType))
+    .sort((a, b) => bundleOrder.indexOf(a.productType) - bundleOrder.indexOf(b.productType));
+
   const addOns = configs.filter((b) => b.productType === "add_on");
 
   return (
@@ -54,6 +79,7 @@ export default async function PricingServerPage() {
       membership={membership}
       bundles={bundles}
       addOns={addOns}
+      entitlements={entitlements}
     />
   );
 }
