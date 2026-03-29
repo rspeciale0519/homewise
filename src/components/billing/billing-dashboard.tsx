@@ -166,21 +166,25 @@ export function BillingDashboard({
       <div className="space-y-6">
         <div className="rounded-xl bg-navy-800 px-6 py-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-slate-400" />
-            <span className="text-sm font-medium text-white/80">
-              No Active Subscription
-            </span>
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className="text-sm font-semibold">Annual Brokerage Membership</span>
           </div>
+          {membershipConfig && (
+            <span className="text-lg font-bold">
+              ${(membershipConfig.annualAmount / 100).toFixed(0)}
+              <span className="text-xs font-normal text-navy-300">/year</span>
+            </span>
+          )}
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
           <div className="text-center mb-8">
             <h3 className="font-serif text-xl font-semibold text-navy-700 mb-2">
-              Get started with a plan
+              Enhance your membership
             </h3>
             <p className="text-sm text-slate-500 max-w-md mx-auto">
-              Select the Annual Brokerage Membership and optional bundles to unlock
-              AI tools, marketing automation, and growth analytics.
+              Add optional bundles to unlock AI tools, marketing automation,
+              and growth analytics on top of your brokerage membership.
             </p>
           </div>
 
