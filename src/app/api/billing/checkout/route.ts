@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { bundles, addOns, billingInterval, successUrl, cancelUrl } =
+  const { bundles, addOns, billingInterval, skipMembership, successUrl, cancelUrl } =
     parsed.data;
 
   const customerId = await getOrCreateStripeCustomer(agent.id);
@@ -52,21 +52,23 @@ export async function POST(request: NextRequest) {
     where: { isActive: true },
   });
 
-  const membershipBundle = bundleConfigs.find(
-    (b) => b.productType === "membership",
-  );
-
-  if (!membershipBundle?.annualPriceId) {
-    return NextResponse.json(
-      { error: "Membership bundle is not configured" },
-      { status: 500 },
-    );
-  }
-
   type LineItem = { price: string; quantity: number };
-  const lineItems: LineItem[] = [
-    { price: membershipBundle.annualPriceId, quantity: 1 },
-  ];
+  const lineItems: LineItem[] = [];
+
+  if (!skipMembership) {
+    const membershipBundle = bundleConfigs.find(
+      (b) => b.productType === "membership",
+    );
+
+    if (!membershipBundle?.annualPriceId) {
+      return NextResponse.json(
+        { error: "Membership bundle is not configured" },
+        { status: 500 },
+      );
+    }
+
+    lineItems.push({ price: membershipBundle.annualPriceId, quantity: 1 });
+  }
 
   for (const slug of bundles) {
     const bundle = bundleConfigs.find((b) => b.slug === slug);
