@@ -89,7 +89,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    console.log("[checkout] Creating session for customer:", customerId, "items:", lineItems.length);
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
@@ -103,17 +102,12 @@ export async function POST(request: NextRequest) {
       cancel_url: cancelUrl ?? `${siteUrl}/dashboard/billing?checkout=cancel`,
     });
 
-    console.log("[checkout] Session created:", session.id);
     return NextResponse.json({ url: session.url });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    const stripeErr = err as Record<string, unknown>;
-    const stripeCode = stripeErr?.code ?? "unknown";
-    const stripeType = stripeErr?.type ?? "unknown";
-    const stripeParam = stripeErr?.param ?? "unknown";
-    console.error("[checkout] Stripe error:", { message, code: stripeCode, type: stripeType, param: stripeParam, siteUrl });
+    console.error("[checkout] Stripe error:", message);
     return NextResponse.json(
-      { error: "Failed to create checkout session", detail: message, code: stripeCode, param: stripeParam, siteUrl },
+      { error: "Failed to create checkout session", detail: message },
       { status: 500 },
     );
   }
