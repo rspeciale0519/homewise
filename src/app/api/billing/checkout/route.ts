@@ -17,6 +17,7 @@ function getSiteUrl(request: NextRequest): string {
 
 export async function POST(request: NextRequest) {
   const siteUrl = getSiteUrl(request);
+  console.log("[checkout] siteUrl:", siteUrl, "env:", process.env.NEXT_PUBLIC_SITE_URL, "origin:", request.headers.get("origin"), "referer:", request.headers.get("referer"));
   const auth = await requireAuthApi();
   if (isError(auth)) return auth.error;
 
