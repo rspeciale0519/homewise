@@ -5,19 +5,14 @@ import { stripe } from "@/lib/stripe";
 import { getOrCreateStripeCustomer } from "@/lib/billing/stripe-sync";
 import { checkoutSessionSchema } from "@/schemas/billing.schema";
 
-function getSiteUrl(request: NextRequest): string {
-  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (envUrl && envUrl.startsWith("http")) return envUrl;
-  const origin = request.headers.get("origin") || request.headers.get("referer");
-  if (origin) {
-    try { return new URL(origin).origin; } catch { /* fall through */ }
-  }
+function getSiteUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (envUrl && envUrl.startsWith("https://")) return envUrl;
   return "https://app.homewisefl.com";
 }
 
 export async function POST(request: NextRequest) {
-  const siteUrl = getSiteUrl(request);
-  console.log("[checkout] siteUrl:", siteUrl, "env:", process.env.NEXT_PUBLIC_SITE_URL, "origin:", request.headers.get("origin"), "referer:", request.headers.get("referer"));
+  const siteUrl = getSiteUrl();
   const auth = await requireAuthApi();
   if (isError(auth)) return auth.error;
 
@@ -112,11 +107,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    const stripeCode = (err as Record<string, unknown>)?.code ?? "unknown";
-    const stripeType = (err as Record<string, unknown>)?.type ?? "unknown";
-    console.error("[checkout] Stripe error:", { message, code: stripeCode, type: stripeType });
+    const stripeErr = err as Record<string, unknown>;
+    const stripeCode = stripeErr?.code ?? "unknown";
+    const stripeType = stripeErr?.type ?? "unknown";
+    const stripeParam = stripeErr?.param ?? "unknown";
+    console.error("[checkout] Stripe error:", { message, code: stripeCode, type: stripeType, param: stripeParam, siteUrl });
     return NextResponse.json(
-      { error: "Failed to create checkout session", detail: message, code: stripeCode },
+      { error: "Failed to create checkout session", detail: message, code: stripeCode, param: stripeParam, siteUrl },
       { status: 500 },
     );
   }
