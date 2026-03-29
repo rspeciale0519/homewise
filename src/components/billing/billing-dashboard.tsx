@@ -290,6 +290,7 @@ export function BillingDashboard({
       <div>
         {activeTab === "plan" && (
           <PlanManager
+            subscription={subscription}
             items={subscription.items}
             bundleConfigs={bundleConfigs}
             entitlements={entitlements}
