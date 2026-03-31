@@ -37,6 +37,10 @@ export function Sidebar({ role }: SidebarProps) {
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
 
+  const showAgentNav =
+    role === "agent" ||
+    (role === "admin" && (pathname.startsWith("/dashboard/agent-hub") || pathname.startsWith("/dashboard/billing")));
+
   return (
     <>
       {/* Desktop sidebar */}
@@ -60,7 +64,7 @@ export function Sidebar({ role }: SidebarProps) {
               {item.label}
             </Link>
           ))}
-          {role === "agent" && (
+          {showAgentNav && (
             <>
               <div className="my-3 mx-3 border-t border-slate-200/60" />
               <p className="px-3 mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
@@ -115,7 +119,7 @@ export function Sidebar({ role }: SidebarProps) {
             {item.label}
           </Link>
         ))}
-        {role === "agent" && (
+        {showAgentNav && (
           <>
             <div className="shrink-0 w-px h-6 bg-slate-200 mx-1" />
             {AGENT_NAV_ITEMS.map((item) => (
