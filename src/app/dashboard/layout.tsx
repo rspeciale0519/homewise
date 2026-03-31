@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { DashboardToaster } from "@/components/dashboard/dashboard-toaster";
 
 export default async function DashboardLayout({
   children,
@@ -39,13 +40,14 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <DashboardHeader />
-      <div className="flex min-h-[calc(100vh-4rem)]">
+      <Header />
+      <div className="flex min-h-[calc(100vh-5rem)]">
         <Sidebar role={userRole} />
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
+      <DashboardToaster />
     </div>
   );
 }
