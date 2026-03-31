@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 const MENU_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -17,6 +18,7 @@ export function UserMenu() {
   const { user, supabase, loading } = useSupabase();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -24,13 +26,12 @@ export function UserMenu() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.profile?.role === "admin") setIsAdmin(true);
+        if (data?.profile?.avatarUrl) setAvatarUrl(data.profile.avatarUrl);
       })
       .catch(() => {});
   }, [user]);
 
   if (loading || !user) return null;
-
-  const initials = getInitials(user.user_metadata?.first_name, user.user_metadata?.last_name, user.email);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -42,12 +43,15 @@ export function UserMenu() {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button
-          className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-navy-600 focus:ring-offset-2"
+          className="flex items-center gap-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600 focus:ring-offset-2"
           aria-label="User menu"
         >
-          <span className="h-9 w-9 rounded-full bg-navy-600 text-white text-xs font-bold flex items-center justify-center shadow-sm">
-            {initials}
-          </span>
+          <UserAvatar
+            avatarUrl={avatarUrl}
+            firstName={user.user_metadata?.first_name ?? ""}
+            lastName={user.user_metadata?.last_name ?? ""}
+            size="sm"
+          />
         </button>
       </DropdownMenu.Trigger>
 
@@ -75,6 +79,20 @@ export function UserMenu() {
               </Link>
             </DropdownMenu.Item>
           ))}
+
+          <DropdownMenu.Separator className="h-px bg-slate-100 my-1" />
+          <DropdownMenu.Item asChild>
+            <Link
+              href="/dashboard/profile#avatar"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-navy-700 transition-colors outline-none data-[highlighted]:bg-slate-50 data-[highlighted]:text-navy-700"
+            >
+              <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+              </svg>
+              Change Photo
+            </Link>
+          </DropdownMenu.Item>
 
           {isAdmin && (
             <>
@@ -130,13 +148,6 @@ export function UserMenu() {
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
   );
-}
-
-function getInitials(first?: string, last?: string, email?: string): string {
-  if (first && last) return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
-  if (first) return first.charAt(0).toUpperCase();
-  if (email) return email.charAt(0).toUpperCase();
-  return "U";
 }
 
 function MenuIcon({ type }: { type: string }) {
