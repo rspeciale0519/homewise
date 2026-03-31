@@ -20,7 +20,7 @@ export default async function BillingPage() {
     select: { role: true },
   });
 
-  if (profile?.role !== "agent") {
+  if (profile?.role !== "agent" && profile?.role !== "admin") {
     return <AccessDenied />;
   }
 
