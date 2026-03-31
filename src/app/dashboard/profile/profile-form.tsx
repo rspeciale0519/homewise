@@ -3,19 +3,22 @@
 import { useState } from "react";
 import { profileSchema, type ProfileInput } from "@/schemas/profile.schema";
 import { cn } from "@/lib/utils";
+import { AvatarUpload } from "@/components/profile/avatar-upload";
 
 interface ProfileFormProps {
   initialData: ProfileInput;
   email: string;
+  avatarUrl: string | null;
 }
 
 type FieldErrors = Partial<Record<keyof ProfileInput, string>>;
 
-export function ProfileForm({ initialData, email }: ProfileFormProps) {
+export function ProfileForm({ initialData, email, avatarUrl }: ProfileFormProps) {
   const [form, setForm] = useState<ProfileInput>(initialData);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [serverError, setServerError] = useState("");
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(avatarUrl);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +59,16 @@ export function ProfileForm({ initialData, email }: ProfileFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Avatar upload */}
+      <div className="pb-5 border-b border-slate-100">
+        <AvatarUpload
+          avatarUrl={currentAvatarUrl}
+          firstName={form.firstName}
+          lastName={form.lastName}
+          onAvatarChange={setCurrentAvatarUrl}
+        />
+      </div>
+
       {/* Email (read-only) */}
       <div>
         <label className="block text-sm font-medium text-navy-700 mb-1.5">Email</label>
