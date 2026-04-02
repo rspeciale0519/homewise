@@ -179,10 +179,13 @@ export function AvatarUpload({
       {/* Hidden file input */}
       <input
         ref={inputRef}
+        id="avatar-file-input"
+        name="avatar-file-input"
         type="file"
         accept="image/jpeg,image/png,image/webp"
         onChange={handleFileSelect}
         className="sr-only"
+        aria-label="Upload profile photo"
       />
 
       {/* Crop modal */}
