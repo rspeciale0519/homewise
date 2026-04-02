@@ -54,7 +54,7 @@ export function Header() {
             : "bg-white border-b border-slate-100"
         )}
       >
-        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24">
+        <div className="w-full px-4">
           <div
             className={cn(
               "flex items-center justify-between gap-4 transition-all duration-500",
@@ -63,7 +63,7 @@ export function Header() {
           >
 
             {/* Logo */}
-            <Link href="/" className="shrink-0 flex items-center" aria-label="Home Wise Realty Group — Home">
+            <Link href="/" className="-ml-2.5 shrink-0 flex items-center" aria-label="Home Wise Realty Group — Home">
               <Image
                 src="/images/logo.png"
                 alt="Home Wise Realty Group"

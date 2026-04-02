@@ -56,8 +56,9 @@ export function MortgageCalculator() {
           {/* Home price */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-navy-700">Home Price</label>
+              <label htmlFor="calc-price" className="text-sm font-medium text-navy-700">Home Price</label>
               <InlineNumberInput
+                id="calc-price"
                 value={price}
                 onChange={setPrice}
                 min={100000}
@@ -70,6 +71,9 @@ export function MortgageCalculator() {
             </div>
             <input
               type="range"
+              id="calc-price-range"
+              name="calc-price-range"
+              aria-label="Home price slider"
               min={100000}
               max={2000000}
               step={5000}
@@ -86,9 +90,10 @@ export function MortgageCalculator() {
           {/* Down payment */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-navy-700">Down Payment</label>
+              <label htmlFor="calc-down" className="text-sm font-medium text-navy-700">Down Payment</label>
               <span className="flex items-center gap-1.5">
                 <InlineNumberInput
+                  id="calc-down"
                   value={downPercent}
                   onChange={setDownPercent}
                   min={0}
@@ -105,6 +110,9 @@ export function MortgageCalculator() {
             </div>
             <input
               type="range"
+              id="calc-down-range"
+              name="calc-down-range"
+              aria-label="Down payment slider"
               min={0}
               max={50}
               step={1}
@@ -121,8 +129,9 @@ export function MortgageCalculator() {
           {/* Interest rate */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-navy-700">Interest Rate</label>
+              <label htmlFor="calc-rate" className="text-sm font-medium text-navy-700">Interest Rate</label>
               <InlineNumberInput
+                id="calc-rate"
                 value={rate}
                 onChange={setRate}
                 min={2}
@@ -135,6 +144,9 @@ export function MortgageCalculator() {
             </div>
             <input
               type="range"
+              id="calc-rate-range"
+              name="calc-rate-range"
+              aria-label="Interest rate slider"
               min={2}
               max={12}
               step={0.1}
@@ -196,6 +208,7 @@ export function MortgageCalculator() {
 }
 
 function InlineNumberInput({
+  id,
   value,
   onChange,
   min,
@@ -205,6 +218,7 @@ function InlineNumberInput({
   ariaLabel,
   inputWidth,
 }: {
+  id: string;
   value: number;
   onChange: (v: number) => void;
   min: number;
@@ -221,6 +235,8 @@ function InlineNumberInput({
   return (
     <input
       ref={ref}
+      id={id}
+      name={id}
       type="text"
       inputMode="decimal"
       aria-label={ariaLabel}

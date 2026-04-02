@@ -39,9 +39,9 @@ export default async function DashboardLayout({
   const userRole = existing.role ?? "user";
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="h-screen flex flex-col overflow-hidden bg-slate-50/50">
       <Header />
-      <div className="flex min-h-[calc(100vh-5rem)]">
+      <div className="flex flex-1 min-h-0">
         <Sidebar role={userRole} />
         <main className="flex-1 overflow-y-auto">
           {children}
