@@ -9,6 +9,7 @@ interface ComparisonBarsProps {
   newLabel?: string;
   originalCost: string;
   newCost: string;
+  newBarColor?: string;
 }
 
 export function ComparisonBars({
@@ -18,6 +19,7 @@ export function ComparisonBars({
   newLabel = "New",
   originalCost,
   newCost,
+  newBarColor,
 }: ComparisonBarsProps) {
   const maxMonths = Math.max(originalMonths, newMonths, 1);
 
@@ -58,7 +60,7 @@ export function ComparisonBars({
             className="h-full rounded-lg transition-all duration-700 ease-out"
             style={{
               width: `${(newMonths / maxMonths) * 100}%`,
-              backgroundColor: CHART_COLORS.newTimeline,
+              backgroundColor: newBarColor ?? CHART_COLORS.newTimeline,
             }}
           />
         </div>
