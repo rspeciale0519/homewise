@@ -17,6 +17,47 @@ const chatSchema = z.object({
   agentId: z.string().optional(),
 });
 
+async function findAgentIdForUser(userId: string, email?: string) {
+  const matches = email ? [{ userId }, { email }] : [{ userId }];
+  const agent = await prisma.agent.findFirst({
+    where: { OR: matches },
+    select: { id: true },
+  });
+
+  return agent?.id;
+}
+
+async function validateConversationAccess({
+  conversationId,
+  config,
+  userId,
+  agentId,
+}: {
+  conversationId: string;
+  config: "agent" | "dashboard";
+  userId: string;
+  agentId?: string;
+}) {
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { id: true, config: true, userId: true, agentId: true },
+  });
+
+  if (!conversation) {
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+  }
+
+  if (conversation.config !== config || conversation.userId !== userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (agentId && conversation.agentId && conversation.agentId !== agentId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const raw: unknown = await request.json();
@@ -29,10 +70,16 @@ export async function POST(request: NextRequest) {
     }
     const body = input.data;
     const config = body.config ?? "public";
+    let authenticatedUserId: string | undefined;
+    let authenticatedUserEmail: string | undefined;
+    let authenticatedRole: string | undefined;
 
     if (config === "dashboard" || config === "agent") {
       const auth = await requireAuthApi();
       if (isError(auth)) return auth.error;
+      authenticatedUserId = auth.user.id;
+      authenticatedUserEmail = auth.user.email ?? undefined;
+      authenticatedRole = auth.profile.role;
     }
 
     const sessionId = body.sessionId ?? crypto.randomUUID();
@@ -44,6 +91,9 @@ export async function POST(request: NextRequest) {
         if (!body.agentId) {
           return NextResponse.json({ error: "agentId required for agent config" }, { status: 400 });
         }
+        if (!authenticatedUserId) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
         const agent = await prisma.agent.findUnique({
           where: { id: body.agentId },
           select: { id: true, firstName: true, lastName: true, bio: true },
@@ -51,23 +101,64 @@ export async function POST(request: NextRequest) {
         if (!agent) {
           return NextResponse.json({ error: "Agent not found" }, { status: 404 });
         }
+
+        const conversationError = body.conversationId
+          ? await validateConversationAccess({
+              conversationId: body.conversationId,
+              config,
+              userId: authenticatedUserId,
+              agentId: agent.id,
+            })
+          : null;
+        if (conversationError) return conversationError;
+
         engine = createAgentChatbot({
           agentId: agent.id,
           agentName: `${agent.firstName} ${agent.lastName}`,
           agentBio: agent.bio ?? undefined,
           sessionId,
+          userId: authenticatedUserId,
         });
         break;
       }
       case "dashboard": {
-        if (!body.userId) {
-          return NextResponse.json({ error: "userId required for dashboard config" }, { status: 400 });
+        if (!authenticatedUserId) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        engine = createDashboardChatbot(sessionId, body.userId, body.agentId);
+
+        let scopedAgentId: string | undefined;
+        if (authenticatedRole === "admin") {
+          if (body.agentId) {
+            const agent = await prisma.agent.findUnique({
+              where: { id: body.agentId },
+              select: { id: true },
+            });
+
+            if (!agent) {
+              return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+            }
+
+            scopedAgentId = agent.id;
+          }
+        } else {
+          scopedAgentId = await findAgentIdForUser(authenticatedUserId, authenticatedUserEmail);
+        }
+
+        const conversationError = body.conversationId
+          ? await validateConversationAccess({
+              conversationId: body.conversationId,
+              config,
+              userId: authenticatedUserId,
+              agentId: scopedAgentId,
+            })
+          : null;
+        if (conversationError) return conversationError;
+
+        engine = createDashboardChatbot(sessionId, authenticatedUserId, scopedAgentId);
         break;
       }
       default: {
-        engine = createPublicChatbot(sessionId, body.userId);
+        engine = createPublicChatbot(sessionId);
       }
     }
 

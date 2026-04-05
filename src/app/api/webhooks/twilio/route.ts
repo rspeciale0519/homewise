@@ -1,10 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
+import twilio from "twilio";
 import { prisma } from "@/lib/prisma";
 import { logActivityByEmail } from "@/lib/crm/log-activity";
 
+function buildWebhookUrl(request: NextRequest): string {
+  const proto = request.headers.get("x-forwarded-proto");
+  const host =
+    request.headers.get("x-forwarded-host") ??
+    request.headers.get("host");
+
+  if (proto && host) {
+    return `${proto}://${host}${request.nextUrl.pathname}${request.nextUrl.search}`;
+  }
+
+  return request.url;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const signature = request.headers.get("x-twilio-signature");
+
+    if (!authToken) {
+      console.error("[webhook/twilio] TWILIO_AUTH_TOKEN not configured");
+      return new NextResponse("Webhook not configured", { status: 500 });
+    }
+
+    if (!signature) {
+      return new NextResponse("Missing signature", { status: 401 });
+    }
+
     const formData = await request.formData();
+    const params = Object.fromEntries(
+      [...formData.entries()].map(([key, value]) => [key, String(value)])
+    );
+    const webhookUrl = buildWebhookUrl(request);
+    const isValid = twilio.validateRequest(authToken, signature, webhookUrl, params);
+
+    if (!isValid) {
+      return new NextResponse("Invalid signature", { status: 401 });
+    }
+
     const from = formData.get("From") as string | null;
     const body = formData.get("Body") as string | null;
     const messageSid = formData.get("MessageSid") as string | null;
