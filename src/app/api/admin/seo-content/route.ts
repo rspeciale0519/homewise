@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
+import DOMPurify from "isomorphic-dompurify";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdminApi();
@@ -47,6 +48,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   const updateData: Record<string, unknown> = { ...data };
+  if (typeof data.body === "string") {
+    updateData.body = DOMPurify.sanitize(data.body);
+  }
   if (data.status === "published") {
     updateData.publishedAt = new Date();
   }

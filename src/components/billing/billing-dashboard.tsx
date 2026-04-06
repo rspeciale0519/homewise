@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { PlanManager } from "./plan-manager";
 import { PaymentMethodsTab } from "./payment-methods-tab";
@@ -154,13 +153,8 @@ export function BillingDashboard({
     }, 0);
   }, [subscription, bundleConfigs, currentInterval]);
 
-  // No subscription state — show plan selection inline
   if (!subscription) {
     const membershipConfig = bundleConfigs.find((b) => b.productType === "membership");
-    const bundleOrder = ["marketing_suite", "ai_power_tools", "growth_engine"];
-    const availableBundles = bundleConfigs
-      .filter((b) => bundleOrder.includes(b.productType))
-      .sort((a, b) => bundleOrder.indexOf(a.productType) - bundleOrder.indexOf(b.productType));
 
     return (
       <div className="space-y-6">
@@ -211,7 +205,6 @@ export function BillingDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Plan summary bar */}
       <div className="rounded-xl bg-navy-800 px-6 py-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -248,7 +241,6 @@ export function BillingDashboard({
         </div>
       </div>
 
-      {/* Past due alert */}
       {subscription.status === "past_due" && (
         <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
           <div className="shrink-0 h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center mt-0.5">
@@ -268,7 +260,6 @@ export function BillingDashboard({
         </div>
       )}
 
-      {/* Tabs */}
       <div className="border-b border-slate-200">
         <nav className="flex gap-1 -mb-px" aria-label="Billing tabs">
           {TABS.map((tab) => (
@@ -290,7 +281,6 @@ export function BillingDashboard({
         </nav>
       </div>
 
-      {/* Tab content */}
       <div>
         {activeTab === "plan" && (
           <PlanManager

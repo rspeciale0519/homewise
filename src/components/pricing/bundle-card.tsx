@@ -87,7 +87,12 @@ export function BundleCard({
       role="button"
       tabIndex={0}
       aria-pressed={selected}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
     >
       {/* Badges */}
       {recommended && !selected && (
@@ -183,7 +188,10 @@ export function BundleCard({
                 : "bg-slate-100 text-navy-700 hover:bg-slate-200",
           )}
           disabled={loading}
-          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
           type="button"
         >
           {selected ? (

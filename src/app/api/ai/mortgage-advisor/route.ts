@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 export const maxDuration = 60;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 8;
+const requestLogByIp = new Map<string, number[]>();
 
 const mortgageAdvisorSchema = z.object({
   annualIncome: z.number().positive().optional(),
@@ -11,14 +15,45 @@ const mortgageAdvisorSchema = z.object({
   creditScore: z.string().optional(),
   homePrice: z.number().positive().optional(),
   description: z.string().max(2000).optional(),
-  userId: z.string().optional(),
 }).refine(
   (data) => data.annualIncome || data.monthlyDebt || data.downPayment || data.creditScore || data.homePrice || data.description,
   { message: "Please provide at least one financial field" },
 );
 
+function getClientIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() ?? "unknown";
+  }
+
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
+
+function checkIpRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const existing = requestLogByIp.get(ip) ?? [];
+  const recent = existing.filter((timestamp) => timestamp >= now - RATE_LIMIT_WINDOW_MS);
+
+  if (recent.length >= RATE_LIMIT_MAX_REQUESTS) {
+    requestLogByIp.set(ip, recent);
+    return false;
+  }
+
+  recent.push(now);
+  requestLogByIp.set(ip, recent);
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+    if (!checkIpRateLimit(clientIp)) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const raw: unknown = await request.json();
     const input = mortgageAdvisorSchema.safeParse(raw);
     if (!input.success) {
@@ -28,6 +63,10 @@ export async function POST(request: NextRequest) {
       );
     }
     const body = input.data;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const inputs: string[] = [];
     if (body.annualIncome) inputs.push(`Annual income: $${body.annualIncome.toLocaleString()}`);
@@ -75,7 +114,7 @@ Format as JSON with this structure:
       feature: "mortgage_advisor",
       systemPrompt: "You are a mortgage advisor assistant. Provide helpful financing scenarios. Always output valid JSON. Use current average mortgage rates. This is for educational purposes only, not financial advice.",
       userMessage: prompt,
-      userId: body.userId,
+      userId: user?.id,
       maxTokens: 2000,
       temperature: 0.5,
     });

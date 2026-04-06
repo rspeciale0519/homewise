@@ -11,6 +11,35 @@ function getSiteUrl(): string {
   return "https://app.homewisefl.com";
 }
 
+function resolveTrustedReturnUrl(
+  target: string | undefined,
+  fallbackPath: string,
+  siteUrl: string,
+): string | null {
+  const site = new URL(siteUrl);
+
+  if (!target) {
+    return new URL(fallbackPath, site).toString();
+  }
+
+  try {
+    const resolved = target.startsWith("/")
+      ? new URL(target, site)
+      : new URL(target);
+
+    if (resolved.origin !== site.origin) {
+      return null;
+    }
+
+    return new URL(
+      `${resolved.pathname}${resolved.search}${resolved.hash}`,
+      site,
+    ).toString();
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const siteUrl = getSiteUrl();
   const auth = await requireAuthApi();
@@ -43,8 +72,32 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { bundles, addOns, billingInterval, skipMembership, successUrl, cancelUrl } =
-    parsed.data;
+  const {
+    bundles,
+    addOns,
+    billingInterval,
+    skipMembership,
+    successUrl,
+    cancelUrl,
+  } = parsed.data;
+
+  const resolvedSuccessUrl = resolveTrustedReturnUrl(
+    successUrl,
+    "/dashboard/billing?checkout=success",
+    siteUrl,
+  );
+  const resolvedCancelUrl = resolveTrustedReturnUrl(
+    cancelUrl,
+    "/dashboard/billing?checkout=cancel",
+    siteUrl,
+  );
+
+  if (!resolvedSuccessUrl || !resolvedCancelUrl) {
+    return NextResponse.json(
+      { error: "Return URLs must stay on the Homewise site." },
+      { status: 400 },
+    );
+  }
 
   const customerId = await getOrCreateStripeCustomer(agent.id);
 
@@ -99,9 +152,8 @@ export async function POST(request: NextRequest) {
       subscription_data: {
         metadata: { agentId: agent.id },
       },
-      success_url:
-        successUrl ?? `${siteUrl}/dashboard/billing?checkout=success`,
-      cancel_url: cancelUrl ?? `${siteUrl}/dashboard/billing?checkout=cancel`,
+      success_url: resolvedSuccessUrl,
+      cancel_url: resolvedCancelUrl,
     });
 
     return NextResponse.json({ url: session.url });

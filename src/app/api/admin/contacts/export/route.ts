@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 
+function escapeCsvCell(value: string): string {
+  const trimmed = value.trimStart();
+  const neutralized = /^[=+\-@]/.test(trimmed) ? `'${value}` : value;
+  return `"${neutralized.replace(/"/g, '""')}"`;
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireAdminApi();
   if (isError(auth)) return auth.error;
@@ -45,7 +51,7 @@ export async function GET(request: NextRequest) {
 
   const csvContent = [
     headers.join(","),
-    ...rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")),
+    ...rows.map((row) => row.map((cell) => escapeCsvCell(cell)).join(",")),
   ].join("\n");
 
   return new NextResponse(csvContent, {

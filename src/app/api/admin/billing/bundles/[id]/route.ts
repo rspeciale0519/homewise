@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
+import { stripe } from "@/lib/stripe";
 import { bundleUpdateSchema } from "@/schemas/billing.schema";
 
 export async function GET(
@@ -55,13 +56,67 @@ export async function PUT(
     );
   }
 
-  const { featureKeys, ...bundleData } = parsed.data;
-
   try {
     const existing = await prisma.bundleConfig.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
     }
+
+    const immutableFieldChanges = [
+      parsed.data.slug !== undefined && parsed.data.slug !== existing.slug
+        ? "slug"
+        : null,
+      parsed.data.productType !== undefined &&
+      parsed.data.productType !== existing.productType
+        ? "product type"
+        : null,
+      parsed.data.monthlyAmount !== undefined &&
+      parsed.data.monthlyAmount !== existing.monthlyAmount
+        ? "monthly amount"
+        : null,
+      parsed.data.annualAmount !== undefined &&
+      parsed.data.annualAmount !== existing.annualAmount
+        ? "annual amount"
+        : null,
+    ].filter((value): value is string => value !== null);
+
+    if (immutableFieldChanges.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Existing bundles cannot change slug, product type, or billing amounts. Create a new bundle for pricing or product changes.",
+          details: immutableFieldChanges,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      existing.stripeProductId &&
+      (parsed.data.name !== undefined || parsed.data.description !== undefined)
+    ) {
+      await stripe.products.update(existing.stripeProductId, {
+        name: parsed.data.name ?? existing.name,
+        description: parsed.data.description ?? existing.description,
+        metadata: {
+          slug: existing.slug,
+          productType: existing.productType,
+        },
+      });
+    }
+
+    const bundleData = {
+      ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+      ...(parsed.data.description !== undefined
+        ? { description: parsed.data.description }
+        : {}),
+      ...(parsed.data.isActive !== undefined
+        ? { isActive: parsed.data.isActive }
+        : {}),
+      ...(parsed.data.sortOrder !== undefined
+        ? { sortOrder: parsed.data.sortOrder }
+        : {}),
+    };
 
     const bundle = await prisma.bundleConfig.update({
       where: { id },
@@ -69,11 +124,11 @@ export async function PUT(
       include: { features: true },
     });
 
-    if (featureKeys !== undefined) {
+    if (parsed.data.featureKeys !== undefined) {
       await prisma.bundleFeature.deleteMany({ where: { bundleId: id } });
-      if (featureKeys.length > 0) {
+      if (parsed.data.featureKeys.length > 0) {
         await prisma.bundleFeature.createMany({
-          data: featureKeys.map((featureKey) => ({
+          data: parsed.data.featureKeys.map((featureKey) => ({
             bundleId: id,
             featureKey,
           })),

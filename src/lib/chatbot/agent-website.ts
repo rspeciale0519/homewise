@@ -10,6 +10,7 @@ interface AgentConfig {
   tone?: string;
   clientType?: string;
   sessionId: string;
+  userId?: string;
 }
 
 const TOOLS: Anthropic.Tool[] = [
@@ -72,6 +73,7 @@ Always represent ${config.agentName} professionally and encourage visitors to co
     tools: TOOLS,
     sessionId: config.sessionId,
     agentId: config.agentId,
+    userId: config.userId,
   };
 
   const engine = new ChatbotEngine(context);
