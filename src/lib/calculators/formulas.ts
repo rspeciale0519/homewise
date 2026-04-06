@@ -152,11 +152,6 @@ export function calculatePayoffWithExtraPayment(params: {
   newMonthlyPayment: number;
 }): PayoffComparisonResult {
   const monthlyRate = params.annualRate / 100 / 12;
-  const originalPayment = calculateMonthlyPI(
-    params.loanAmount,
-    params.annualRate,
-    params.termYears
-  );
   const originalMonths = params.termYears * 12;
 
   const originalSchedule = calculateAmortizationSchedule(

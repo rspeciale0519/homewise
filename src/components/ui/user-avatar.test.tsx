@@ -1,9 +1,14 @@
+import { createElement } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { UserAvatar } from "./user-avatar";
 
 vi.mock("next/image", () => ({
-  default: (props: Record<string, unknown>) => <img {...props} />,
+  default: (props: Record<string, unknown>) =>
+    createElement("img", {
+      ...props,
+      alt: typeof props.alt === "string" ? props.alt : "",
+    }),
 }));
 
 describe("UserAvatar", () => {
