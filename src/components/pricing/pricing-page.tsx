@@ -56,7 +56,12 @@ const FAQ_ITEMS = [
   },
 ];
 
-export function PricingPage({ membership, bundles, addOns, entitlements }: PricingPageProps) {
+export function PricingPage({
+  membership,
+  bundles,
+  addOns: _addOns,
+  entitlements,
+}: PricingPageProps) {
   const router = useRouter();
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("annual");
   const [planMode, setPlanMode] = useState<PlanMode>("bundles");
@@ -130,9 +135,9 @@ export function PricingPage({ membership, bundles, addOns, entitlements }: Prici
 
   const bundlesMonthlyTotal = useMemo(() => {
     return Array.from(selectedBundles).reduce((acc, slug) => {
-      const b = bundles.find((b) => b.slug === slug);
-      if (!b) return acc;
-      return acc + (billingInterval === "annual" ? Math.round(b.annualAmount / 12) : b.monthlyAmount);
+      const bundle = bundles.find((item) => item.slug === slug);
+      if (!bundle) return acc;
+      return acc + (billingInterval === "annual" ? Math.round(bundle.annualAmount / 12) : bundle.monthlyAmount);
     }, 0);
   }, [selectedBundles, bundles, billingInterval]);
 
@@ -141,15 +146,15 @@ export function PricingPage({ membership, bundles, addOns, entitlements }: Prici
 
     if (planMode === "bundles") {
       for (const slug of selectedBundles) {
-        const b = bundles.find((b) => b.slug === slug);
-        if (!b) continue;
-        const price = billingInterval === "annual" ? Math.round(b.annualAmount / 12) : b.monthlyAmount;
-        items.push({ label: b.name, amount: `${formatDollars(price)}/mo` });
+        const bundle = bundles.find((item) => item.slug === slug);
+        if (!bundle) continue;
+        const price = billingInterval === "annual" ? Math.round(bundle.annualAmount / 12) : bundle.monthlyAmount;
+        items.push({ label: bundle.name, amount: `${formatDollars(price)}/mo` });
       }
     } else {
       for (const key of selectedFeatures) {
-        const e = entitlements.find((e) => e.featureKey === key);
-        if (e) items.push({ label: e.featureName, amount: "TBD" });
+        const entitlement = entitlements.find((item) => item.featureKey === key);
+        if (entitlement) items.push({ label: entitlement.featureName, amount: "TBD" });
       }
     }
 
