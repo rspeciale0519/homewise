@@ -120,17 +120,25 @@ export function BundleManagement() {
       .map((k) => k.trim())
       .filter(Boolean);
 
-    const payload = {
-      name: form.name,
-      slug: form.slug,
-      description: form.description,
-      monthlyAmount: parseInt(form.monthlyAmount, 10),
-      annualAmount: parseInt(form.annualAmount, 10),
-      productType: form.productType,
-      isActive: form.isActive,
-      sortOrder: parseInt(form.sortOrder, 10),
-      featureKeys,
-    };
+    const payload = formMode === "create"
+      ? {
+          name: form.name,
+          slug: form.slug,
+          description: form.description,
+          monthlyAmount: parseInt(form.monthlyAmount, 10),
+          annualAmount: parseInt(form.annualAmount, 10),
+          productType: form.productType,
+          isActive: form.isActive,
+          sortOrder: parseInt(form.sortOrder, 10),
+          featureKeys,
+        }
+      : {
+          name: form.name,
+          description: form.description,
+          isActive: form.isActive,
+          sortOrder: parseInt(form.sortOrder, 10),
+          featureKeys,
+        };
 
     try {
       const url = formMode === "create"
@@ -190,6 +198,13 @@ export function BundleManagement() {
           <h3 className="font-semibold text-navy-700 text-sm mb-4">
             {formMode === "create" ? "Create Bundle" : "Edit Bundle"}
           </h3>
+          {formMode === "edit" && (
+            <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Existing bundles keep their original slug, product type, and prices so
+              active Stripe subscriptions stay in sync. Create a new bundle if you need
+              a new pricing structure.
+            </p>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -229,7 +244,8 @@ export function BundleManagement() {
                   onChange={(e) => updateField("monthlyAmount", e.target.value)}
                   required
                   min={0}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200"
+                  disabled={formMode === "edit"}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:bg-slate-50 disabled:text-slate-400"
                 />
               </div>
               <div>
@@ -240,7 +256,8 @@ export function BundleManagement() {
                   onChange={(e) => updateField("annualAmount", e.target.value)}
                   required
                   min={0}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200"
+                  disabled={formMode === "edit"}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:bg-slate-50 disabled:text-slate-400"
                 />
               </div>
               <div>
@@ -250,7 +267,8 @@ export function BundleManagement() {
                   onChange={(e) => updateField("productType", e.target.value)}
                   required
                   placeholder="e.g. core, marketing, premium"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200"
+                  disabled={formMode === "edit"}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:bg-slate-50 disabled:text-slate-400"
                 />
               </div>
               <div>

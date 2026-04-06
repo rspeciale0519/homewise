@@ -7,6 +7,34 @@ import { checkoutSessionSchema } from "@/schemas/billing.schema";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+function resolveTrustedReturnUrl(
+  target: string | undefined,
+  fallbackPath: string,
+): string | null {
+  const site = new URL(SITE_URL);
+
+  if (!target) {
+    return new URL(fallbackPath, site).toString();
+  }
+
+  try {
+    const resolved = target.startsWith("/")
+      ? new URL(target, site)
+      : new URL(target);
+
+    if (resolved.origin !== site.origin) {
+      return null;
+    }
+
+    return new URL(
+      `${resolved.pathname}${resolved.search}${resolved.hash}`,
+      site,
+    ).toString();
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const auth = await requireAuthApi();
   if (isError(auth)) return auth.error;
@@ -40,6 +68,22 @@ export async function POST(request: NextRequest) {
 
   const { bundles, addOns, billingInterval, successUrl, cancelUrl } =
     parsed.data;
+
+  const resolvedSuccessUrl = resolveTrustedReturnUrl(
+    successUrl,
+    "/dashboard/billing?checkout=success",
+  );
+  const resolvedCancelUrl = resolveTrustedReturnUrl(
+    cancelUrl,
+    "/dashboard/billing?checkout=cancel",
+  );
+
+  if (!resolvedSuccessUrl || !resolvedCancelUrl) {
+    return NextResponse.json(
+      { error: "Return URLs must stay on the Homewise site." },
+      { status: 400 },
+    );
+  }
 
   const customerId = await getOrCreateStripeCustomer(agent.id);
 
@@ -92,9 +136,8 @@ export async function POST(request: NextRequest) {
       subscription_data: {
         metadata: { agentId: agent.id },
       },
-      success_url:
-        successUrl ?? `${SITE_URL}/dashboard/billing?checkout=success`,
-      cancel_url: cancelUrl ?? `${SITE_URL}/dashboard/billing?checkout=cancel`,
+      success_url: resolvedSuccessUrl,
+      cancel_url: resolvedCancelUrl,
     });
 
     return NextResponse.json({ url: session.url });
