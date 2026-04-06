@@ -17,28 +17,47 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    const authenticatedEmail = user?.email ?? null;
 
-    await prisma.propertyAlert.upsert({
-      where: { email: parsed.data.email },
-      update: {
-        name: parsed.data.name || null,
-        cities: parsed.data.cities,
-        minPrice: parsed.data.minPrice ?? null,
-        maxPrice: parsed.data.maxPrice ?? null,
-        beds: parsed.data.beds ?? null,
-        active: true,
-        userId: user?.id ?? undefined,
-      },
-      create: {
-        email: parsed.data.email,
-        name: parsed.data.name || null,
-        cities: parsed.data.cities,
-        minPrice: parsed.data.minPrice ?? null,
-        maxPrice: parsed.data.maxPrice ?? null,
-        beds: parsed.data.beds ?? null,
-        userId: user?.id ?? null,
-      },
+    if (authenticatedEmail && parsed.data.email !== authenticatedEmail) {
+      return NextResponse.json(
+        { error: "Authenticated users can only manage alerts for their own email." },
+        { status: 403 }
+      );
+    }
+
+    const alertEmail = authenticatedEmail ?? parsed.data.email;
+    const existingAlert = await prisma.propertyAlert.findUnique({
+      where: { email: alertEmail },
+      select: { email: true },
     });
+
+    if (!existingAlert) {
+      await prisma.propertyAlert.create({
+        data: {
+          email: alertEmail,
+          name: parsed.data.name || null,
+          cities: parsed.data.cities,
+          minPrice: parsed.data.minPrice ?? null,
+          maxPrice: parsed.data.maxPrice ?? null,
+          beds: parsed.data.beds ?? null,
+          userId: user?.id ?? null,
+        },
+      });
+    } else if (user) {
+      await prisma.propertyAlert.update({
+        where: { email: alertEmail },
+        data: {
+          name: parsed.data.name || null,
+          cities: parsed.data.cities,
+          minPrice: parsed.data.minPrice ?? null,
+          maxPrice: parsed.data.maxPrice ?? null,
+          beds: parsed.data.beds ?? null,
+          active: true,
+          userId: user.id,
+        },
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch {

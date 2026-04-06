@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuthApi, isError } from "@/lib/admin-api";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/ai";
 import { z } from "zod";
 
 export async function GET() {
-  const auth = await requireAuthApi();
+  const auth = await requireAdminApi();
   if (isError(auth)) return auth.error;
 
   const configs = await prisma.aiFeatureConfig.findMany({
@@ -24,7 +24,7 @@ const patchSchema = z.array(
 );
 
 export async function PATCH(request: NextRequest) {
-  const auth = await requireAuthApi();
+  const auth = await requireAdminApi();
   if (isError(auth)) return auth.error;
 
   const raw: unknown = await request.json();

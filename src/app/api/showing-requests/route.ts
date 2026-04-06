@@ -29,45 +29,51 @@ export async function POST(request: NextRequest) {
 
   const { firstName, lastName, email, phone, propertyId, propertyAddress, preferredDate, preferredTime, message, source } = parsed.data;
 
-  // Upsert contact (create or update existing)
-  const contact = await prisma.contact.upsert({
+  const existingContact = await prisma.contact.findUnique({
     where: { email },
-    create: {
-      firstName,
-      lastName,
-      email,
-      phone,
-      source: source ?? "showing_request",
-      type: "buyer",
-      stage: "new_lead",
-    },
-    update: {
-      phone: phone ?? undefined,
-    },
+    select: { id: true, assignedAgentId: true },
   });
 
-  // Log the showing request as an activity
-  await logActivity({
-    contactId: contact.id,
-    type: "form_submission",
-    title: "Showing Request Submitted",
-    description: `Requested showing for ${propertyAddress}`,
-    metadata: {
-      propertyId,
-      propertyAddress,
-      preferredDate,
-      preferredTime,
-      message,
-    },
-  });
+  const contact = existingContact
+    ? null
+    : await prisma.contact.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          phone,
+          source: source ?? "showing_request",
+          type: "buyer",
+          stage: "new_lead",
+        },
+      });
+
+  if (contact) {
+    await logActivity({
+      contactId: contact.id,
+      type: "form_submission",
+      title: "Showing Request Submitted",
+      description: `Requested showing for ${propertyAddress}`,
+      metadata: {
+        propertyId,
+        propertyAddress,
+        preferredDate,
+        preferredTime,
+        message,
+      },
+    });
+  }
 
   // Create a task for the assigned agent (or unassigned)
   await prisma.task.create({
     data: {
-      contactId: contact.id,
-      assignedTo: contact.assignedAgentId,
+      contactId: contact?.id ?? null,
+      assignedTo: contact?.id ? null : existingContact?.assignedAgentId,
       title: `Schedule showing: ${propertyAddress}`,
       description: [
+        contact
+          ? "Verified contact created from a new public submission."
+          : "Unverified public submission for an existing CRM email. Review before merging into the contact record.",
         `Contact: ${firstName} ${lastName} (${email})`,
         phone ? `Phone: ${phone}` : null,
         preferredDate ? `Preferred date: ${preferredDate}` : null,
@@ -79,5 +85,5 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return NextResponse.json({ success: true, contactId: contact.id }, { status: 201 });
+  return NextResponse.json({ success: true, contactId: contact?.id ?? null }, { status: 201 });
 }
