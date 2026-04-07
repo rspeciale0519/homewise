@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { UserAvatar } from "./user-avatar";
 
 vi.mock("next/image", () => ({
-  default: (props: Record<string, unknown>) =>
+  default: ({ fill: _fill, ...props }: Record<string, unknown>) =>
     createElement("img", {
       ...props,
       alt: typeof props.alt === "string" ? props.alt : "",

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuthApi, isError } from "@/lib/admin-api";
+import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
@@ -12,7 +12,7 @@ const followUpSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuthApi();
+  const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
@@ -27,8 +27,10 @@ export async function POST(request: NextRequest) {
     const body = input.data;
     const channel = body.channel ?? "email";
 
-    const contact = await prisma.contact.findUnique({
-      where: { id: body.contactId },
+    const contact = await prisma.contact.findFirst({
+      where: auth.isAdmin
+        ? { id: body.contactId }
+        : { id: body.contactId, assignedAgentId: auth.agentId ?? undefined },
       include: {
         activities: { orderBy: { createdAt: "desc" }, take: 15 },
         assignedAgent: { select: { firstName: true, lastName: true } },

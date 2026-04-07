@@ -89,7 +89,7 @@ export function PropertyAlertForm() {
     return (
       <FormSuccess
         title="You're Subscribed!"
-        message="We'll send you email alerts when new listings match your criteria. You can update your preferences anytime."
+        message="We'll send you email alerts when new listings match your criteria."
         onReset={() => {
           setForm({ email: "", name: "", cities: [], minPrice: "", maxPrice: "", beds: "" });
           setErrors({});

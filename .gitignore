@@ -62,9 +62,10 @@ skills-lock.json
 # temp docs
 docs/temp/
 
+# archived local projects and artifacts
+/archive/
+
 # root-level screenshot artifacts
-/archive/*.png
-/archive/*.jpg
 /*.png
 /*.jpg
 

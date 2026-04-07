@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuthApi, isError } from "@/lib/admin-api";
+import { requireStaffApi, isError } from "@/lib/admin-api";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import { CmaReportDocument } from "@/components/pdf/cma-report-document";
 import { createElement, type ReactElement } from "react";
@@ -8,7 +8,7 @@ import type { CmaReportProps } from "@/components/pdf/cma-report-document";
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuthApi();
+  const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   let body: unknown;

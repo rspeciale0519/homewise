@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuthApi, isError } from "@/lib/admin-api";
+import { requireAuthApi, requireStaffApi, isError } from "@/lib/admin-api";
 import { createPublicChatbot } from "@/lib/chatbot/public-site";
 import { createAgentChatbot } from "@/lib/chatbot/agent-website";
 import { createDashboardChatbot } from "@/lib/chatbot/dashboard";
@@ -16,16 +16,6 @@ const chatSchema = z.object({
   userId: z.string().optional(),
   agentId: z.string().optional(),
 });
-
-async function findAgentIdForUser(userId: string, email?: string) {
-  const matches = email ? [{ userId }, { email }] : [{ userId }];
-  const agent = await prisma.agent.findFirst({
-    where: { OR: matches },
-    select: { id: true },
-  });
-
-  return agent?.id;
-}
 
 async function validateConversationAccess({
   conversationId,
@@ -71,15 +61,11 @@ export async function POST(request: NextRequest) {
     const body = input.data;
     const config = body.config ?? "public";
     let authenticatedUserId: string | undefined;
-    let authenticatedUserEmail: string | undefined;
-    let authenticatedRole: string | undefined;
 
-    if (config === "dashboard" || config === "agent") {
+    if (config === "agent") {
       const auth = await requireAuthApi();
       if (isError(auth)) return auth.error;
       authenticatedUserId = auth.user.id;
-      authenticatedUserEmail = auth.user.email ?? undefined;
-      authenticatedRole = auth.profile.role;
     }
 
     const sessionId = body.sessionId ?? crypto.randomUUID();
@@ -122,12 +108,12 @@ export async function POST(request: NextRequest) {
         break;
       }
       case "dashboard": {
-        if (!authenticatedUserId) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        const auth = await requireStaffApi();
+        if (isError(auth)) return auth.error;
+        authenticatedUserId = auth.user.id;
 
         let scopedAgentId: string | undefined;
-        if (authenticatedRole === "admin") {
+        if (auth.isAdmin) {
           if (body.agentId) {
             const agent = await prisma.agent.findUnique({
               where: { id: body.agentId },
@@ -141,7 +127,7 @@ export async function POST(request: NextRequest) {
             scopedAgentId = agent.id;
           }
         } else {
-          scopedAgentId = await findAgentIdForUser(authenticatedUserId, authenticatedUserEmail);
+          scopedAgentId = auth.agentId ?? undefined;
         }
 
         const conversationError = body.conversationId

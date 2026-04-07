@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuthApi, isError } from "@/lib/admin-api";
+import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
@@ -11,7 +11,7 @@ const homeValuationSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuthApi();
+  const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
@@ -31,6 +31,20 @@ export async function POST(request: NextRequest) {
 
     if (!evaluation) {
       return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
+    }
+
+    if (!auth.isAdmin) {
+      const accessibleContact = await prisma.contact.findFirst({
+        where: {
+          email: evaluation.email,
+          assignedAgentId: auth.agentId ?? undefined,
+        },
+        select: { id: true },
+      });
+
+      if (!accessibleContact) {
+        return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
+      }
     }
 
     // Pull comparable sold listings
