@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "prisma:generate": "prisma generate",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
+    "verify": "npm run lint && npm run type-check && npm run test:run && npm run build",
     "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
     "postinstall": "node -e \"const fs=require('fs');fs.writeFileSync('node_modules/@types/mapbox__point-geometry/index.d.ts','export {};');\""

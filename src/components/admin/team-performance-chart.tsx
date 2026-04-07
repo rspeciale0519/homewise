@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useHasMounted } from "@/hooks/use-has-mounted";
 import {
   BarChart,
   Bar,
@@ -39,6 +40,7 @@ interface TeamPerformanceChartProps {
 }
 
 export function TeamPerformanceChart({ agents }: TeamPerformanceChartProps) {
+  const hasMounted = useHasMounted();
   const [activeMetric, setActiveMetric] = useState<Metric>("closings");
   const [hoveredBar, setHoveredBar] = useState<string | null>(null);
 
@@ -76,61 +78,65 @@ export function TeamPerformanceChart({ agents }: TeamPerformanceChartProps) {
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart
-          data={data}
-          margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-          barCategoryGap="30%"
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            vertical={false}
-            stroke="#e2e8f0"
-            strokeWidth={0.5}
-          />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11, fill: "#64748b" }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tickFormatter={(v: number) => formatMetricValue(v, activeMetric)}
-            tick={{ fontSize: 11, fill: "#64748b" }}
-            axisLine={false}
-            tickLine={false}
-            width={48}
-          />
-          <Tooltip
-            formatter={(value) => [
-              formatMetricValue(Number(value), activeMetric),
-              METRICS.find((m) => m.key === activeMetric)?.label ?? activeMetric,
-            ]}
-            contentStyle={{
-              fontSize: 12,
-              borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              boxShadow: "0 4px 12px -2px rgba(0,0,0,0.08)",
-            }}
-            cursor={{ fill: "rgba(46,39,109,0.04)" }}
-          />
-          <Bar
-            dataKey="value"
-            radius={[4, 4, 0, 0]}
-            onMouseEnter={(entry) =>
-              setHoveredBar((entry as unknown as { agentId: string }).agentId)
-            }
-            onMouseLeave={() => setHoveredBar(null)}
+      {hasMounted ? (
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart
+            data={data}
+            margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+            barCategoryGap="30%"
           >
-            {data.map((entry) => (
-              <Cell
-                key={entry.agentId}
-                fill={hoveredBar === entry.agentId ? "#DB2526" : "#2E276D"}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="#e2e8f0"
+              strokeWidth={0.5}
+            />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11, fill: "#64748b" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tickFormatter={(v: number) => formatMetricValue(v, activeMetric)}
+              tick={{ fontSize: 11, fill: "#64748b" }}
+              axisLine={false}
+              tickLine={false}
+              width={48}
+            />
+            <Tooltip
+              formatter={(value) => [
+                formatMetricValue(Number(value), activeMetric),
+                METRICS.find((m) => m.key === activeMetric)?.label ?? activeMetric,
+              ]}
+              contentStyle={{
+                fontSize: 12,
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 12px -2px rgba(0,0,0,0.08)",
+              }}
+              cursor={{ fill: "rgba(46,39,109,0.04)" }}
+            />
+            <Bar
+              dataKey="value"
+              radius={[4, 4, 0, 0]}
+              onMouseEnter={(entry) =>
+                setHoveredBar((entry as unknown as { agentId: string }).agentId)
+              }
+              onMouseLeave={() => setHoveredBar(null)}
+            >
+              {data.map((entry) => (
+                <Cell
+                  key={entry.agentId}
+                  fill={hoveredBar === entry.agentId ? "#DB2526" : "#2E276D"}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      ) : (
+        <div aria-hidden="true" className="h-[220px] w-full" />
+      )}
     </div>
   );
 }

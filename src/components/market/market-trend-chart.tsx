@@ -1,5 +1,6 @@
 "use client";
 
+import { useHasMounted } from "@/hooks/use-has-mounted";
 import {
   ComposedChart,
   Area,
@@ -34,6 +35,8 @@ function formatPrice(value: number): string {
 }
 
 export function MarketTrendChart({ stats }: MarketTrendChartProps) {
+  const hasMounted = useHasMounted();
+
   if (stats.length < 2) return null;
 
   const first = stats[0];
@@ -67,95 +70,99 @@ export function MarketTrendChart({ stats }: MarketTrendChartProps) {
 
       {/* Chart */}
       <div className="px-2 pt-4 pb-2">
-        <ResponsiveContainer width="100%" height={180}>
-          <ComposedChart data={stats} margin={{ top: 4, right: 44, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="mktNavyGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2E276D" stopOpacity={0.18} />
-                <stop offset="100%" stopColor="#2E276D" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="mktCrimsonGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#DB2526" stopOpacity={0.12} />
-                <stop offset="100%" stopColor="#DB2526" stopOpacity={0} />
-              </linearGradient>
-            </defs>
+        {hasMounted ? (
+          <ResponsiveContainer width="100%" height={180}>
+            <ComposedChart data={stats} margin={{ top: 4, right: 44, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="mktNavyGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2E276D" stopOpacity={0.18} />
+                  <stop offset="100%" stopColor="#2E276D" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="mktCrimsonGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#DB2526" stopOpacity={0.12} />
+                  <stop offset="100%" stopColor="#DB2526" stopOpacity={0} />
+                </linearGradient>
+              </defs>
 
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-              stroke="#e2e8f0"
-              strokeWidth={0.5}
-            />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="#e2e8f0"
+                strokeWidth={0.5}
+              />
 
-            <XAxis
-              dataKey="period"
-              tickFormatter={formatPeriod}
-              tick={{ fontSize: 11, fill: "#64748b" }}
-              axisLine={false}
-              tickLine={false}
-            />
+              <XAxis
+                dataKey="period"
+                tickFormatter={formatPeriod}
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+              />
 
-            <YAxis
-              yAxisId="price"
-              orientation="left"
-              tickFormatter={formatPrice}
-              tick={{ fontSize: 11, fill: "#64748b" }}
-              axisLine={false}
-              tickLine={false}
-              width={44}
-            />
+              <YAxis
+                yAxisId="price"
+                orientation="left"
+                tickFormatter={formatPrice}
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+                width={44}
+              />
 
-            <YAxis
-              yAxisId="dom"
-              orientation="right"
-              tickFormatter={(v: number) => `${v}d`}
-              tick={{ fontSize: 11, fill: "#64748b" }}
-              axisLine={false}
-              tickLine={false}
-              width={32}
-            />
+              <YAxis
+                yAxisId="dom"
+                orientation="right"
+                tickFormatter={(v: number) => `${v}d`}
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+                width={32}
+              />
 
-            <Tooltip
-              formatter={(value, name) => {
-                const v = Number(value);
-                if (name === "medianPrice")
-                  return [`$${v.toLocaleString()}`, "Median Price"];
-                return [`${v} days`, "Avg Days on Market"];
-              }}
-              labelFormatter={(label) => formatPeriod(String(label))}
-              contentStyle={{
-                fontSize: 12,
-                borderRadius: 8,
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 4px 12px -2px rgba(0,0,0,0.08)",
-              }}
-            />
+              <Tooltip
+                formatter={(value, name) => {
+                  const v = Number(value);
+                  if (name === "medianPrice")
+                    return [`$${v.toLocaleString()}`, "Median Price"];
+                  return [`${v} days`, "Avg Days on Market"];
+                }}
+                labelFormatter={(label) => formatPeriod(String(label))}
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 4px 12px -2px rgba(0,0,0,0.08)",
+                }}
+              />
 
-            <Area
-              yAxisId="price"
-              type="monotone"
-              dataKey="medianPrice"
-              stroke="#2E276D"
-              strokeWidth={2.5}
-              fill="url(#mktNavyGrad)"
-              dot={false}
-              activeDot={{ r: 4, fill: "#2E276D", strokeWidth: 0 }}
-            />
+              <Area
+                yAxisId="price"
+                type="monotone"
+                dataKey="medianPrice"
+                stroke="#2E276D"
+                strokeWidth={2.5}
+                fill="url(#mktNavyGrad)"
+                dot={false}
+                activeDot={{ r: 4, fill: "#2E276D", strokeWidth: 0 }}
+              />
 
-            <Area
-              yAxisId="dom"
-              type="monotone"
-              dataKey="avgDom"
-              stroke="#DB2526"
-              strokeWidth={2}
-              strokeDasharray="5 3"
-              fill="url(#mktCrimsonGrad)"
-              dot={false}
-              activeDot={{ r: 4, fill: "#DB2526", strokeWidth: 0 }}
-              opacity={0.85}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
+              <Area
+                yAxisId="dom"
+                type="monotone"
+                dataKey="avgDom"
+                stroke="#DB2526"
+                strokeWidth={2}
+                strokeDasharray="5 3"
+                fill="url(#mktCrimsonGrad)"
+                dot={false}
+                activeDot={{ r: 4, fill: "#DB2526", strokeWidth: 0 }}
+                opacity={0.85}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        ) : (
+          <div aria-hidden="true" className="h-[180px] w-full" />
+        )}
       </div>
 
       {/* Delta indicators */}

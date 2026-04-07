@@ -57,6 +57,11 @@ export async function POST(request: NextRequest) {
           userId: user.id,
         },
       });
+    } else {
+      return NextResponse.json(
+        { error: "An alert already exists for this email. Sign in to update your saved criteria." },
+        { status: 409 }
+      );
     }
 
     return NextResponse.json({ success: true });

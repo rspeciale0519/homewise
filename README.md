@@ -29,6 +29,7 @@ cp .env.example .env.local
 
 ```bash
 npm install
+npm run prisma:generate
 npx prisma db push
 npx prisma db seed
 npm run dev
@@ -41,14 +42,31 @@ Open [http://localhost:3000](http://localhost:3000).
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start development server |
-| `npm run build` | Production build |
+| `npm run prisma:generate` | Regenerate Prisma client after schema or Prisma package changes |
+| `npm run build` | Production app build |
 | `npm run start` | Start production server |
 | `npm run type-check` | TypeScript type checking |
 | `npm run lint` | ESLint code quality check |
 | `npm run test` | Run test suite (watch mode) |
 | `npm run test:run` | Run tests once |
+| `npm run verify` | Full local pre-push verification: lint, type-check, tests, and build |
 | `npm run db:push` | Push Prisma schema to database |
 | `npm run db:seed` | Seed database with mock data |
+
+## Recommended Local Verification
+
+Use this before pushing feature work:
+
+```bash
+npm run verify
+```
+
+If you changed [schema.prisma](/C:/Users/rob/Documents/Software/real-estate/homewise/prisma/schema.prisma) or updated Prisma packages, regenerate the client first:
+
+```bash
+npm run prisma:generate
+npm run verify
+```
 
 ## Project Structure
 

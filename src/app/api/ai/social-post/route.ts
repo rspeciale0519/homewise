@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuthApi, isError } from "@/lib/admin-api";
+import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
 import { z } from "zod";
@@ -14,7 +14,7 @@ const socialPostSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuthApi();
+  const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
