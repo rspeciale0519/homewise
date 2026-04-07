@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import DOMPurify from "isomorphic-dompurify";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
@@ -31,21 +32,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name, subject, and body are required" }, { status: 400 });
     }
 
+    const sanitizedBody = DOMPurify.sanitize(body.body);
+
     // Resolve audience
-    let recipientIds = body.audienceIds ?? [];
+    let recipientIds = Array.from(new Set(body.audienceIds ?? []));
     if (body.audienceTag) {
       const tagged = await prisma.contactTag.findMany({
         where: { tag: { name: body.audienceTag } },
         select: { contactId: true },
       });
       recipientIds = [...new Set([...recipientIds, ...tagged.map((t) => t.contactId)])];
+    } else if (body.send && recipientIds.length === 0) {
+      const contacts = await prisma.contact.findMany({
+        select: { id: true },
+      });
+      recipientIds = contacts.map((contact) => contact.id);
     }
 
-    const broadcast = await prisma.broadcast.create({
+    if (body.send && recipientIds.length === 0) {
+      return NextResponse.json({ error: "No recipients available for this broadcast" }, { status: 400 });
+    }
+
+    let broadcast = await prisma.broadcast.create({
       data: {
         name: body.name,
         subject: body.subject,
-        body: body.body,
+        body: sanitizedBody,
         audienceTag: body.audienceTag ?? null,
         audienceIds: recipientIds,
         status: body.send ? "sending" : "draft",
@@ -72,7 +84,7 @@ export async function POST(request: NextRequest) {
         const result = await sendEmail({
           to: contact.email,
           subject: personalizeTemplate(body.subject, tokens),
-          html: buildEmailHtml(personalizeTemplate(body.body, tokens)),
+          html: buildEmailHtml(personalizeTemplate(sanitizedBody, tokens)),
           tags: [
             { name: "type", value: "broadcast" },
             { name: "broadcast_id", value: broadcast.id },
@@ -82,7 +94,7 @@ export async function POST(request: NextRequest) {
         if (!result.error) sentCount++;
       }
 
-      await prisma.broadcast.update({
+      broadcast = await prisma.broadcast.update({
         where: { id: broadcast.id },
         data: { status: "sent", sentAt: new Date(), sentCount },
       });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DOMPurify from "isomorphic-dompurify";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/admin-toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
@@ -42,16 +43,21 @@ export function BroadcastListView({ broadcasts, tags }: BroadcastListViewProps) 
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
+  const sanitizedPreview = body.trim() ? DOMPurify.sanitize(body) : "";
 
   const handleSend = async (send: boolean) => {
     if (!name.trim() || !subject.trim() || !body.trim()) return;
     setSending(true);
     try {
-      await fetch("/api/admin/broadcasts", {
+      const res = await fetch("/api/admin/broadcasts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, subject, body, audienceTag: audienceTag || undefined, send }),
       });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(payload?.error ?? "Failed to send broadcast");
+      }
       toast(send ? "Broadcast sent" : "Draft saved", "success");
       setIsCreating(false);
       setName("");
@@ -96,7 +102,7 @@ export function BroadcastListView({ broadcasts, tags }: BroadcastListViewProps) 
                   <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
                     <p className="text-xs text-slate-500">Subject: <span className="font-medium text-navy-700">{subject || "(no subject)"}</span></p>
                   </div>
-                  <div className="p-4 bg-white prose prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: body }} />
+                  <div className="p-4 bg-white prose prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: sanitizedPreview }} />
                 </div>
               )}
             </div>
