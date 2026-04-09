@@ -13,7 +13,7 @@ const CATEGORIES = [
 ] as const;
 
 export default async function TrainingAdminPage() {
-  const tracks = await prisma.trainingTrack.findMany({
+  const tracks = await prisma.trainingCourse.findMany({
     include: {
       items: {
         include: { content: { select: { id: true, title: true, type: true } } },
@@ -28,7 +28,7 @@ export default async function TrainingAdminPage() {
     <div>
       <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">Training Hub</h1>
       <p className="text-slate-500 text-sm mb-8">
-        Manage training content, tracks, and agent progress
+        Manage training content, courses, and agent progress
       </p>
       <TrainingAdminView
         tracks={tracks}

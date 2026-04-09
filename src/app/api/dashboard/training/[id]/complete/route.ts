@@ -31,22 +31,22 @@ export async function POST(
     },
   });
 
-  const tracksWithContent = await prisma.trainingTrackItem.findMany({
+  const tracksWithContent = await prisma.trainingCourseItem.findMany({
     where: { contentId },
-    select: { trackId: true },
+    select: { courseId: true },
   });
 
-  const trackIds = tracksWithContent.map((t) => t.trackId);
+  const trackIds = tracksWithContent.map((t) => t.courseId);
 
   if (trackIds.length > 0) {
     const userEnrollments = await prisma.trainingEnrollment.findMany({
       where: {
         userId: user.id,
-        trackId: { in: trackIds },
+        courseId: { in: trackIds },
         completedAt: null,
       },
       include: {
-        track: {
+        course: {
           include: {
             items: { select: { contentId: true } },
           },
@@ -67,7 +67,7 @@ export async function POST(
     const enrollmentsToComplete: string[] = [];
 
     for (const enrollment of userEnrollments) {
-      const allDone = enrollment.track.items.every((item) =>
+      const allDone = enrollment.course.items.every((item) =>
         completedSet.has(item.contentId),
       );
       if (allDone) {

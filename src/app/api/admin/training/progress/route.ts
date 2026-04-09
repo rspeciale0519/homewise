@@ -29,7 +29,7 @@ export async function GET() {
       }),
       prisma.trainingEnrollment.findMany({
         include: {
-          track: {
+          course: {
             include: { _count: { select: { items: true } } },
           },
         },
@@ -40,9 +40,9 @@ export async function GET() {
 
   const overdueCount = enrollments.filter((e) => {
     if (e.completedAt) return false;
-    if (!e.track.reminderDays) return false;
+    if (!e.course.reminderDays) return false;
     const deadline = new Date(e.createdAt);
-    deadline.setDate(deadline.getDate() + e.track.reminderDays);
+    deadline.setDate(deadline.getDate() + e.course.reminderDays);
     return deadline < now;
   }).length;
 
@@ -76,7 +76,7 @@ export async function GET() {
       enrollmentsByUser.set(e.userId, list);
     }
     list.push({
-      trackItemCount: e.track._count.items,
+      trackItemCount: e.course._count.items,
       completed: e.completedAt !== null,
     });
   }

@@ -12,6 +12,7 @@ const updateSchema = z.object({
   type: z.enum(["video", "document", "quiz", "article"]).optional(),
   url: z.string().url().optional(),
   fileKey: z.string().optional(),
+  thumbnailUrl: z.string().optional(),
   duration: z.number().optional(),
   tags: z.array(z.string()).optional(),
   published: z.boolean().optional(),

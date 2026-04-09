@@ -47,7 +47,7 @@ const ADMIN_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/agents", label: "Agents", icon: "agent" },
       { href: "/admin/users", label: "Users", icon: "users" },
-      { href: "/admin/training", label: "Training", icon: "book" },
+      { href: "/admin/training", label: "Training Hub", icon: "book" },
       { href: "/admin/team-performance", label: "Performance", icon: "chart" },
     ],
   },

@@ -21,17 +21,17 @@ import { CSS } from "@dnd-kit/utilities";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
-import type { TrainingItem, TrackData } from "@/app/admin/training/types";
+import type { TrainingItem, CourseData } from "@/app/admin/training/types";
 
-interface TrainingTrackDrawerProps {
+interface TrainingCourseDrawerProps {
   open: boolean;
   onClose: () => void;
-  track: TrackData | null;
+  course: CourseData | null;
   allContent: TrainingItem[];
   onSaved: () => void;
 }
 
-interface TrackContentItem {
+interface CourseContentItem {
   id: string;
   title: string;
   type: string;
@@ -47,11 +47,11 @@ const TYPE_BADGE_COLORS: Record<string, string> = {
   quiz: "bg-navy-100 text-navy-700",
 };
 
-function SortableTrackItem({
+function SortableCourseItem({
   item,
   onRemove,
 }: {
-  item: TrackContentItem;
+  item: CourseContentItem;
   onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -102,13 +102,13 @@ function SortableTrackItem({
   );
 }
 
-export function TrainingTrackDrawer({
+export function TrainingCourseDrawer({
   open,
   onClose,
-  track,
+  course,
   allContent,
   onSaved,
-}: TrainingTrackDrawerProps) {
+}: TrainingCourseDrawerProps) {
   const { toast } = useToast();
 
   const [name, setName] = useState("");
@@ -117,7 +117,7 @@ export function TrainingTrackDrawer({
   const [autoEnroll, setAutoEnroll] = useState(false);
   const [reminderDays, setReminderDays] = useState("");
   const [reminderRepeat, setReminderRepeat] = useState("");
-  const [items, setItems] = useState<TrackContentItem[]>([]);
+  const [items, setItems] = useState<CourseContentItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -131,15 +131,15 @@ export function TrainingTrackDrawer({
   /* eslint-disable react-hooks/set-state-in-effect -- sync form state from props */
   useEffect(() => {
     if (!open) return;
-    if (track) {
-      setName(track.name);
-      setDescription(track.description ?? "");
-      setRequired(track.required);
-      setAutoEnroll(track.autoEnroll);
-      setReminderDays(track.reminderDays != null ? String(track.reminderDays) : "");
-      setReminderRepeat(track.reminderRepeat != null ? String(track.reminderRepeat) : "");
+    if (course) {
+      setName(course.name);
+      setDescription(course.description ?? "");
+      setRequired(course.required);
+      setAutoEnroll(course.autoEnroll);
+      setReminderDays(course.reminderDays != null ? String(course.reminderDays) : "");
+      setReminderRepeat(course.reminderRepeat != null ? String(course.reminderRepeat) : "");
       setItems(
-        track.items.map((ti) => ({
+        course.items.map((ti: { content: { id: string; title: string; type: string } }) => ({
           id: ti.content.id,
           title: ti.content.title,
           type: ti.content.type,
@@ -156,7 +156,7 @@ export function TrainingTrackDrawer({
     }
     setPickerOpen(false);
     setPickerSearch("");
-  }, [open, track]);
+  }, [open, course]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
@@ -203,18 +203,18 @@ export function TrainingTrackDrawer({
         reminderRepeat: reminderRepeat ? Number(reminderRepeat) : undefined,
         contentIds: items.map((i) => i.id),
       };
-      if (track) {
-        await adminFetch(`/api/admin/training/tracks/${track.id}`, {
+      if (course) {
+        await adminFetch(`/api/admin/training/courses/${course.id}`, {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
-        toast("Track updated", "success");
+        toast("Course updated", "success");
       } else {
-        await adminFetch("/api/admin/training/tracks", {
+        await adminFetch("/api/admin/training/courses", {
           method: "POST",
           body: JSON.stringify(payload),
         });
-        toast("Track created", "success");
+        toast("Course created", "success");
       }
       onSaved();
       onClose();
@@ -225,10 +225,10 @@ export function TrainingTrackDrawer({
   };
 
   const handleDelete = async () => {
-    if (!track) return;
+    if (!course) return;
     try {
-      await adminFetch(`/api/admin/training/tracks/${track.id}`, { method: "DELETE" });
-      toast("Track deleted", "success");
+      await adminFetch(`/api/admin/training/courses/${course.id}`, { method: "DELETE" });
+      toast("Course deleted", "success");
       onSaved();
       onClose();
     } catch (err) {
@@ -246,7 +246,7 @@ export function TrainingTrackDrawer({
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <Dialog.Title className="font-semibold text-navy-700 text-lg">
-                {track ? `Edit: ${track.name}` : "New Learning Track"}
+                {course ? `Edit: ${course.name}` : "New Learning Course"}
               </Dialog.Title>
               <Dialog.Close asChild>
                 <button
@@ -264,7 +264,7 @@ export function TrainingTrackDrawer({
             <div className="overflow-y-auto flex-1 p-6 space-y-5">
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Name *</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className={INPUT_CLASS} placeholder="Track name" />
+                <input value={name} onChange={(e) => setName(e.target.value)} className={INPUT_CLASS} placeholder="Course name" />
               </div>
 
               <div>
@@ -274,7 +274,7 @@ export function TrainingTrackDrawer({
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600 resize-none"
-                  placeholder="Brief description of the learning track"
+                  placeholder="Brief description of the learning course"
                 />
               </div>
 
@@ -352,7 +352,7 @@ export function TrainingTrackDrawer({
                     <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                       <div className="space-y-1.5">
                         {items.map((item) => (
-                          <SortableTrackItem key={item.id} item={item} onRemove={() => removeItem(item.id)} />
+                          <SortableCourseItem key={item.id} item={item} onRemove={() => removeItem(item.id)} />
                         ))}
                       </div>
                     </SortableContext>
@@ -424,7 +424,7 @@ export function TrainingTrackDrawer({
               <button onClick={onClose} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700">
                 Cancel
               </button>
-              {track && (
+              {course && (
                 <button
                   onClick={() => setConfirmDelete(true)}
                   className="ml-auto px-4 py-2 text-sm text-red-600 hover:text-red-700 font-semibold"
@@ -439,7 +439,7 @@ export function TrainingTrackDrawer({
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete Track"
+        title="Delete Course"
         message={`Are you sure you want to delete "${name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={handleDelete}

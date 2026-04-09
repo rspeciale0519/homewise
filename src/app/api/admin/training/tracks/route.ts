@@ -17,7 +17,7 @@ export async function GET() {
   const auth = await requireAdminApi();
   if (isError(auth)) return auth.error;
 
-  const tracks = await prisma.trainingTrack.findMany({
+  const tracks = await prisma.trainingCourse.findMany({
     include: {
       items: {
         include: { content: true },
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
 
-  const track = await prisma.trainingTrack.create({
+  const track = await prisma.trainingCourse.create({
     data: {
       name: parsed.data.name,
       description: parsed.data.description,

@@ -6,7 +6,7 @@ interface OverdueEnrollment {
   id: string;
   userId: string;
   createdAt: Date;
-  track: {
+  course: {
     id: string;
     name: string;
     reminderDays: number;
@@ -26,13 +26,13 @@ export const trainingReminders = inngest.createFunction(
         const rows = await prisma.trainingEnrollment.findMany({
           where: {
             completedAt: null,
-            track: {
+            course: {
               required: true,
               reminderDays: { not: null },
             },
           },
           include: {
-            track: {
+            course: {
               include: {
                 items: {
                   include: { content: { select: { title: true } } },
@@ -44,7 +44,7 @@ export const trainingReminders = inngest.createFunction(
         });
 
         return rows.filter((row) => {
-          const reminderDays = row.track.reminderDays;
+          const reminderDays = row.course.reminderDays;
           if (reminderDays === null) return false;
           const elapsed = Math.floor(
             (now.getTime() - new Date(row.createdAt).getTime()) / 86400000,
@@ -61,11 +61,11 @@ export const trainingReminders = inngest.createFunction(
       const daysOverdue =
         Math.floor(
           (now.getTime() - new Date(enrollment.createdAt).getTime()) / 86400000,
-        ) - enrollment.track.reminderDays;
+        ) - enrollment.course.reminderDays;
 
       if (daysOverdue < 0) continue;
 
-      const { reminderRepeat } = enrollment.track;
+      const { reminderRepeat } = enrollment.course;
       if (reminderRepeat && reminderRepeat > 0) {
         if (daysOverdue % reminderRepeat !== 0) continue;
       } else {
@@ -85,7 +85,7 @@ export const trainingReminders = inngest.createFunction(
             userId: enrollment.userId,
             completed: true,
             contentId: {
-              in: enrollment.track.items.map((item) => item.contentId),
+              in: enrollment.course.items.map((item) => item.contentId),
             },
           },
           select: { contentId: true },
@@ -94,7 +94,7 @@ export const trainingReminders = inngest.createFunction(
         const completedSet = new Set(
           completedContentIds.map((p) => p.contentId),
         );
-        const incompleteItems = enrollment.track.items.filter(
+        const incompleteItems = enrollment.course.items.filter(
           (item) => !completedSet.has(item.contentId),
         );
 
@@ -110,14 +110,14 @@ export const trainingReminders = inngest.createFunction(
         const body = `
           <h2>Training Reminder</h2>
           <p>Hi ${user.firstName},</p>
-          <p>You have incomplete items in the required training track: <strong>${enrollment.track.name}</strong></p>
+          <p>You have incomplete items in the required training course: <strong>${enrollment.course.name}</strong></p>
           <ul>${incompleteList}</ul>
           <p><a href="${appUrl}/dashboard/training" class="btn">Go to Training</a></p>
         `;
 
         await sendEmail({
           to: user.email,
-          subject: `Training Reminder: ${enrollment.track.name}`,
+          subject: `Training Reminder: ${enrollment.course.name}`,
           html: buildEmailHtml(body),
         });
 

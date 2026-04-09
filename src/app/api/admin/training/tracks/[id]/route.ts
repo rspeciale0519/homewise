@@ -27,11 +27,11 @@ export async function PATCH(
 
   const track = await prisma.$transaction(async (tx) => {
     if (contentIds) {
-      await tx.trainingTrackItem.deleteMany({ where: { trackId: id } });
+      await tx.trainingCourseItem.deleteMany({ where: { courseId: id } });
       if (contentIds.length > 0) {
-        await tx.trainingTrackItem.createMany({
+        await tx.trainingCourseItem.createMany({
           data: contentIds.map((contentId, i) => ({
-            trackId: id,
+            courseId: id,
             contentId,
             sortOrder: i,
           })),
@@ -39,7 +39,7 @@ export async function PATCH(
       }
     }
 
-    return tx.trainingTrack.update({
+    return tx.trainingCourse.update({
       where: { id },
       data: trackData,
       include: {
@@ -60,6 +60,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  await prisma.trainingTrack.delete({ where: { id } });
+  await prisma.trainingCourse.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

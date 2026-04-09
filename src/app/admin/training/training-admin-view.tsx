@@ -4,12 +4,12 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import { TrainingContentDrawer } from "@/components/admin/training-content-drawer";
-import { TrainingTrackDrawer } from "@/components/admin/training-track-drawer";
+import { TrainingCourseDrawer } from "@/components/admin/training-course-drawer";
 import { TrainingProgressView } from "@/components/admin/training-progress-view";
-import type { TrainingItem, TrackData } from "./types";
+import type { TrainingItem, CourseData } from "./types";
 
 interface TrainingAdminViewProps {
-  tracks: TrackData[];
+  tracks: CourseData[];
   categories: string[];
 }
 
@@ -23,9 +23,9 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
   const [audienceFilter, setAudienceFilter] = useState("all");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<TrainingItem | null>(null);
-  const [tracksData, setTracksData] = useState<TrackData[]>(tracks);
-  const [trackDrawerOpen, setTrackDrawerOpen] = useState(false);
-  const [editingTrack, setEditingTrack] = useState<TrackData | null>(null);
+  const [coursesData, setCoursesData] = useState<CourseData[]>(tracks);
+  const [courseDrawerOpen, setCourseDrawerOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<CourseData | null>(null);
 
   const fetchContent = useCallback(async () => {
     setLoading(true);
@@ -38,10 +38,10 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
     setLoading(false);
   }, [toast]);
 
-  const fetchTracks = useCallback(async () => {
+  const fetchCourses = useCallback(async () => {
     try {
-      const data = await adminFetch<TrackData[]>("/api/admin/training/tracks");
-      setTracksData(data);
+      const data = await adminFetch<CourseData[]>("/api/admin/training/courses");
+      setCoursesData(data);
     } catch (err) {
       toast((err as Error).message, "error");
     }
@@ -110,7 +110,7 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
             activeTab === "tracks" ? "bg-navy-600 text-white" : "bg-white border border-slate-200 text-slate-600"
           }`}
         >
-          Tracks ({tracksData.length})
+          Courses ({coursesData.length})
         </button>
         <button
           onClick={() => setActiveTab("progress")}
@@ -130,10 +130,10 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
         )}
         {activeTab === "tracks" && (
           <button
-            onClick={() => { setEditingTrack(null); setTrackDrawerOpen(true); }}
+            onClick={() => { setEditingCourse(null); setCourseDrawerOpen(true); }}
             className="ml-auto px-4 py-2 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 transition-colors"
           >
-            + Create Track
+            + Create Course
           </button>
         )}
       </div>
@@ -238,13 +238,13 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
         </>
       )}
 
-      {/* Tracks tab */}
+      {/* Courses tab */}
       {activeTab === "tracks" && (
         <div className="space-y-4">
-          {tracksData.map((t) => (
+          {coursesData.map((t) => (
             <div
               key={t.id}
-              onClick={() => { setEditingTrack(t); setTrackDrawerOpen(true); }}
+              onClick={() => { setEditingCourse(t); setCourseDrawerOpen(true); }}
               className="bg-white rounded-xl border border-slate-200 p-6 cursor-pointer hover:border-slate-300 transition-colors"
             >
               <div className="flex items-start justify-between mb-3">
@@ -272,8 +272,8 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
               </div>
             </div>
           ))}
-          {tracksData.length === 0 && (
-            <p className="text-sm text-slate-400 text-center py-8">No tracks created yet</p>
+          {coursesData.length === 0 && (
+            <p className="text-sm text-slate-400 text-center py-8">No courses created yet</p>
           )}
         </div>
       )}
@@ -290,13 +290,13 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
         onSaved={fetchContent}
       />
 
-      {/* Training track drawer */}
-      <TrainingTrackDrawer
-        open={trackDrawerOpen}
-        onClose={() => { setTrackDrawerOpen(false); setEditingTrack(null); }}
-        track={editingTrack}
+      {/* Training course drawer */}
+      <TrainingCourseDrawer
+        open={courseDrawerOpen}
+        onClose={() => { setCourseDrawerOpen(false); setEditingCourse(null); }}
+        course={editingCourse}
         allContent={content}
-        onSaved={fetchTracks}
+        onSaved={fetchCourses}
       />
     </div>
   );

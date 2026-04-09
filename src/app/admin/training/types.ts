@@ -8,6 +8,7 @@ export interface TrainingItem {
   type: string;
   url: string | null;
   fileKey: string | null;
+  thumbnailUrl: string | null;
   duration: number | null;
   tags: string[];
   published: boolean;
@@ -16,7 +17,7 @@ export interface TrainingItem {
   updatedAt: string;
 }
 
-export interface TrackData {
+export interface CourseData {
   id: string;
   name: string;
   description: string | null;

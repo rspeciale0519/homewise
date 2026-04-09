@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { FileUploadZone, formatFileSize } from "@/components/admin/file-upload-zone";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
+import { extractYouTubeId, getYouTubeThumbnailUrl } from "@/lib/training/youtube";
 import type { TrainingItem, UploadedFile } from "@/app/admin/training/types";
 
 interface TrainingContentDrawerProps {
@@ -27,13 +28,6 @@ const FILE_LIMITS: Record<string, number> = {
   ".jpg": 5 * 1024 * 1024,
   ".jpeg": 5 * 1024 * 1024,
 };
-
-function extractYouTubeId(url: string): string | null {
-  const match = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-  );
-  return match?.[1] ?? null;
-}
 
 function getFileExtension(name: string): string {
   const idx = name.lastIndexOf(".");
@@ -59,8 +53,9 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- sync form state from props */
   useEffect(() => {
     if (!open) return;
     if (item) {
@@ -76,13 +71,14 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
       setUploadedFile(
         item.fileKey ? { name: item.fileKey.split("/").pop() ?? item.fileKey, size: 0, fileKey: item.fileKey } : null,
       );
+      setThumbnailUrl(item.thumbnailUrl ?? null);
     } else {
       setTitle(""); setCategory(categories[0] ?? ""); setType("video");
       setAudience("agent"); setBody(""); setVideoUrl(""); setDuration("");
       setTagsStr(""); setPublished(false); setUploadedFile(null);
+      setThumbnailUrl(null);
     }
   }, [open, item, categories]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleFileUpload = useCallback(async (file: File) => {
     const ext = getFileExtension(file.name);
@@ -99,15 +95,46 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
       await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
       setUploadedFile({ name: file.name, size: file.size, fileKey });
       toast("File uploaded", "success");
+      if (ext === ".pdf" && !thumbnailUrl) handleGeneratePdfThumbnail(fileKey);
     } catch (err) { toast((err as Error).message, "error"); }
     setUploading(false);
-  }, [toast]);
+  }, [toast, thumbnailUrl, handleGeneratePdfThumbnail]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file) handleFileUpload(file);
   }, [handleFileUpload]);
+
+  const handleThumbnailUpload = useCallback(async (file: File) => {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast("Use JPEG, PNG, or WebP for thumbnails", "error"); return;
+    }
+    if (file.size > 2 * 1024 * 1024) { toast("Thumbnail must be under 2MB", "error"); return; }
+    setUploadingThumb(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/training/thumbnail", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setThumbnailUrl(data.thumbnailUrl);
+      toast("Thumbnail uploaded", "success");
+    } catch (err) { toast((err as Error).message, "error"); }
+    setUploadingThumb(false);
+  }, [toast]);
+
+  const handleGeneratePdfThumbnail = useCallback(async (fileKey: string) => {
+    try {
+      const data = await adminFetch<{ thumbnailUrl: string }>(
+        "/api/admin/training/generate-thumbnail",
+        { method: "POST", body: JSON.stringify({ fileKey }) },
+      );
+      setThumbnailUrl(data.thumbnailUrl);
+    } catch {
+      // Silently fail — user can upload manually
+    }
+  }, []);
 
   const handleSave = async () => {
     if (!title.trim()) { toast("Title is required", "error"); return; }
@@ -117,6 +144,7 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
         title: title.trim(), category, type, audience,
         body: body || undefined, url: videoUrl || undefined,
         fileKey: uploadedFile?.fileKey ?? undefined,
+        thumbnailUrl: thumbnailUrl ?? undefined,
         duration: duration ? Number(duration) : undefined,
         tags: tagsStr.split(",").map((t) => t.trim()).filter(Boolean),
         published,
@@ -199,6 +227,34 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
                   <option value="both">Both</option>
                 </select>
               </div>
+
+              {/* Thumbnail — using img for dynamic external URLs in admin preview */}
+              {/* eslint-disable @next/next/no-img-element */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block">Thumbnail</label>
+                {thumbnailUrl ? (
+                  <div className="relative group">
+                    <img src={thumbnailUrl} alt="Thumbnail" className="w-full aspect-video object-cover rounded-lg border border-slate-200" />
+                    <button
+                      type="button"
+                      onClick={() => setThumbnailUrl(null)}
+                      className="absolute top-2 right-2 h-6 w-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : type === "video" && videoUrl && extractYouTubeId(videoUrl) ? (
+                  <div>
+                    <img src={getYouTubeThumbnailUrl(videoUrl) ?? ""} alt="YouTube thumbnail" className="w-full aspect-video object-cover rounded-lg border border-slate-200" />
+                    <p className="text-xs text-slate-400 mt-1">Auto-detected from YouTube — upload custom to override</p>
+                  </div>
+                ) : null}
+                <label className={`mt-2 flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-slate-300 rounded-lg text-sm text-slate-500 hover:border-navy-400 hover:text-navy-600 cursor-pointer transition-colors ${uploadingThumb ? "opacity-50 pointer-events-none" : ""}`}>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleThumbnailUpload(f); e.target.value = ""; }} />
+                  {uploadingThumb ? "Uploading..." : thumbnailUrl ? "Replace thumbnail" : "Upload thumbnail (JPEG, PNG, WebP)"}
+                </label>
+              </div>
+              {/* eslint-enable @next/next/no-img-element */}
 
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Body</label>

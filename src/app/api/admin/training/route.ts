@@ -12,6 +12,7 @@ const createSchema = z.object({
   type: z.enum(["video", "document", "quiz", "article"]).optional(),
   url: z.string().url().optional(),
   fileKey: z.string().optional(),
+  thumbnailUrl: z.string().optional(),
   duration: z.number().optional(),
   tags: z.array(z.string()).optional(),
 });
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
       type: parsed.data.type ?? "video",
       url: parsed.data.url,
       fileKey: parsed.data.fileKey,
+      thumbnailUrl: parsed.data.thumbnailUrl,
       duration: parsed.data.duration,
       tags: parsed.data.tags ?? [],
     },
