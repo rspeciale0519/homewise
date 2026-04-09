@@ -12,7 +12,7 @@ export default async function AgentTrainingPage() {
   } = await supabase.auth.getUser();
 
   const content = await prisma.trainingContent.findMany({
-    where: { published: true, audience: { in: ["agent", "both"] } },
+    where: { published: true, audience: { in: ["agent", "public", "both"] } },
     orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
   });
 
