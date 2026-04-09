@@ -14,6 +14,11 @@ function getResend(): Resend {
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "Homewise FL <noreply@homewisefl.com>";
 
+interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+}
+
 interface SendEmailInput {
   to: string;
   subject: string;
@@ -21,6 +26,7 @@ interface SendEmailInput {
   from?: string;
   replyTo?: string;
   tags?: { name: string; value: string }[];
+  attachments?: EmailAttachment[];
 }
 
 interface SendEmailResult {
@@ -35,6 +41,7 @@ export async function sendEmail({
   from,
   replyTo,
   tags,
+  attachments,
 }: SendEmailInput): Promise<SendEmailResult> {
   const { data, error } = await getResend().emails.send({
     from: from ?? FROM_EMAIL,
@@ -43,6 +50,10 @@ export async function sendEmail({
     html,
     replyTo,
     tags,
+    attachments: attachments?.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+    })),
   });
 
   if (error) {
