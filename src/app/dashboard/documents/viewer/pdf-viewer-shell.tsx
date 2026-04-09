@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ViewerToolbar } from "@/components/documents/viewer-toolbar";
 import { PdfPageRenderer } from "@/components/documents/pdf-page-renderer";
 import { SignaturePad } from "@/components/documents/signature-pad";
 import { EmailDialog } from "@/components/documents/email-dialog";
+import { useTrackDocumentView } from "@/hooks/use-track-document-view";
 import {
   resolveAgentField,
   resolveContactField,
@@ -68,6 +69,60 @@ export function PdfViewerShell({
   // Export state
   const [isExporting, setIsExporting] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Track document view
+  useTrackDocumentView(documentPath, documentName);
+
+  // Auto-save draft when annotations change
+  useEffect(() => {
+    if (!isDirty || annotations.length === 0) return;
+    clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(() => {
+      fetch("/api/documents/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentPath,
+          documentName,
+          annotations: {
+            version: 1,
+            documentPath,
+            annotations,
+            selectedContactId: selectedContact?.id ?? null,
+            lastModified: new Date().toISOString(),
+          },
+        }),
+      }).catch(() => {});
+      setIsDirty(false);
+    }, 30000);
+    return () => clearTimeout(autoSaveRef.current);
+  }, [isDirty, annotations, documentPath, documentName, selectedContact]);
+
+  // Mark dirty when annotations change
+  useEffect(() => {
+    if (annotations.length > 0) setIsDirty(true);
+  }, [annotations]);
+
+  const handleToggleFavorite = useCallback(async () => {
+    const next = !isFavorite;
+    setIsFavorite(next);
+    if (next) {
+      await fetch("/api/documents/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentPath, documentName }),
+      }).catch(() => setIsFavorite(false));
+    } else {
+      await fetch("/api/documents/favorites", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentPath }),
+      }).catch(() => setIsFavorite(true));
+    }
+  }, [isFavorite, documentPath, documentName]);
 
   const handleZoomIn = useCallback(() => {
     setZoom((z) => Math.min(z + ZOOM_STEP, MAX_ZOOM));
@@ -332,6 +387,27 @@ export function PdfViewerShell({
         onPrint={handlePrint}
         onEmail={() => setShowEmailDialog(true)}
         isExporting={isExporting}
+        isFavorite={isFavorite}
+        onToggleFavorite={handleToggleFavorite}
+        onSaveDraft={() => {
+          fetch("/api/documents/drafts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              documentPath,
+              documentName,
+              annotations: {
+                version: 1,
+                documentPath,
+                annotations,
+                selectedContactId: selectedContact?.id ?? null,
+                lastModified: new Date().toISOString(),
+              },
+            }),
+          }).catch(() => {});
+          setIsDirty(false);
+        }}
+        isDirty={isDirty}
       />
 
       <EmailDialog

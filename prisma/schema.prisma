@@ -40,6 +40,9 @@ model Agent {
   paymentRecords       PaymentRecord[]
   gracePeriodOverrides GracePeriodOverride[]
   documentSignature    DocumentSignature?
+  documentDrafts       DocumentDraft[]
+  documentFavorites    DocumentFavorite[]
+  documentRecents      DocumentRecent[]
 
   @@index([lastName])
   @@index([active])
@@ -488,69 +491,74 @@ model LeadRoutingRule {
 // =============================================================================
 
 model TrainingContent {
-  id          String              @id @default(cuid())
-  title       String
-  description String?
-  category    String
-  audience    String              @default("agent")
-  type        String              @default("video")
-  url         String?
-  body        String?
-  fileKey     String?
-  duration    Int?
-  tags        String[]
-  sortOrder   Int                 @default(0)
-  published   Boolean             @default(true)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id           String              @id @default(cuid())
+  title        String
+  description  String?
+  category     String
+  audience     String              @default("agent")
+  type         String              @default("video")
+  url          String?
+  body         String?
+  fileKey      String?
+  thumbnailUrl String?
+  duration     Int?
+  tags         String[]
+  sortOrder    Int                 @default(0)
+  published    Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
-  progress    TrainingProgress[]
-  trackItems  TrainingTrackItem[]
+  progress     TrainingProgress[]
+  courseItems   TrainingCourseItem[]
 
   @@index([category])
   @@index([audience])
   @@index([published])
 }
 
-model TrainingTrack {
-  id            String                @id @default(cuid())
-  name          String
-  description   String?
-  required      Boolean               @default(false)
-  autoEnroll    Boolean               @default(false)
-  reminderDays  Int?
+model TrainingCourse {
+  id             String                @id @default(cuid())
+  name           String
+  description    String?
+  thumbnailUrl   String?
+  required       Boolean               @default(false)
+  autoEnroll     Boolean               @default(false)
+  reminderDays   Int?
   reminderRepeat Int?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 
-  items         TrainingTrackItem[]
-  enrollments   TrainingEnrollment[]
+  items          TrainingCourseItem[]
+  enrollments    TrainingEnrollment[]
+
+  @@map("TrainingTrack")
 }
 
-model TrainingTrackItem {
-  id              String          @id @default(cuid())
-  trackId         String
-  contentId       String
-  sortOrder       Int             @default(0)
+model TrainingCourseItem {
+  id        String           @id @default(cuid())
+  courseId  String           @map("trackId")
+  contentId String
+  sortOrder Int              @default(0)
 
-  track           TrainingTrack   @relation(fields: [trackId], references: [id], onDelete: Cascade)
-  content         TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  course    TrainingCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  content   TrainingContent  @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
-  @@unique([trackId, contentId])
-  @@index([trackId])
+  @@unique([courseId, contentId], map: "TrainingTrackItem_trackId_contentId_key")
+  @@index([courseId], map: "TrainingTrackItem_trackId_idx")
+  @@map("TrainingTrackItem")
 }
 
 model TrainingEnrollment {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   userId      String
-  trackId     String
+  courseId    String         @map("trackId")
   completedAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
-  track       TrainingTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  course      TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, trackId])
+  @@unique([userId, courseId], map: "TrainingEnrollment_userId_trackId_key")
   @@index([userId])
 }
 
@@ -990,6 +998,48 @@ model DocumentSignature {
   updatedAt DateTime @updatedAt
 
   agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+model DocumentDraft {
+  id           String   @id @default(cuid())
+  agentId      String
+  documentPath String
+  documentName String
+  annotations  Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, documentPath])
+  @@index([agentId])
+}
+
+model DocumentFavorite {
+  id           String   @id @default(cuid())
+  agentId      String
+  documentPath String
+  documentName String
+  savedAt      DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, documentPath])
+  @@index([agentId])
+}
+
+model DocumentRecent {
+  id           String   @id @default(cuid())
+  agentId      String
+  documentPath String
+  documentName String
+  viewedAt     DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, documentPath])
+  @@index([agentId])
+  @@index([viewedAt])
 }
 
 model BillingSettings {
