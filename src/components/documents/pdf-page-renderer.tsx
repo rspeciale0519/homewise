@@ -1,0 +1,155 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+interface PdfPageRendererProps {
+  fileUrl: string;
+  scale: number;
+  onDocumentLoad: (numPages: number) => void;
+  onPageInView: (pageNumber: number) => void;
+}
+
+export function PdfPageRenderer({
+  fileUrl,
+  scale,
+  onDocumentLoad,
+  onPageInView,
+}: PdfPageRendererProps) {
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [loadedPages, setLoadedPages] = useState<Set<number>>(new Set());
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  const onDocumentLoadSuccess = useCallback(
+    ({ numPages: total }: { numPages: number }) => {
+      setNumPages(total);
+      onDocumentLoad(total);
+    },
+    [onDocumentLoad]
+  );
+
+  // Intersection observer for page visibility tracking and lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const pageNum = Number(entry.target.getAttribute("data-page"));
+          if (entry.isIntersecting) {
+            setLoadedPages((prev) => {
+              const next = new Set(prev);
+              next.add(pageNum);
+              return next;
+            });
+            if (entry.intersectionRatio > 0.5) {
+              onPageInView(pageNum);
+            }
+          }
+        }
+      },
+      {
+        root: containerRef.current?.parentElement,
+        rootMargin: "200px 0px",
+        threshold: [0, 0.5],
+      }
+    );
+
+    const refs = pageRefs.current;
+    refs.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [numPages, onPageInView]);
+
+  const setPageRef = useCallback(
+    (pageNum: number, el: HTMLDivElement | null) => {
+      if (el) {
+        pageRefs.current.set(pageNum, el);
+      } else {
+        pageRefs.current.delete(pageNum);
+      }
+    },
+    []
+  );
+
+  return (
+    <div ref={containerRef} className="flex flex-col items-center gap-4 py-6">
+      <Document
+        file={fileUrl}
+        onLoadSuccess={onDocumentLoadSuccess}
+        loading={<PageSkeleton />}
+        error={<PageError />}
+      >
+        {numPages !== null &&
+          Array.from({ length: numPages }, (_, i) => {
+            const pageNum = i + 1;
+            const isLoaded = loadedPages.has(pageNum);
+            return (
+              <div
+                key={pageNum}
+                ref={(el) => setPageRef(pageNum, el)}
+                data-page={pageNum}
+                className="mb-4 shadow-card rounded-lg overflow-hidden bg-white"
+              >
+                {isLoaded ? (
+                  <Page
+                    pageNumber={pageNum}
+                    scale={scale}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    loading={<PageSkeleton />}
+                  />
+                ) : (
+                  <PageSkeleton />
+                )}
+              </div>
+            );
+          })}
+      </Document>
+    </div>
+  );
+}
+
+function PageSkeleton() {
+  return (
+    <div className="w-[612px] h-[792px] bg-slate-50 animate-pulse flex items-center justify-center">
+      <svg
+        className="h-8 w-8 text-slate-200"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function PageError() {
+  return (
+    <div className="w-[612px] h-[400px] bg-slate-50 flex flex-col items-center justify-center gap-3">
+      <svg
+        className="h-8 w-8 text-crimson-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.5}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+        />
+      </svg>
+      <p className="text-sm text-slate-500">Failed to load document</p>
+    </div>
+  );
+}

@@ -1,0 +1,68 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { AccessDenied } from "@/components/dashboard/access-denied";
+import { PdfViewerShell } from "./pdf-viewer-shell";
+import {
+  OFFICE_FORMS,
+  LISTING_FORMS,
+  SALES_FORMS,
+  QUICK_ACCESS_DOCUMENTS,
+} from "@/data/content/agent-resources";
+import type { ResourceDocument } from "@/data/content/agent-resources";
+
+function findDocumentByPath(docPath: string): ResourceDocument | undefined {
+  const apiUrl = `/api/documents/${docPath}`;
+  const allDocs = [
+    ...QUICK_ACCESS_DOCUMENTS,
+    ...OFFICE_FORMS.flatMap((c) => c.documents),
+    ...LISTING_FORMS.flatMap((c) => c.documents),
+    ...SALES_FORMS.flatMap((c) => c.documents),
+  ];
+  return allDocs.find((d) => d.url === apiUrl);
+}
+
+export default async function DocumentViewerPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const profile = await prisma.userProfile.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  });
+
+  if (profile?.role !== "agent" && profile?.role !== "admin") {
+    return <AccessDenied />;
+  }
+
+  const params = await searchParams;
+  const docPath =
+    typeof params.doc === "string" ? params.doc : undefined;
+
+  if (!docPath) {
+    redirect("/dashboard/agent-hub/documents");
+  }
+
+  if (docPath.includes("..") || docPath.startsWith("/")) {
+    redirect("/dashboard/agent-hub/documents");
+  }
+
+  const docMeta = findDocumentByPath(docPath);
+  const documentName = docMeta?.name ?? docPath.split("/").pop() ?? "Document";
+  const fileUrl = `/api/documents/${docPath}`;
+
+  return (
+    <PdfViewerShell
+      documentPath={docPath}
+      documentName={documentName}
+      fileUrl={fileUrl}
+    />
+  );
+}

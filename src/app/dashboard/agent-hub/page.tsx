@@ -73,13 +73,16 @@ export default async function AgentHubPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {QUICK_ACCESS_DOCUMENTS.map((doc) => {
             const isExternal = doc.external === true;
-            return (
-              <a
-                key={doc.name}
-                href={doc.url}
-                {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : { download: true })}
-                className="group flex items-center gap-3 p-4 rounded-xl bg-white border border-slate-100 hover:border-crimson-200 hover:shadow-sm transition-all duration-200"
-              >
+            const isPdf = doc.url.endsWith(".pdf") && doc.url.startsWith("/api/documents/");
+            const viewerUrl = isPdf
+              ? `/dashboard/documents/viewer?doc=${encodeURIComponent(doc.url.replace("/api/documents/", ""))}`
+              : null;
+
+            const cardClasses =
+              "group flex items-center gap-3 p-4 rounded-xl bg-white border border-slate-100 hover:border-crimson-200 hover:shadow-sm transition-all duration-200";
+
+            const inner = (
+              <>
                 <div className="shrink-0 h-10 w-10 rounded-lg bg-crimson-50 group-hover:bg-crimson-100 flex items-center justify-center transition-colors">
                   <svg className="h-5 w-5 text-crimson-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -96,6 +99,25 @@ export default async function AgentHubPage() {
                 <svg className="h-4 w-4 text-slate-300 group-hover:text-crimson-500 shrink-0 transition-all group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
                 </svg>
+              </>
+            );
+
+            if (viewerUrl) {
+              return (
+                <Link key={doc.name} href={viewerUrl} className={cardClasses}>
+                  {inner}
+                </Link>
+              );
+            }
+
+            return (
+              <a
+                key={doc.name}
+                href={doc.url}
+                {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : { download: true })}
+                className={cardClasses}
+              >
+                {inner}
               </a>
             );
           })}
