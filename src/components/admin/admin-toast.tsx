@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import { Toaster, toast as sonnerToast } from "sonner";
 
 type ToastType = "success" | "error" | "info";
@@ -23,18 +24,18 @@ export function AdminToastProvider({ children }: { children: React.ReactNode }) 
 }
 
 export function useToast() {
-  return {
-    toast: (message: string, type: ToastType = "info") => {
-      switch (type) {
-        case "success":
-          sonnerToast.success(message);
-          break;
-        case "error":
-          sonnerToast.error(message);
-          break;
-        default:
-          sonnerToast(message);
-      }
-    },
-  };
+  const toast = useCallback((message: string, type: ToastType = "info") => {
+    switch (type) {
+      case "success":
+        sonnerToast.success(message);
+        break;
+      case "error":
+        sonnerToast.error(message);
+        break;
+      default:
+        sonnerToast(message);
+    }
+  }, []);
+
+  return useMemo(() => ({ toast }), [toast]);
 }
