@@ -10,6 +10,7 @@ import {
   QUICK_ACCESS_DOCUMENTS,
 } from "@/data/content/agent-resources";
 import type { ResourceDocument } from "@/data/content/agent-resources";
+import type { AgentInfo } from "@/types/document-viewer";
 
 function findDocumentByPath(docPath: string): ResourceDocument | undefined {
   const apiUrl = `/api/documents/${docPath}`;
@@ -35,7 +36,19 @@ export default async function DocumentViewerPage({
 
   const profile = await prisma.userProfile.findUnique({
     where: { id: user.id },
-    select: { role: true },
+    select: {
+      role: true,
+      agentProfile: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          designations: true,
+          documentSignature: { select: { imageData: true } },
+        },
+      },
+    },
   });
 
   if (profile?.role !== "agent" && profile?.role !== "admin") {
@@ -58,11 +71,25 @@ export default async function DocumentViewerPage({
   const documentName = docMeta?.name ?? docPath.split("/").pop() ?? "Document";
   const fileUrl = `/api/documents/${docPath}`;
 
+  const agent = profile.agentProfile;
+  const agentInfo: AgentInfo = {
+    firstName: agent?.firstName ?? "",
+    lastName: agent?.lastName ?? "",
+    email: agent?.email ?? null,
+    phone: agent?.phone ?? null,
+    brokerageName: "Home Wise Realty Group",
+    licenseNumber: agent?.designations?.[0] ?? null,
+  };
+
+  const savedSignature = agent?.documentSignature?.imageData ?? null;
+
   return (
     <PdfViewerShell
       documentPath={docPath}
       documentName={documentName}
       fileUrl={fileUrl}
+      agentInfo={agentInfo}
+      savedSignature={savedSignature}
     />
   );
 }

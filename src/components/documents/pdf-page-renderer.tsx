@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { AnnotationOverlay } from "@/components/documents/annotation-overlay";
+import type { Annotation, AnnotationMode, PageDimensions } from "@/types/document-viewer";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -12,6 +14,13 @@ interface PdfPageRendererProps {
   scale: number;
   onDocumentLoad: (numPages: number) => void;
   onPageInView: (pageNumber: number) => void;
+  annotations: Annotation[];
+  activeMode: AnnotationMode;
+  pageDims: Map<number, PageDimensions>;
+  onPageDims: (pageIndex: number, dims: PageDimensions) => void;
+  onPlaceAnnotation: (pageIndex: number, pdfX: number, pdfY: number) => void;
+  onDeleteAnnotation: (id: string) => void;
+  onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
 }
 
 export function PdfPageRenderer({
@@ -19,6 +28,13 @@ export function PdfPageRenderer({
   scale,
   onDocumentLoad,
   onPageInView,
+  annotations,
+  activeMode,
+  pageDims,
+  onPageDims,
+  onPlaceAnnotation,
+  onDeleteAnnotation,
+  onMoveAnnotation,
 }: PdfPageRendererProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [loadedPages, setLoadedPages] = useState<Set<number>>(new Set());
@@ -33,7 +49,6 @@ export function PdfPageRenderer({
     [onDocumentLoad]
   );
 
-  // Intersection observer for page visibility tracking and lazy loading
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -75,6 +90,30 @@ export function PdfPageRenderer({
     []
   );
 
+  const handlePageRender = useCallback(
+    (pageNum: number) => {
+      const pageIndex = pageNum - 1;
+      const el = pageRefs.current.get(pageNum);
+      if (!el) return;
+      const canvas = el.querySelector("canvas");
+      if (!canvas) return;
+
+      const pdfWidth = canvas.width / (scale * window.devicePixelRatio);
+      const pdfHeight = canvas.height / (scale * window.devicePixelRatio);
+      const renderWidth = canvas.clientWidth;
+      const renderHeight = canvas.clientHeight;
+
+      onPageDims(pageIndex, {
+        pdfWidth,
+        pdfHeight,
+        renderWidth,
+        renderHeight,
+        scale,
+      });
+    },
+    [scale, onPageDims]
+  );
+
   return (
     <div ref={containerRef} className="flex flex-col items-center gap-4 py-6">
       <Document
@@ -86,22 +125,39 @@ export function PdfPageRenderer({
         {numPages !== null &&
           Array.from({ length: numPages }, (_, i) => {
             const pageNum = i + 1;
+            const pageIndex = i;
             const isLoaded = loadedPages.has(pageNum);
+            const dims = pageDims.get(pageIndex);
+
             return (
               <div
                 key={pageNum}
                 ref={(el) => setPageRef(pageNum, el)}
                 data-page={pageNum}
-                className="mb-4 shadow-card rounded-lg overflow-hidden bg-white"
+                className="mb-4 shadow-card rounded-lg overflow-hidden bg-white relative"
               >
                 {isLoaded ? (
-                  <Page
-                    pageNumber={pageNum}
-                    scale={scale}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    loading={<PageSkeleton />}
-                  />
+                  <>
+                    <Page
+                      pageNumber={pageNum}
+                      scale={scale}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      loading={<PageSkeleton />}
+                      onRenderSuccess={() => handlePageRender(pageNum)}
+                    />
+                    {dims && (
+                      <AnnotationOverlay
+                        pageIndex={pageIndex}
+                        dims={dims}
+                        annotations={annotations}
+                        activeMode={activeMode}
+                        onPlaceAnnotation={onPlaceAnnotation}
+                        onDeleteAnnotation={onDeleteAnnotation}
+                        onMoveAnnotation={onMoveAnnotation}
+                      />
+                    )}
+                  </>
                 ) : (
                   <PageSkeleton />
                 )}
