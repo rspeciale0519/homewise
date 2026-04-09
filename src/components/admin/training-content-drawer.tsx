@@ -80,6 +80,18 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
     }
   }, [open, item, categories]);
 
+  const handleGeneratePdfThumbnail = useCallback(async (fileKey: string) => {
+    try {
+      const data = await adminFetch<{ thumbnailUrl: string }>(
+        "/api/admin/training/generate-thumbnail",
+        { method: "POST", body: JSON.stringify({ fileKey }) },
+      );
+      setThumbnailUrl(data.thumbnailUrl);
+    } catch {
+      // Silently fail — user can upload manually
+    }
+  }, []);
+
   const handleFileUpload = useCallback(async (file: File) => {
     const ext = getFileExtension(file.name);
     const limit = FILE_LIMITS[ext];
@@ -95,10 +107,9 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
       await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
       setUploadedFile({ name: file.name, size: file.size, fileKey });
       toast("File uploaded", "success");
-      if (ext === ".pdf" && !thumbnailUrl) handleGeneratePdfThumbnail(fileKey);
     } catch (err) { toast((err as Error).message, "error"); }
     setUploading(false);
-  }, [toast, thumbnailUrl, handleGeneratePdfThumbnail]);
+  }, [toast]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -124,17 +135,12 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
     setUploadingThumb(false);
   }, [toast]);
 
-  const handleGeneratePdfThumbnail = useCallback(async (fileKey: string) => {
-    try {
-      const data = await adminFetch<{ thumbnailUrl: string }>(
-        "/api/admin/training/generate-thumbnail",
-        { method: "POST", body: JSON.stringify({ fileKey }) },
-      );
-      setThumbnailUrl(data.thumbnailUrl);
-    } catch {
-      // Silently fail — user can upload manually
+  // Auto-generate PDF thumbnail when a PDF is uploaded and no thumbnail exists
+  useEffect(() => {
+    if (uploadedFile?.fileKey?.endsWith(".pdf") && !thumbnailUrl) {
+      handleGeneratePdfThumbnail(uploadedFile.fileKey);
     }
-  }, []);
+  }, [uploadedFile, thumbnailUrl, handleGeneratePdfThumbnail]);
 
   const handleSave = async () => {
     if (!title.trim()) { toast("Title is required", "error"); return; }
