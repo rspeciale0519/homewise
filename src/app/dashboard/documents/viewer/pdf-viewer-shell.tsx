@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { ViewerToolbar } from "@/components/documents/viewer-toolbar";
 import { PdfPageRenderer } from "@/components/documents/pdf-page-renderer";
 import { SignaturePad } from "@/components/documents/signature-pad";
+import { EmailDialog } from "@/components/documents/email-dialog";
 import {
   resolveAgentField,
   resolveContactField,
@@ -37,6 +38,7 @@ function genId() {
 }
 
 export function PdfViewerShell({
+  documentPath,
   documentName,
   fileUrl,
   agentInfo,
@@ -62,6 +64,10 @@ export function PdfViewerShell({
   } | null>(null);
   const [pendingAgentField, setPendingAgentField] = useState<AgentFieldKey | null>(null);
   const [pendingContactField, setPendingContactField] = useState<ContactFieldKey | null>(null);
+
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   const handleZoomIn = useCallback(() => {
     setZoom((z) => Math.min(z + ZOOM_STEP, MAX_ZOOM));
@@ -238,6 +244,69 @@ export function PdfViewerShell({
     setActiveMode("contact-field");
   }, []);
 
+  const handleDownload = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/documents/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentPath, annotations, action: "download" }),
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = documentName.replace(/\s+/g, "-") + "-filled.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [documentPath, documentName, annotations]);
+
+  const handlePrint = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/documents/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentPath, annotations, action: "download" }),
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const printWindow = window.open(url);
+      if (printWindow) {
+        printWindow.onload = () => printWindow.print();
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  }, [documentPath, annotations]);
+
+  const handleEmailSend = useCallback(
+    async (to: string, subject: string, message: string) => {
+      const res = await fetch("/api/documents/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentPath,
+          annotations,
+          action: "email",
+          emailTo: to,
+          emailSubject: subject,
+          emailMessage: message,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "Failed to send email");
+      }
+    },
+    [documentPath, annotations]
+  );
+
   return (
     <div className="flex flex-col min-h-full bg-slate-50">
       <ViewerToolbar
@@ -259,6 +328,17 @@ export function PdfViewerShell({
         pendingPlacement={pendingPlacement}
         onPlaceText={handlePlaceText}
         onCancelPlacement={() => setPendingPlacement(null)}
+        onDownload={handleDownload}
+        onPrint={handlePrint}
+        onEmail={() => setShowEmailDialog(true)}
+        isExporting={isExporting}
+      />
+
+      <EmailDialog
+        open={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        onSend={handleEmailSend}
+        documentName={documentName}
       />
 
       {showSignaturePad && (
