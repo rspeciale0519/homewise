@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "./profile-form";
+import { SignatureSection } from "./signature-section";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -10,9 +11,20 @@ export default async function ProfilePage() {
 
   const profile = await prisma.userProfile.findUnique({
     where: { id: user.id },
+    include: {
+      agentProfile: {
+        select: {
+          id: true,
+          documentSignature: { select: { imageData: true } },
+        },
+      },
+    },
   });
 
   if (!profile) redirect("/dashboard");
+
+  const isAgent = profile.role === "agent" || profile.role === "admin";
+  const savedSignature = profile.agentProfile?.documentSignature?.imageData ?? null;
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
@@ -34,6 +46,12 @@ export default async function ProfilePage() {
           avatarUrl={profile.avatarUrl}
         />
       </div>
+
+      {isAgent && (
+        <div className="mt-6 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8">
+          <SignatureSection initialSignature={savedSignature} />
+        </div>
+      )}
     </div>
   );
 }

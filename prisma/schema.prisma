@@ -39,6 +39,7 @@ model Agent {
   usageRecords         UsageRecord[]
   paymentRecords       PaymentRecord[]
   gracePeriodOverrides GracePeriodOverride[]
+  documentSignature    DocumentSignature?
 
   @@index([lastName])
   @@index([active])
@@ -979,6 +980,16 @@ model GracePeriodOverride {
   createdAt     DateTime @default(now())
 
   @@index([agentId])
+}
+
+model DocumentSignature {
+  id        String   @id @default(cuid())
+  agentId   String   @unique
+  imageData String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }
 
 model BillingSettings {
