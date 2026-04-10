@@ -286,6 +286,15 @@ export function PdfViewerShell({
     []
   );
 
+  const handleResizeAnnotation = useCallback(
+    (id: string, width: number, height: number) => {
+      setAnnotations((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, width, height } : a))
+      );
+    },
+    []
+  );
+
   const handleSetMode = useCallback((mode: AnnotationMode) => {
     setActiveMode(mode);
     setPendingPlacement(null);
@@ -452,6 +461,7 @@ export function PdfViewerShell({
           onPlaceAnnotation={handlePlaceAnnotation}
           onDeleteAnnotation={handleDeleteAnnotation}
           onMoveAnnotation={handleMoveAnnotation}
+          onResizeAnnotation={handleResizeAnnotation}
         />
       </div>
     </div>

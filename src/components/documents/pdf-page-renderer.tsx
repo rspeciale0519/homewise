@@ -21,6 +21,7 @@ interface PdfPageRendererProps {
   onPlaceAnnotation: (pageIndex: number, pdfX: number, pdfY: number) => void;
   onDeleteAnnotation: (id: string) => void;
   onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
+  onResizeAnnotation: (id: string, width: number, height: number) => void;
 }
 
 export function PdfPageRenderer({
@@ -35,6 +36,7 @@ export function PdfPageRenderer({
   onPlaceAnnotation,
   onDeleteAnnotation,
   onMoveAnnotation,
+  onResizeAnnotation,
 }: PdfPageRendererProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [loadedPages, setLoadedPages] = useState<Set<number>>(new Set());
@@ -164,6 +166,7 @@ export function PdfPageRenderer({
                         onPlaceAnnotation={onPlaceAnnotation}
                         onDeleteAnnotation={onDeleteAnnotation}
                         onMoveAnnotation={onMoveAnnotation}
+                        onResizeAnnotation={onResizeAnnotation}
                       />
                     )}
                   </>
