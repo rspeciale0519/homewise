@@ -9,6 +9,13 @@ import type {
   PageDimensions,
 } from "@/types/document-viewer";
 
+type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+
+const HANDLE_CURSORS: Record<ResizeHandle, string> = {
+  nw: "nwse-resize", n: "ns-resize", ne: "nesw-resize", e: "ew-resize",
+  se: "nwse-resize", s: "ns-resize", sw: "nesw-resize", w: "ew-resize",
+};
+
 interface AnnotationOverlayProps {
   pageIndex: number;
   dims: PageDimensions;
@@ -21,26 +28,25 @@ interface AnnotationOverlayProps {
 }
 
 export function AnnotationOverlay({
-  pageIndex,
-  dims,
-  annotations,
-  activeMode,
-  onPlaceAnnotation,
-  onDeleteAnnotation,
-  onMoveAnnotation,
-  onResizeAnnotation,
+  pageIndex, dims, annotations, activeMode,
+  onPlaceAnnotation, onDeleteAnnotation, onMoveAnnotation, onResizeAnnotation,
 }: AnnotationOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
 
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+  const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
   const dragStartRef = useRef<{
-    annId: string;
-    startPdfX: number;
-    startPdfY: number;
-    mouseX: number;
-    mouseY: number;
+    annId: string; startPdfX: number; startPdfY: number;
+    mouseX: number; mouseY: number;
+  } | null>(null);
+
+  const [resizingId, setResizingId] = useState<string | null>(null);
+  const [resizeDelta, setResizeDelta] = useState({ dw: 0, dh: 0 });
+  const resizeStartRef = useRef<{
+    annId: string; startW: number; startH: number;
+    mouseX: number; mouseY: number; handle: ResizeHandle;
   } | null>(null);
 
   const getOverlayRelativePos = useCallback(
@@ -49,17 +55,19 @@ export function AnnotationOverlay({
       if (!el) return { x: 0, y: 0 };
       const rect = el.getBoundingClientRect();
       return { x: clientX - rect.left, y: clientY - rect.top };
-    },
-    []
+    }, []
   );
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (activeMode === "cursor") return;
-      if (draggingId) return;
-      const { x, y } = getOverlayRelativePos(e.clientX, e.clientY);
-      const { pdfX, pdfY } = screenToPdf(x, y, dims);
-      onPlaceAnnotation(pageIndex, pdfX, pdfY);
+      if (activeMode !== "cursor") {
+        if (draggingId) return;
+        const { x, y } = getOverlayRelativePos(e.clientX, e.clientY);
+        const { pdfX, pdfY } = screenToPdf(x, y, dims);
+        onPlaceAnnotation(pageIndex, pdfX, pdfY);
+      } else {
+        setSelectedId(null);
+      }
     },
     [activeMode, dims, pageIndex, onPlaceAnnotation, draggingId, getOverlayRelativePos]
   );
@@ -69,179 +77,141 @@ export function AnnotationOverlay({
       if (activeMode !== "cursor") return;
       e.stopPropagation();
       e.preventDefault();
+      setSelectedId(annId);
       setDraggingId(annId);
       setDragOffset({ dx: 0, dy: 0 });
       dragStartRef.current = {
-        annId,
-        startPdfX: ann.pdfX,
-        startPdfY: ann.pdfY,
-        mouseX: e.clientX,
-        mouseY: e.clientY,
+        annId, startPdfX: ann.pdfX, startPdfY: ann.pdfY,
+        mouseX: e.clientX, mouseY: e.clientY,
       };
 
-      const handleMouseMove = (me: MouseEvent) => {
+      const onMove = (me: MouseEvent) => {
         const start = dragStartRef.current;
         if (!start) return;
-        setDragOffset({
-          dx: me.clientX - start.mouseX,
-          dy: me.clientY - start.mouseY,
-        });
+        setDragOffset({ dx: me.clientX - start.mouseX, dy: me.clientY - start.mouseY });
       };
-
-      const handleMouseUp = (me: MouseEvent) => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-
+      const onUp = (me: MouseEvent) => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
         const start = dragStartRef.current;
         if (!start) return;
-
         const dx = me.clientX - start.mouseX;
         const dy = me.clientY - start.mouseY;
-
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-          const scaleX = dims.pdfWidth / dims.renderWidth;
-          const scaleY = dims.pdfHeight / dims.renderHeight;
-          const newPdfX = start.startPdfX + dx * scaleX;
-          const newPdfY = start.startPdfY - dy * scaleY;
-          onMoveAnnotation(start.annId, newPdfX, newPdfY);
+          const sx = dims.pdfWidth / dims.renderWidth;
+          const sy = dims.pdfHeight / dims.renderHeight;
+          onMoveAnnotation(start.annId, start.startPdfX + dx * sx, start.startPdfY - dy * sy);
         }
-
         setDraggingId(null);
         setDragOffset({ dx: 0, dy: 0 });
         dragStartRef.current = null;
       };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
     },
     [activeMode, dims, onMoveAnnotation]
   );
 
-  // Resize state
-  const [resizingId, setResizingId] = useState<string | null>(null);
-  const [resizeScale, setResizeScale] = useState(1);
-  const resizeStartRef = useRef<{
-    annId: string;
-    startWidth: number;
-    startHeight: number;
-    mouseX: number;
-  } | null>(null);
-
   const handleResizeMouseDown = useCallback(
-    (annId: string, ann: Annotation, e: React.MouseEvent) => {
+    (annId: string, ann: Annotation, handle: ResizeHandle, e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
       setResizingId(annId);
-      setResizeScale(1);
+      setResizeDelta({ dw: 0, dh: 0 });
       resizeStartRef.current = {
-        annId,
-        startWidth: ann.width ?? 150,
-        startHeight: ann.height ?? 60,
-        mouseX: e.clientX,
+        annId, startW: ann.width ?? 150, startH: ann.height ?? 60,
+        mouseX: e.clientX, mouseY: e.clientY, handle,
       };
 
-      const handleMouseMove = (me: MouseEvent) => {
-        const start = resizeStartRef.current;
-        if (!start) return;
-        const dx = me.clientX - start.mouseX;
-        const scale = Math.max(0.3, (start.startWidth * dims.scale + dx) / (start.startWidth * dims.scale));
-        setResizeScale(scale);
+      const onMove = (me: MouseEvent) => {
+        const s = resizeStartRef.current;
+        if (!s) return;
+        const dx = me.clientX - s.mouseX;
+        const dy = me.clientY - s.mouseY;
+        const sc = dims.scale;
+        let dw = 0, dh = 0;
+        const aspect = s.startW / s.startH;
+
+        if (s.handle === "e") { dw = dx / sc; }
+        else if (s.handle === "w") { dw = -dx / sc; }
+        else if (s.handle === "s") { dh = dy / sc; }
+        else if (s.handle === "n") { dh = -dy / sc; }
+        else if (s.handle === "se") { dw = dx / sc; dh = dw / aspect; }
+        else if (s.handle === "nw") { dw = -dx / sc; dh = dw / aspect; }
+        else if (s.handle === "ne") { dw = dx / sc; dh = dw / aspect; }
+        else if (s.handle === "sw") { dw = -dx / sc; dh = dw / aspect; }
+
+        if (s.startW + dw < 30) dw = 30 - s.startW;
+        if (s.startH + dh < 15) dh = 15 - s.startH;
+        setResizeDelta({ dw, dh });
       };
 
-      const handleMouseUp = (me: MouseEvent) => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-
-        const start = resizeStartRef.current;
-        if (!start) return;
-
-        const dx = me.clientX - start.mouseX;
-        const scale = Math.max(0.3, (start.startWidth * dims.scale + dx) / (start.startWidth * dims.scale));
-        const newWidth = Math.round(start.startWidth * scale);
-        const newHeight = Math.round(start.startHeight * scale);
-
-        if (Math.abs(scale - 1) > 0.02) {
-          onResizeAnnotation(start.annId, newWidth, newHeight);
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        const s = resizeStartRef.current;
+        if (!s) return;
+        const finalW = Math.max(30, Math.round(s.startW + resizeDelta.dw));
+        const finalH = Math.max(15, Math.round(s.startH + resizeDelta.dh));
+        if (finalW !== s.startW || finalH !== s.startH) {
+          onResizeAnnotation(s.annId, finalW, finalH);
         }
-
         setResizingId(null);
-        setResizeScale(1);
+        setResizeDelta({ dw: 0, dh: 0 });
         resizeStartRef.current = null;
       };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
     },
-    [dims, onResizeAnnotation]
+    [dims, onResizeAnnotation, resizeDelta]
   );
 
-  const cursorClass =
-    activeMode === "cursor"
-      ? "cursor-default"
-      : activeMode === "signature"
-        ? "cursor-crosshair"
-        : "cursor-text";
+  const cursorClass = activeMode === "cursor" ? "cursor-default"
+    : activeMode === "signature" ? "cursor-crosshair" : "cursor-text";
 
   return (
-    <div
-      ref={overlayRef}
-      className={`absolute inset-0 ${cursorClass}`}
-      onClick={handleClick}
-    >
+    <div ref={overlayRef} className={`absolute inset-0 ${cursorClass}`} onClick={handleClick}>
       {pageAnnotations.map((ann) => {
         const { screenX, screenY } = pdfToScreen(ann.pdfX, ann.pdfY, dims);
         const isDragging = draggingId === ann.id;
+        const isResizing = resizingId === ann.id;
+        const isSelected = selectedId === ann.id && activeMode === "cursor";
         const transform = isDragging
-          ? `translate(${dragOffset.dx}px, ${dragOffset.dy}px)`
-          : undefined;
+          ? `translate(${dragOffset.dx}px, ${dragOffset.dy}px)` : undefined;
 
         if (ann.type === "signature" && ann.width && ann.height) {
-          const isResizing = resizingId === ann.id;
-          const currentScale = isResizing ? resizeScale : 1;
-          const w = ann.width * dims.scale * currentScale;
-          const h = ann.height * dims.scale * currentScale;
+          const baseW = ann.width;
+          const baseH = ann.height;
+          const w = (baseW + (isResizing ? resizeDelta.dw : 0)) * dims.scale;
+          const h = (baseH + (isResizing ? resizeDelta.dh : 0)) * dims.scale;
+
           return (
             <div
               key={ann.id}
-              className="absolute group"
+              className="absolute"
               style={{
-                left: screenX,
-                top: screenY - h,
-                width: w,
-                height: h,
+                left: screenX, top: screenY - h, width: w, height: h,
                 cursor: activeMode === "cursor" ? (isDragging ? "grabbing" : "grab") : undefined,
                 transform,
-                zIndex: isDragging || isResizing ? 50 : undefined,
+                zIndex: isDragging || isResizing || isSelected ? 50 : undefined,
                 opacity: isDragging ? 0.8 : undefined,
                 transition: isDragging || isResizing ? "none" : "transform 0.15s ease",
               }}
               onMouseDown={(e) => handleAnnotationMouseDown(ann.id, ann, e)}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setSelectedId(ann.id); }}
             >
               <Image
-                src={ann.value}
-                alt="Signature"
-                width={Math.round(w)}
-                height={Math.round(h)}
-                className="w-full h-full object-contain pointer-events-none"
-                unoptimized
+                src={ann.value} alt="Signature"
+                width={Math.round(w)} height={Math.round(h)}
+                className="w-full h-full object-contain pointer-events-none" unoptimized
               />
-              {!isDragging && activeMode === "cursor" && (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteAnnotation(ann.id);
-                    }}
-                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-crimson-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                  >
-                    &times;
-                  </button>
-                  <div
-                    onMouseDown={(e) => handleResizeMouseDown(ann.id, ann, e)}
-                    className="absolute -bottom-1.5 -right-1.5 h-4 w-4 rounded-sm bg-navy-600 border-2 border-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
-                  />
-                </>
+
+              {isSelected && !isDragging && (
+                <SelectionFrame
+                  ann={ann} w={w} h={h}
+                  onDelete={onDeleteAnnotation}
+                  onResizeStart={handleResizeMouseDown}
+                />
               )}
             </div>
           );
@@ -253,8 +223,7 @@ export function AnnotationOverlay({
             key={ann.id}
             className="absolute group"
             style={{
-              left: screenX,
-              top: screenY - fontSize,
+              left: screenX, top: screenY - fontSize,
               cursor: activeMode === "cursor" ? (isDragging ? "grabbing" : "grab") : undefined,
               transform,
               zIndex: isDragging ? 50 : undefined,
@@ -264,31 +233,80 @@ export function AnnotationOverlay({
             onMouseDown={(e) => handleAnnotationMouseDown(ann.id, ann, e)}
             onClick={(e) => e.stopPropagation()}
           >
-            <span
-              style={{
-                fontSize,
-                color: ann.color,
-                lineHeight: 1,
-                whiteSpace: "nowrap",
-                fontFamily: "var(--font-dm-sans), sans-serif",
-              }}
-            >
+            <span style={{
+              fontSize, color: ann.color, lineHeight: 1,
+              whiteSpace: "nowrap", fontFamily: "var(--font-dm-sans), sans-serif",
+            }}>
               {ann.value}
             </span>
-            {!isDragging && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteAnnotation(ann.id);
-                }}
-                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-crimson-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-              >
-                &times;
-              </button>
-            )}
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onDeleteAnnotation(ann.id); }}
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-crimson-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+            >
+              &times;
+            </button>
           </div>
         );
       })}
     </div>
+  );
+}
+
+function SelectionFrame({
+  ann, w, h, onDelete, onResizeStart,
+}: {
+  ann: Annotation;
+  w: number;
+  h: number;
+  onDelete: (id: string) => void;
+  onResizeStart: (id: string, ann: Annotation, handle: ResizeHandle, e: React.MouseEvent) => void;
+}) {
+  const handleSize = w < 80 || h < 40 ? 6 : 8;
+  const half = handleSize / 2;
+
+  const handles: { handle: ResizeHandle; style: React.CSSProperties }[] = [
+    { handle: "nw", style: { top: -half, left: -half } },
+    { handle: "n", style: { top: -half, left: w / 2 - half } },
+    { handle: "ne", style: { top: -half, right: -half } },
+    { handle: "e", style: { top: h / 2 - half, right: -half } },
+    { handle: "se", style: { bottom: -half, right: -half } },
+    { handle: "s", style: { bottom: -half, left: w / 2 - half } },
+    { handle: "sw", style: { bottom: -half, left: -half } },
+    { handle: "w", style: { top: h / 2 - half, left: -half } },
+  ];
+
+  return (
+    <>
+      {/* Selection border */}
+      <div
+        className="absolute inset-0 border-2 border-navy-500 rounded-sm pointer-events-none"
+        style={{ margin: -1 }}
+      />
+
+      {/* Delete button */}
+      <button
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onDelete(ann.id); }}
+        className="absolute -top-3 -right-3 h-5 w-5 rounded-full bg-crimson-600 text-white flex items-center justify-center text-xs shadow-sm z-10 hover:bg-crimson-700 transition-colors"
+      >
+        &times;
+      </button>
+
+      {/* 8 resize handles */}
+      {handles.map(({ handle, style }) => (
+        <div
+          key={handle}
+          onMouseDown={(e) => onResizeStart(ann.id, ann, handle, e)}
+          className="absolute bg-white border-2 border-navy-500 rounded-sm z-10"
+          style={{
+            ...style,
+            width: handleSize,
+            height: handleSize,
+            cursor: HANDLE_CURSORS[handle],
+          }}
+        />
+      ))}
+    </>
   );
 }
