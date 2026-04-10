@@ -146,13 +146,33 @@ export function AnnotationOverlay({
         setResizeDelta({ dw, dh });
       };
 
-      const onUp = () => {
+      const onUp = (me: MouseEvent) => {
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
         const s = resizeStartRef.current;
         if (!s) return;
-        const finalW = Math.max(30, Math.round(s.startW + resizeDelta.dw));
-        const finalH = Math.max(15, Math.round(s.startH + resizeDelta.dh));
+
+        // Recompute delta from mouse position (avoid stale closure on state)
+        const dx = me.clientX - s.mouseX;
+        const dy = me.clientY - s.mouseY;
+        const sc = dims.scale;
+        let dw = 0, dh = 0;
+        const aspect = s.startW / s.startH;
+
+        if (s.handle === "e") { dw = dx / sc; }
+        else if (s.handle === "w") { dw = -dx / sc; }
+        else if (s.handle === "s") { dh = dy / sc; }
+        else if (s.handle === "n") { dh = -dy / sc; }
+        else if (s.handle === "se") { dw = dx / sc; dh = dw / aspect; }
+        else if (s.handle === "nw") { dw = -dx / sc; dh = dw / aspect; }
+        else if (s.handle === "ne") { dw = dx / sc; dh = dw / aspect; }
+        else if (s.handle === "sw") { dw = -dx / sc; dh = dw / aspect; }
+
+        if (s.startW + dw < 30) dw = 30 - s.startW;
+        if (s.startH + dh < 15) dh = 15 - s.startH;
+
+        const finalW = Math.max(30, Math.round(s.startW + dw));
+        const finalH = Math.max(15, Math.round(s.startH + dh));
         if (finalW !== s.startW || finalH !== s.startH) {
           onResizeAnnotation(s.annId, finalW, finalH);
         }
@@ -163,7 +183,7 @@ export function AnnotationOverlay({
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
     },
-    [dims, onResizeAnnotation, resizeDelta]
+    [dims, onResizeAnnotation]
   );
 
   const cursorClass = activeMode === "cursor" ? "cursor-default"
