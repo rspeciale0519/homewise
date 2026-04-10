@@ -157,20 +157,22 @@ export function PdfViewerShell({
       if (activeMode === "text") {
         setPendingPlacement({ pageIndex, pdfX, pdfY });
       } else if (activeMode === "signature") {
+        const sigWidth = 150;
+        const sigHeight = 60;
         if (savedSignature) {
           setAnnotations((prev) => [
             ...prev,
             {
               id: genId(),
               pageIndex,
-              pdfX,
-              pdfY,
+              pdfX: pdfX - sigWidth / 2,
+              pdfY: pdfY - sigHeight / 2,
               type: "signature",
               value: savedSignature,
               fontSize: 12,
               color: "#000000",
-              width: 150,
-              height: 60,
+              width: sigWidth,
+              height: sigHeight,
             },
           ]);
           setActiveMode("cursor");
@@ -246,19 +248,21 @@ export function PdfViewerShell({
   const handleSignatureSave = useCallback(
     (dataUrl: string) => {
       if (pendingPlacement) {
+        const sigWidth = 150;
+        const sigHeight = 60;
         setAnnotations((prev) => [
           ...prev,
           {
             id: genId(),
             pageIndex: pendingPlacement.pageIndex,
-            pdfX: pendingPlacement.pdfX,
-            pdfY: pendingPlacement.pdfY,
+            pdfX: pendingPlacement.pdfX - sigWidth / 2,
+            pdfY: pendingPlacement.pdfY - sigHeight / 2,
             type: "signature",
             value: dataUrl,
             fontSize: 12,
             color: "#000000",
-            width: 150,
-            height: 60,
+            width: sigWidth,
+            height: sigHeight,
           },
         ]);
         setPendingPlacement(null);

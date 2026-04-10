@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { pdfToScreen, screenToPdf } from "@/lib/documents/coordinates";
 import type {
@@ -28,33 +28,79 @@ export function AnnotationOverlay({
   onDeleteAnnotation,
   onMoveAnnotation,
 }: AnnotationOverlayProps) {
+  const overlayRef = useRef<HTMLDivElement>(null);
   const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
+
+  // Dragging state
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const dragStartRef = useRef<{ annId: string; startPdfX: number; startPdfY: number; mouseX: number; mouseY: number } | null>(null);
+
+  const getOverlayRelativePos = useCallback(
+    (clientX: number, clientY: number) => {
+      const el = overlayRef.current;
+      if (!el) return { x: 0, y: 0 };
+      const rect = el.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    },
+    []
+  );
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (activeMode === "cursor") return;
-      // Use nativeEvent.offsetX/Y for accurate position relative to the
-      // clicked element, avoiding issues with scroll offset and nesting.
-      const nativeEvent = e.nativeEvent;
-      const clickX = nativeEvent.offsetX;
-      const clickY = nativeEvent.offsetY;
-      const { pdfX, pdfY } = screenToPdf(clickX, clickY, dims);
+      if (draggingId) return;
+      const { x, y } = getOverlayRelativePos(e.clientX, e.clientY);
+      const { pdfX, pdfY } = screenToPdf(x, y, dims);
       onPlaceAnnotation(pageIndex, pdfX, pdfY);
     },
-    [activeMode, dims, pageIndex, onPlaceAnnotation]
+    [activeMode, dims, pageIndex, onPlaceAnnotation, draggingId, getOverlayRelativePos]
   );
 
-  const handleDragEnd = useCallback(
-    (annotationId: string, e: React.DragEvent<HTMLDivElement>) => {
-      const overlay = e.currentTarget.parentElement;
-      if (!overlay) return;
-      const rect = overlay.getBoundingClientRect();
-      const dropX = e.clientX - rect.left;
-      const dropY = e.clientY - rect.top;
-      const { pdfX, pdfY } = screenToPdf(dropX, dropY, dims);
-      onMoveAnnotation(annotationId, pdfX, pdfY);
+  // Mouse-based drag handlers (replaces unreliable HTML drag API)
+  const handleAnnotationMouseDown = useCallback(
+    (annId: string, ann: Annotation, e: React.MouseEvent) => {
+      if (activeMode !== "cursor") return;
+      e.stopPropagation();
+      e.preventDefault();
+      setDraggingId(annId);
+      dragStartRef.current = {
+        annId,
+        startPdfX: ann.pdfX,
+        startPdfY: ann.pdfY,
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+      };
+
+      const handleMouseMove = (_me: MouseEvent) => {
+        // Visual feedback could be added here
+      };
+
+      const handleMouseUp = (me: MouseEvent) => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+
+        const start = dragStartRef.current;
+        if (!start) return;
+
+        const dx = me.clientX - start.mouseX;
+        const dy = me.clientY - start.mouseY;
+
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+          const scaleX = dims.pdfWidth / dims.renderWidth;
+          const scaleY = dims.pdfHeight / dims.renderHeight;
+          const newPdfX = start.startPdfX + dx * scaleX;
+          const newPdfY = start.startPdfY - dy * scaleY; // Y is flipped in PDF coords
+          onMoveAnnotation(start.annId, newPdfX, newPdfY);
+        }
+
+        setDraggingId(null);
+        dragStartRef.current = null;
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
     },
-    [dims, onMoveAnnotation]
+    [activeMode, dims, onMoveAnnotation]
   );
 
   const cursorClass =
@@ -66,6 +112,7 @@ export function AnnotationOverlay({
 
   return (
     <div
+      ref={overlayRef}
       className={`absolute inset-0 ${cursorClass}`}
       onClick={handleClick}
     >
@@ -78,15 +125,15 @@ export function AnnotationOverlay({
           return (
             <div
               key={ann.id}
-              draggable
-              onDragEnd={(e) => handleDragEnd(ann.id, e)}
               className="absolute group"
               style={{
                 left: screenX,
                 top: screenY - h,
                 width: w,
                 height: h,
+                cursor: activeMode === "cursor" ? "grab" : undefined,
               }}
+              onMouseDown={(e) => handleAnnotationMouseDown(ann.id, ann, e)}
               onClick={(e) => e.stopPropagation()}
             >
               <Image
@@ -114,13 +161,13 @@ export function AnnotationOverlay({
         return (
           <div
             key={ann.id}
-            draggable
-            onDragEnd={(e) => handleDragEnd(ann.id, e)}
             className="absolute group"
             style={{
               left: screenX,
               top: screenY - fontSize,
+              cursor: activeMode === "cursor" ? "grab" : undefined,
             }}
+            onMouseDown={(e) => handleAnnotationMouseDown(ann.id, ann, e)}
             onClick={(e) => e.stopPropagation()}
           >
             <span
