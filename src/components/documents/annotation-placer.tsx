@@ -18,6 +18,7 @@ interface AnnotationPlacerProps {
   onPlaceAgentField: (key: AgentFieldKey) => void;
   onPlaceContactField: (key: ContactFieldKey) => void;
   onCancel: () => void;
+  defaultTab?: "text" | "agent" | "contact";
 }
 
 const AGENT_FIELDS: { key: AgentFieldKey; label: string }[] = [
@@ -84,8 +85,9 @@ export function AnnotationPlacer({
   onPlaceAgentField,
   onPlaceContactField,
   onCancel,
+  defaultTab = "text",
 }: AnnotationPlacerProps) {
-  const [tab, setTab] = useState<Tab>("text");
+  const [tab, setTab] = useState<Tab>(defaultTab);
   const [freeText, setFreeText] = useState("");
 
   return (

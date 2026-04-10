@@ -40,10 +40,13 @@ export function EmailDialog({ open, onClose, onSend, documentName }: EmailDialog
     <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl shadow-elevated p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95">
+        <Dialog.Content aria-describedby="email-dialog-desc" className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl shadow-elevated p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95">
           <Dialog.Title className="text-base font-semibold text-navy-700 mb-4">
             Email Document
           </Dialog.Title>
+          <Dialog.Description id="email-dialog-desc" className="sr-only">
+            Send the filled PDF document as an email attachment.
+          </Dialog.Description>
 
           <div className="space-y-3">
             <div>

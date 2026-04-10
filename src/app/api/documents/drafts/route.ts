@@ -2,15 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { draftSchema } from "@/schemas/document-viewer.schema";
-
-async function getAgentId(userId: string): Promise<string | null> {
-  const profile = await prisma.userProfile.findUnique({
-    where: { id: userId },
-    select: { role: true, agentProfile: { select: { id: true } } },
-  });
-  if (!profile || (profile.role !== "agent" && profile.role !== "admin")) return null;
-  return profile.agentProfile?.id ?? null;
-}
+import { getAgentId } from "@/lib/documents/get-agent-id";
 
 export async function GET() {
   const supabase = await createClient();
@@ -18,7 +10,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const agentId = await getAgentId(user.id);
-  if (!agentId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!agentId) return NextResponse.json({ drafts: [] });
 
   const drafts = await prisma.documentDraft.findMany({
     where: { agentId },
@@ -36,7 +28,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const agentId = await getAgentId(user.id);
-  if (!agentId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!agentId) return NextResponse.json({ success: true });
 
   const body = await request.json();
   const parsed = draftSchema.safeParse(body);

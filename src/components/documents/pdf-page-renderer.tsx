@@ -52,6 +52,9 @@ export function PdfPageRenderer({
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
+        let topVisiblePage = 0;
+        let topVisibleY = Infinity;
+
         for (const entry of entries) {
           const pageNum = Number(entry.target.getAttribute("data-page"));
           if (entry.isIntersecting) {
@@ -60,16 +63,22 @@ export function PdfPageRenderer({
               next.add(pageNum);
               return next;
             });
-            if (entry.intersectionRatio > 0.5) {
-              onPageInView(pageNum);
+            const rect = entry.boundingClientRect;
+            if (entry.intersectionRatio > 0.3 && rect.top < topVisibleY) {
+              topVisibleY = rect.top;
+              topVisiblePage = pageNum;
             }
           }
+        }
+
+        if (topVisiblePage > 0) {
+          onPageInView(topVisiblePage);
         }
       },
       {
         root: containerRef.current?.parentElement,
         rootMargin: "200px 0px",
-        threshold: [0, 0.5],
+        threshold: [0, 0.3, 0.5],
       }
     );
 

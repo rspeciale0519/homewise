@@ -40,7 +40,7 @@ export function Sidebar({ role }: SidebarProps) {
 
   const showAgentNav =
     role === "agent" ||
-    (role === "admin" && (pathname.startsWith("/dashboard/agent-hub") || pathname.startsWith("/dashboard/training") || pathname.startsWith("/dashboard/billing")));
+    (role === "admin" && (pathname.startsWith("/dashboard/agent-hub") || pathname.startsWith("/dashboard/documents") || pathname.startsWith("/dashboard/training") || pathname.startsWith("/dashboard/billing")));
 
   return (
     <>

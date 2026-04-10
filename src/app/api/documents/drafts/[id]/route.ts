@@ -2,15 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { draftSchema } from "@/schemas/document-viewer.schema";
-
-async function getAgentId(userId: string): Promise<string | null> {
-  const profile = await prisma.userProfile.findUnique({
-    where: { id: userId },
-    select: { role: true, agentProfile: { select: { id: true } } },
-  });
-  if (!profile || (profile.role !== "agent" && profile.role !== "admin")) return null;
-  return profile.agentProfile?.id ?? null;
-}
+import { getAgentId } from "@/lib/documents/get-agent-id";
 
 export async function GET(
   _request: NextRequest,

@@ -23,6 +23,46 @@ function findDocumentByPath(docPath: string): ResourceDocument | undefined {
   return allDocs.find((d) => d.url === apiUrl);
 }
 
+async function getAgentData(userId: string) {
+  const profile = await prisma.userProfile.findUnique({
+    where: { id: userId },
+    select: {
+      email: true,
+      agentProfile: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          designations: true,
+          documentSignature: { select: { imageData: true } },
+        },
+      },
+    },
+  });
+
+  if (profile?.agentProfile) {
+    return profile.agentProfile;
+  }
+
+  // Fallback: look up agent by email
+  if (profile?.email) {
+    return prisma.agent.findFirst({
+      where: { email: profile.email, active: true },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        designations: true,
+        documentSignature: { select: { imageData: true } },
+      },
+    });
+  }
+
+  return null;
+}
+
 export default async function DocumentViewerPage({
   searchParams,
 }: {
@@ -36,19 +76,7 @@ export default async function DocumentViewerPage({
 
   const profile = await prisma.userProfile.findUnique({
     where: { id: user.id },
-    select: {
-      role: true,
-      agentProfile: {
-        select: {
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
-          designations: true,
-          documentSignature: { select: { imageData: true } },
-        },
-      },
-    },
+    select: { role: true },
   });
 
   if (profile?.role !== "agent" && profile?.role !== "admin") {
@@ -71,7 +99,7 @@ export default async function DocumentViewerPage({
   const documentName = docMeta?.name ?? docPath.split("/").pop() ?? "Document";
   const fileUrl = `/api/documents/${docPath}`;
 
-  const agent = profile.agentProfile;
+  const agent = await getAgentData(user.id);
   const agentInfo: AgentInfo = {
     firstName: agent?.firstName ?? "",
     lastName: agent?.lastName ?? "",

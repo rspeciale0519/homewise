@@ -33,9 +33,11 @@ export function AnnotationOverlay({
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (activeMode === "cursor") return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
+      // Use nativeEvent.offsetX/Y for accurate position relative to the
+      // clicked element, avoiding issues with scroll offset and nesting.
+      const nativeEvent = e.nativeEvent;
+      const clickX = nativeEvent.offsetX;
+      const clickY = nativeEvent.offsetY;
       const { pdfX, pdfY } = screenToPdf(clickX, clickY, dims);
       onPlaceAnnotation(pageIndex, pdfX, pdfY);
     },
@@ -65,7 +67,6 @@ export function AnnotationOverlay({
   return (
     <div
       className={`absolute inset-0 ${cursorClass}`}
-      style={{ width: dims.renderWidth, height: dims.renderHeight }}
       onClick={handleClick}
     >
       {pageAnnotations.map((ann) => {
