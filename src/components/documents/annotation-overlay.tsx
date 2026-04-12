@@ -282,7 +282,7 @@ function SelectionFrame({
   onDelete: (id: string) => void;
   onResizeStart: (id: string, ann: Annotation, handle: ResizeHandle, e: React.MouseEvent) => void;
 }) {
-  const handleSize = w < 80 || h < 40 ? 6 : 8;
+  const handleSize = w < 80 || h < 40 ? 7 : 9;
   const half = handleSize / 2;
 
   const handles: { handle: ResizeHandle; style: React.CSSProperties }[] = [
@@ -300,30 +300,40 @@ function SelectionFrame({
     <>
       {/* Selection border */}
       <div
-        className="absolute inset-0 border-2 border-navy-500 rounded-sm pointer-events-none"
-        style={{ margin: -1 }}
+        className="absolute pointer-events-none"
+        style={{
+          inset: -2,
+          border: '2px solid #3b82f6',
+          borderRadius: 2,
+          boxShadow: '0 0 0 1px rgba(59,130,246,0.2)',
+        }}
       />
 
       {/* Delete button */}
       <button
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); onDelete(ann.id); }}
-        className="absolute -top-3 -right-3 h-5 w-5 rounded-full bg-crimson-600 text-white flex items-center justify-center text-xs shadow-sm z-10 hover:bg-crimson-700 transition-colors"
+        className="absolute h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold z-20 hover:bg-red-600 transition-colors"
+        style={{ top: -10, right: -10, boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}
       >
         &times;
       </button>
 
       {/* 8 resize handles */}
-      {handles.map(({ handle, style }) => (
+      {handles.map(({ handle: h, style: s }) => (
         <div
-          key={handle}
-          onMouseDown={(e) => onResizeStart(ann.id, ann, handle, e)}
-          className="absolute bg-white border-2 border-navy-500 rounded-sm z-10"
+          key={h}
+          onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); onResizeStart(ann.id, ann, h, e); }}
+          className="absolute z-10"
           style={{
-            ...style,
+            ...s,
             width: handleSize,
             height: handleSize,
-            cursor: HANDLE_CURSORS[handle],
+            cursor: HANDLE_CURSORS[h],
+            borderRadius: '50%',
+            backgroundColor: '#3b82f6',
+            border: '1.5px solid white',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
           }}
         />
       ))}
