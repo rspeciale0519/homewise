@@ -12,6 +12,35 @@ export const signatureSchema = z.object({
 
 export type SignatureInput = z.infer<typeof signatureSchema>;
 
+export const createSignatureSchema = z.object({
+  label: z
+    .string()
+    .trim()
+    .min(1, "Label is required")
+    .max(50, "Label must be 50 characters or fewer"),
+  imageData: z
+    .string()
+    .min(1, "Signature data is required")
+    .refine(
+      (val) => val.startsWith("data:image/png;base64,"),
+      "Signature must be a base64 PNG data URL"
+    ),
+  source: z.enum(["drawn", "uploaded"]),
+});
+
+export const updateSignatureSchema = z.object({
+  id: z.string().min(1),
+  label: z
+    .string()
+    .trim()
+    .min(1, "Label is required")
+    .max(50, "Label must be 50 characters or fewer"),
+});
+
+export const deleteSignatureSchema = z.object({
+  id: z.string().min(1),
+});
+
 export const annotationSchema = z.object({
   id: z.string(),
   pageIndex: z.number().int().min(0),

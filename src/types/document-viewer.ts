@@ -58,3 +58,10 @@ export type ContactFieldKey =
   | "fullName"
   | "email"
   | "phone";
+
+export interface SavedSignature {
+  id: string;
+  label: string;
+  imageData: string;
+  source: "drawn" | "uploaded";
+}

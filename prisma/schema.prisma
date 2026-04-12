@@ -140,7 +140,7 @@ model UserProfile {
   propertyAlerts PropertyAlert[]
   agent              Agent?   @relation(fields: [preferredAgent], references: [id])
   agentProfile       Agent?   @relation("AgentUser")
-  documentSignature  DocumentSignature?
+  documentSignatures DocumentSignature[]
 
   @@index([email])
 }
@@ -992,12 +992,16 @@ model GracePeriodOverride {
 
 model DocumentSignature {
   id        String   @id @default(cuid())
-  userId    String   @unique
+  userId    String
+  label     String
   imageData String
+  source    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model DocumentDraft {
