@@ -28,7 +28,10 @@ async function getAgentData(userId: string) {
     where: { id: userId },
     select: {
       email: true,
-      documentSignature: { select: { imageData: true } },
+      documentSignatures: {
+        select: { id: true, label: true, imageData: true, source: true },
+        orderBy: { createdAt: "asc" as const },
+      },
       agentProfile: {
         select: {
           firstName: true,
@@ -59,7 +62,11 @@ async function getAgentData(userId: string) {
 
   return {
     ...agent,
-    savedSignature: profile.documentSignature?.imageData ?? null,
+    savedSignatures: (profile.documentSignatures ?? []).map((s) => ({
+      id: s.id,
+      label: s.label,
+      imageData: s.imageData,
+    })),
   };
 }
 
@@ -109,7 +116,7 @@ export default async function DocumentViewerPage({
     licenseNumber: agent?.designations?.[0] ?? null,
   };
 
-  const savedSignature = agent?.savedSignature ?? null;
+  const savedSignatures = agent?.savedSignatures ?? [];
 
   return (
     <PdfViewerShell
@@ -117,7 +124,7 @@ export default async function DocumentViewerPage({
       documentName={documentName}
       fileUrl={fileUrl}
       agentInfo={agentInfo}
-      savedSignature={savedSignature}
+      savedSignatures={savedSignatures}
     />
   );
 }

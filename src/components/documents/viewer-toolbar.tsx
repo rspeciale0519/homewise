@@ -13,6 +13,7 @@ import type {
   AgentInfo,
   ContactFieldKey,
 } from "@/types/document-viewer";
+import { SignaturePicker } from "@/components/documents/signature-picker";
 import { cn } from "@/lib/utils";
 
 interface ViewerToolbarProps {
@@ -42,6 +43,10 @@ interface ViewerToolbarProps {
   onToggleFavorite: () => void;
   onSaveDraft: () => void;
   isDirty: boolean;
+  savedSignatures: Array<{ id: string; label: string; imageData: string }>;
+  onSelectSignature: (imageData: string) => void;
+  onDrawNewSignature: () => void;
+  onUploadSignature: () => void;
 }
 
 export function ViewerToolbar({
@@ -71,6 +76,10 @@ export function ViewerToolbar({
   onToggleFavorite,
   onSaveDraft,
   isDirty,
+  savedSignatures,
+  onSelectSignature,
+  onDrawNewSignature,
+  onUploadSignature,
 }: ViewerToolbarProps) {
   const zoomPercent = Math.round(zoom * 100);
   const [showPlacer, setShowPlacer] = useState(false);
@@ -205,15 +214,25 @@ export function ViewerToolbar({
             )}
           </div>
 
-          <ToolButton
-            active={activeMode === "signature"}
-            onClick={() => onSetMode(activeMode === "signature" ? "cursor" : "signature")}
-            title="Place signature"
+          <SignaturePicker
+            signatures={savedSignatures.map((s) => ({ ...s, source: "drawn" as const }))}
+            onSelectSignature={onSelectSignature}
+            onDrawNew={onDrawNewSignature}
+            onUploadNew={onUploadSignature}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-            </svg>
-          </ToolButton>
+            <ToolButton
+              active={activeMode === "signature"}
+              onClick={savedSignatures.length === 0
+                ? () => onSetMode(activeMode === "signature" ? "cursor" : "signature")
+                : undefined
+              }
+              title="Place signature"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+              </svg>
+            </ToolButton>
+          </SignaturePicker>
 
           <div className="h-5 w-px bg-slate-200 mx-1" />
 
@@ -283,7 +302,7 @@ function ToolButton({
   children,
 }: {
   active: boolean;
-  onClick: () => void;
+  onClick?: () => void;
   title: string;
   children: React.ReactNode;
 }) {

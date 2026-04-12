@@ -5,6 +5,7 @@ import { ViewerToolbar } from "@/components/documents/viewer-toolbar";
 import { PdfPageRenderer } from "@/components/documents/pdf-page-renderer";
 import { SignaturePad } from "@/components/documents/signature-pad";
 import { EmailDialog } from "@/components/documents/email-dialog";
+import { SaveSignaturePrompt } from "@/components/documents/save-signature-prompt";
 import { useTrackDocumentView } from "@/hooks/use-track-document-view";
 import {
   resolveAgentField,
@@ -25,7 +26,7 @@ interface PdfViewerShellProps {
   documentName: string;
   fileUrl: string;
   agentInfo: AgentInfo;
-  savedSignature: string | null;
+  savedSignatures: Array<{ id: string; label: string; imageData: string }>;
 }
 
 const MIN_ZOOM = 0.5;
@@ -43,7 +44,7 @@ export function PdfViewerShell({
   documentName,
   fileUrl,
   agentInfo,
-  savedSignature,
+  savedSignatures,
 }: PdfViewerShellProps) {
   const [zoom, setZoom] = useState(1);
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -55,6 +56,9 @@ export function PdfViewerShell({
   const [activeMode, setActiveMode] = useState<AnnotationMode>("cursor");
   const [selectedContact, setSelectedContact] = useState<ContactOption | null>(null);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [activeSignatureImage, setActiveSignatureImage] = useState<string | null>(null);
+  const [showSavePrompt, setShowSavePrompt] = useState<string | null>(null);
+  const [savedSigs, setSavedSigs] = useState(savedSignatures);
   const [pageDims, setPageDims] = useState<Map<number, PageDimensions>>(new Map());
 
   // Pending placement state
@@ -159,7 +163,7 @@ export function PdfViewerShell({
       } else if (activeMode === "signature") {
         const sigWidth = 150;
         const sigHeight = 60;
-        if (savedSignature) {
+        if (activeSignatureImage) {
           setAnnotations((prev) => [
             ...prev,
             {
@@ -168,7 +172,7 @@ export function PdfViewerShell({
               pdfX: pdfX - sigWidth / 2,
               pdfY: pdfY - sigHeight / 2,
               type: "signature",
-              value: savedSignature,
+              value: activeSignatureImage,
               fontSize: 12,
               color: "#000000",
               width: sigWidth,
@@ -176,6 +180,7 @@ export function PdfViewerShell({
             },
           ]);
           setActiveMode("cursor");
+          setActiveSignatureImage(null);
         } else {
           setPendingPlacement({ pageIndex, pdfX, pdfY });
           setShowSignaturePad(true);
@@ -220,7 +225,7 @@ export function PdfViewerShell({
         setPendingContactField(null);
       }
     },
-    [activeMode, savedSignature, agentInfo, selectedContact, pendingAgentField, pendingContactField]
+    [activeMode, activeSignatureImage, agentInfo, selectedContact, pendingAgentField, pendingContactField]
   );
 
   const handlePlaceText = useCallback(
@@ -269,9 +274,73 @@ export function PdfViewerShell({
       }
       setShowSignaturePad(false);
       setActiveMode("cursor");
+      setShowSavePrompt(dataUrl);
     },
     [pendingPlacement]
   );
+
+  const handleSelectSignature = useCallback((imageData: string) => {
+    setActiveSignatureImage(imageData);
+    setActiveMode("signature");
+  }, []);
+
+  const handleDrawNewSignature = useCallback(() => {
+    setActiveSignatureImage(null);
+    setActiveMode("signature");
+  }, []);
+
+  const handleUploadSignature = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".png,image/png";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        const label = prompt("Enter a label for this signature:");
+        if (!label?.trim()) return;
+        try {
+          const res = await fetch("/api/documents/signatures", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ label: label.trim(), imageData: dataUrl, source: "uploaded" }),
+          });
+          if (!res.ok) throw new Error("Failed to save");
+          const { signature } = await res.json();
+          setSavedSigs((prev) => [...prev, { id: signature.id, label: signature.label, imageData: signature.imageData }]);
+          setActiveSignatureImage(dataUrl);
+          setActiveMode("signature");
+        } catch { /* upload failed silently */ }
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }, []);
+
+  const handleSaveToProfile = useCallback(
+    async (label: string) => {
+      if (!showSavePrompt) return;
+      try {
+        const res = await fetch("/api/documents/signatures", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ label, imageData: showSavePrompt, source: "drawn" }),
+        });
+        if (res.ok) {
+          const { signature } = await res.json();
+          setSavedSigs((prev) => [...prev, { id: signature.id, label: signature.label, imageData: signature.imageData }]);
+        }
+      } catch { /* save failed silently */ }
+      setShowSavePrompt(null);
+    },
+    [showSavePrompt]
+  );
+
+  const handleSkipSavePrompt = useCallback(() => {
+    setShowSavePrompt(null);
+  }, []);
 
   const handleDeleteAnnotation = useCallback((id: string) => {
     setAnnotations((prev) => prev.filter((a) => a.id !== id));
@@ -421,6 +490,10 @@ export function PdfViewerShell({
           setIsDirty(false);
         }}
         isDirty={isDirty}
+        savedSignatures={savedSigs}
+        onSelectSignature={handleSelectSignature}
+        onDrawNewSignature={handleDrawNewSignature}
+        onUploadSignature={handleUploadSignature}
       />
 
       <EmailDialog
@@ -429,6 +502,13 @@ export function PdfViewerShell({
         onSend={handleEmailSend}
         documentName={documentName}
       />
+
+      {showSavePrompt && (
+        <SaveSignaturePrompt
+          onSave={handleSaveToProfile}
+          onSkip={handleSkipSavePrompt}
+        />
+      )}
 
       {showSignaturePad && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
