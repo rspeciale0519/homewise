@@ -12,19 +12,15 @@ export default async function ProfilePage() {
   const profile = await prisma.userProfile.findUnique({
     where: { id: user.id },
     include: {
-      agentProfile: {
-        select: {
-          id: true,
-          documentSignature: { select: { imageData: true } },
-        },
-      },
+      agentProfile: { select: { id: true } },
+      documentSignature: { select: { imageData: true } },
     },
   });
 
   if (!profile) redirect("/dashboard");
 
   const isAgent = profile.role === "agent" || profile.role === "admin";
-  const savedSignature = profile.agentProfile?.documentSignature?.imageData ?? null;
+  const savedSignature = profile.documentSignature?.imageData ?? null;
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">

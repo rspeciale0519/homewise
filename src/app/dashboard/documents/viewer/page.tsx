@@ -28,6 +28,7 @@ async function getAgentData(userId: string) {
     where: { id: userId },
     select: {
       email: true,
+      documentSignature: { select: { imageData: true } },
       agentProfile: {
         select: {
           firstName: true,
@@ -35,32 +36,31 @@ async function getAgentData(userId: string) {
           email: true,
           phone: true,
           designations: true,
-          documentSignature: { select: { imageData: true } },
         },
       },
     },
   });
 
-  if (profile?.agentProfile) {
-    return profile.agentProfile;
-  }
+  if (!profile) return null;
 
-  // Fallback: look up agent by email
-  if (profile?.email) {
-    return prisma.agent.findFirst({
-      where: { email: profile.email, active: true },
-      select: {
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        designations: true,
-        documentSignature: { select: { imageData: true } },
-      },
-    });
-  }
+  const agent = profile.agentProfile
+    ?? (profile.email
+      ? await prisma.agent.findFirst({
+          where: { email: profile.email, active: true },
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            designations: true,
+          },
+        })
+      : null);
 
-  return null;
+  return {
+    ...agent,
+    savedSignature: profile.documentSignature?.imageData ?? null,
+  };
 }
 
 export default async function DocumentViewerPage({
@@ -109,7 +109,7 @@ export default async function DocumentViewerPage({
     licenseNumber: agent?.designations?.[0] ?? null,
   };
 
-  const savedSignature = agent?.documentSignature?.imageData ?? null;
+  const savedSignature = agent?.savedSignature ?? null;
 
   return (
     <PdfViewerShell

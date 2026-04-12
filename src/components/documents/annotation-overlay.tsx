@@ -49,6 +49,9 @@ export function AnnotationOverlay({
     mouseX: number; mouseY: number; handle: ResizeHandle;
   } | null>(null);
 
+  // Prevent stray click events from deselecting after drag/resize
+  const justInteractedRef = useRef(false);
+
   const getOverlayRelativePos = useCallback(
     (clientX: number, clientY: number) => {
       const el = overlayRef.current;
@@ -60,6 +63,10 @@ export function AnnotationOverlay({
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (justInteractedRef.current) {
+        justInteractedRef.current = false;
+        return;
+      }
       if (activeMode !== "cursor") {
         if (draggingId) return;
         const { x, y } = getOverlayRelativePos(e.clientX, e.clientY);
@@ -101,6 +108,7 @@ export function AnnotationOverlay({
           const sx = dims.pdfWidth / dims.renderWidth;
           const sy = dims.pdfHeight / dims.renderHeight;
           onMoveAnnotation(start.annId, start.startPdfX + dx * sx, start.startPdfY - dy * sy);
+          justInteractedRef.current = true;
         }
         setDraggingId(null);
         setDragOffset({ dx: 0, dy: 0 });
@@ -176,6 +184,7 @@ export function AnnotationOverlay({
         if (finalW !== s.startW || finalH !== s.startH) {
           onResizeAnnotation(s.annId, finalW, finalH);
         }
+        justInteractedRef.current = true;
         setResizingId(null);
         setResizeDelta({ dw: 0, dh: 0 });
         resizeStartRef.current = null;

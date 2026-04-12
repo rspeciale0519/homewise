@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { signatureSchema } from "@/schemas/document-viewer.schema";
-import { getAgentId } from "@/lib/documents/get-agent-id";
 
 export async function GET() {
   const supabase = await createClient();
@@ -14,13 +13,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const agentId = await getAgentId(user.id);
-  if (!agentId) {
-    return NextResponse.json({ signature: null });
-  }
-
   const sig = await prisma.documentSignature.findUnique({
-    where: { agentId },
+    where: { userId: user.id },
     select: { imageData: true, updatedAt: true },
   });
 
@@ -37,11 +31,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const agentId = await getAgentId(user.id);
-  if (!agentId) {
-    return NextResponse.json({ error: "No agent profile found" }, { status: 404 });
-  }
-
   const body = await request.json();
   const parsed = signatureSchema.safeParse(body);
 
@@ -53,9 +42,9 @@ export async function PUT(request: NextRequest) {
   }
 
   const sig = await prisma.documentSignature.upsert({
-    where: { agentId },
+    where: { userId: user.id },
     update: { imageData: parsed.data.imageData },
-    create: { agentId, imageData: parsed.data.imageData },
+    create: { userId: user.id, imageData: parsed.data.imageData },
   });
 
   return NextResponse.json({ signature: { imageData: sig.imageData, updatedAt: sig.updatedAt } });
@@ -71,12 +60,7 @@ export async function DELETE() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const agentId = await getAgentId(user.id);
-  if (!agentId) {
-    return NextResponse.json({ error: "No agent profile found" }, { status: 404 });
-  }
-
-  await prisma.documentSignature.deleteMany({ where: { agentId } });
+  await prisma.documentSignature.deleteMany({ where: { userId: user.id } });
 
   return NextResponse.json({ success: true });
 }
