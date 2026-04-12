@@ -1,24 +1,41 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface SignaturePadProps {
   onSave: (dataUrl: string) => void;
   onCancel: () => void;
-  width?: number;
-  height?: number;
 }
 
-export function SignaturePad({
-  onSave,
-  onCancel,
-  width = 500,
-  height = 200,
-}: SignaturePadProps) {
+const PAD_HEIGHT = 200;
+const DPR = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 2;
+
+export function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStrokes, setHasStrokes] = useState(false);
+
+  // Size canvas to fill container on mount and resize
+  useEffect(() => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+
+    const resize = () => {
+      const w = container.clientWidth;
+      canvas.width = Math.round(w * DPR);
+      canvas.height = Math.round(PAD_HEIGHT * DPR);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${PAD_HEIGHT}px`;
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   const getCtx = useCallback(() => {
     const canvas = canvasRef.current;
@@ -26,7 +43,7 @@ export function SignaturePad({
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
     ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2.5 * DPR;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     return ctx;
@@ -104,13 +121,13 @@ export function SignaturePad({
 
   return (
     <div className="space-y-4">
-      <div className="relative rounded-xl border-2 border-dashed border-slate-200 bg-white overflow-hidden">
+      <div
+        ref={containerRef}
+        className="relative rounded-xl border-2 border-dashed border-slate-200 bg-white overflow-hidden"
+      >
         <canvas
           ref={canvasRef}
-          width={width * 2}
-          height={height * 2}
-          style={{ width, height }}
-          className="cursor-crosshair touch-none w-full"
+          className="cursor-crosshair touch-none block"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
