@@ -36,11 +36,11 @@ export function AnnotationOverlay({
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
   const dragStartRef = useRef<{
     annId: string; startPdfX: number; startPdfY: number;
     mouseX: number; mouseY: number;
   } | null>(null);
+  const dragElRef = useRef<HTMLElement | null>(null);
 
   const [resizingId, setResizingId] = useState<string | null>(null);
   const [resizeDelta, setResizeDelta] = useState({ dw: 0, dh: 0 });
@@ -86,7 +86,14 @@ export function AnnotationOverlay({
       e.preventDefault();
       setSelectedId(annId);
       setDraggingId(annId);
-      setDragOffset({ dx: 0, dy: 0 });
+
+      const el = (e.currentTarget as HTMLElement);
+      dragElRef.current = el;
+      el.style.transition = "none";
+      el.style.opacity = "0.8";
+      el.style.zIndex = "50";
+      el.style.cursor = "grabbing";
+
       dragStartRef.current = {
         annId, startPdfX: ann.pdfX, startPdfY: ann.pdfY,
         mouseX: e.clientX, mouseY: e.clientY,
@@ -94,13 +101,23 @@ export function AnnotationOverlay({
 
       const onMove = (me: MouseEvent) => {
         const start = dragStartRef.current;
-        if (!start) return;
-        setDragOffset({ dx: me.clientX - start.mouseX, dy: me.clientY - start.mouseY });
+        if (!start || !dragElRef.current) return;
+        const dx = me.clientX - start.mouseX;
+        const dy = me.clientY - start.mouseY;
+        dragElRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
       };
       const onUp = (me: MouseEvent) => {
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
         const start = dragStartRef.current;
+        if (dragElRef.current) {
+          dragElRef.current.style.transform = "";
+          dragElRef.current.style.transition = "";
+          dragElRef.current.style.opacity = "";
+          dragElRef.current.style.zIndex = "";
+          dragElRef.current.style.cursor = "";
+        }
+        dragElRef.current = null;
         if (!start) return;
         const dx = me.clientX - start.mouseX;
         const dy = me.clientY - start.mouseY;
@@ -111,7 +128,6 @@ export function AnnotationOverlay({
           justInteractedRef.current = true;
         }
         setDraggingId(null);
-        setDragOffset({ dx: 0, dy: 0 });
         dragStartRef.current = null;
       };
       document.addEventListener("mousemove", onMove);
@@ -205,8 +221,6 @@ export function AnnotationOverlay({
         const isDragging = draggingId === ann.id;
         const isResizing = resizingId === ann.id;
         const isSelected = selectedId === ann.id && activeMode === "cursor";
-        const transform = isDragging
-          ? `translate(${dragOffset.dx}px, ${dragOffset.dy}px)` : undefined;
 
         if (ann.type === "signature" && ann.width && ann.height) {
           const baseW = ann.width;
@@ -220,11 +234,9 @@ export function AnnotationOverlay({
               className="absolute"
               style={{
                 left: screenX, top: screenY - h, width: w, height: h,
-                cursor: activeMode === "cursor" ? (isDragging ? "grabbing" : "grab") : undefined,
-                transform,
-                zIndex: isDragging || isResizing || isSelected ? 50 : undefined,
-                opacity: isDragging ? 0.8 : undefined,
-                transition: isDragging || isResizing ? "none" : "transform 0.15s ease",
+                cursor: activeMode === "cursor" ? "grab" : undefined,
+                zIndex: isResizing || isSelected ? 50 : undefined,
+                transition: isResizing ? "none" : undefined,
               }}
               onMouseDown={(e) => handleAnnotationMouseDown(ann.id, ann, e)}
               onClick={(e) => { e.stopPropagation(); setSelectedId(ann.id); }}
@@ -253,11 +265,7 @@ export function AnnotationOverlay({
             className="absolute group"
             style={{
               left: screenX, top: screenY - fontSize,
-              cursor: activeMode === "cursor" ? (isDragging ? "grabbing" : "grab") : undefined,
-              transform,
-              zIndex: isDragging ? 50 : undefined,
-              opacity: isDragging ? 0.8 : undefined,
-              transition: isDragging ? "none" : "transform 0.15s ease",
+              cursor: activeMode === "cursor" ? "grab" : undefined,
             }}
             onMouseDown={(e) => handleAnnotationMouseDown(ann.id, ann, e)}
             onClick={(e) => e.stopPropagation()}
