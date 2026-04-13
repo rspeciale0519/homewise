@@ -4,16 +4,16 @@ import {
   LISTING_FORMS,
   SALES_FORMS,
   QUICK_ACCESS_DOCUMENTS,
-  type ResourceCategory,
-  type ResourceDocument,
-} from "../src/data/content/agent-resources";
+  type SeedResourceCategory,
+  type SeedResourceDocument,
+} from "./seed-data-documents";
 import { slugify } from "../src/lib/slug/slugify";
 
 const prisma = new PrismaClient();
 
 type Section = "office" | "listing" | "sales";
 
-const SECTIONS: Array<{ section: Section; categories: ResourceCategory[] }> = [
+const SECTIONS: Array<{ section: Section; categories: SeedResourceCategory[] }> = [
   { section: "office", categories: OFFICE_FORMS },
   { section: "listing", categories: LISTING_FORMS },
   { section: "sales", categories: SALES_FORMS },
@@ -32,7 +32,7 @@ function uniqueInSet(base: string, taken: Set<string>): string {
   return candidate;
 }
 
-function inferStorage(doc: ResourceDocument): {
+function inferStorage(doc: SeedResourceDocument): {
   external: boolean;
   url?: string;
   storageKey?: string;

@@ -3,10 +3,36 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { AccessDenied } from "@/components/dashboard/access-denied";
-import {
-  COMPANY_IDENTIFIERS,
-  FORM_CATEGORIES,
-} from "@/data/content/agent-resources";
+import { COMPANY_IDENTIFIERS } from "@/data/content/agent-resources";
+
+const FORM_SECTIONS: Array<{
+  section: "office" | "listing" | "sales";
+  title: string;
+  description: string;
+  icon: "building" | "clipboard" | "document";
+}> = [
+  {
+    section: "office",
+    title: "Office Forms",
+    description:
+      "Business cards, letterhead, transaction checklists, and compliance documents",
+    icon: "building",
+  },
+  {
+    section: "listing",
+    title: "Listing Forms",
+    description:
+      "Data entry forms, listing agreements, property disclosures, and addendums",
+    icon: "clipboard",
+  },
+  {
+    section: "sales",
+    title: "Sales Forms",
+    description:
+      "Purchase contracts, buyer disclosures, association forms, and riders",
+    icon: "document",
+  },
+];
 import { PHONE, FAX } from "@/lib/constants";
 
 export default async function AgentHubPage() {
@@ -36,6 +62,35 @@ export default async function AgentHubPage() {
       storageKey: true,
     },
   });
+
+  const sectionCounts = await prisma.documentCategoryMembership.groupBy({
+    by: ["categoryId"],
+    _count: { documentId: true },
+  });
+  const categoryIdToCount = new Map(
+    sectionCounts.map((row) => [row.categoryId, row._count.documentId]),
+  );
+  const categoryMeta = await prisma.documentCategory.findMany({
+    select: { id: true, section: true },
+  });
+  const sectionTotals: Record<"office" | "listing" | "sales", number> = {
+    office: 0,
+    listing: 0,
+    sales: 0,
+  };
+  for (const cat of categoryMeta) {
+    const count = categoryIdToCount.get(cat.id) ?? 0;
+    if (cat.section === "office" || cat.section === "listing" || cat.section === "sales") {
+      sectionTotals[cat.section] += count;
+    }
+  }
+  const formCategories = FORM_SECTIONS.map((s) => ({
+    title: s.title,
+    description: s.description,
+    icon: s.icon,
+    count: sectionTotals[s.section],
+    href: "/dashboard/agent-hub/documents",
+  }));
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
@@ -147,10 +202,10 @@ export default async function AgentHubPage() {
           Document Libraries
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {FORM_CATEGORIES.map((category) => (
+          {formCategories.map((category) => (
             <Link
               key={category.title}
-              href="/dashboard/agent-hub/documents"
+              href={category.href}
               className="group relative p-5 rounded-2xl bg-white border border-slate-100 hover:border-crimson-200 hover:shadow-card transition-all duration-300"
             >
               <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-crimson-600 to-navy-600 opacity-0 group-hover:opacity-100 transition-opacity" />
