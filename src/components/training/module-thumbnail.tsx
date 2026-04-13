@@ -72,7 +72,7 @@ export function ModuleThumbnail({ type, thumbnailUrl, url, body, title, duration
 function TypeBadge({ label, colors, position = "top-left" }: { label: string; colors: { bg: string; text: string }; position?: "top-left" | "top-right" }) {
   const pos = position === "top-right" ? "top-1 right-1" : "top-1 left-1";
   return (
-    <span className={`absolute ${pos} ${colors.bg} ${colors.text} text-[7px] font-bold px-1.5 py-px rounded`}>
+    <span className={`absolute ${pos} ${colors.bg} ${colors.text} text-[9px] font-bold px-2 py-0.5 rounded`}>
       {label}
     </span>
   );
@@ -81,8 +81,8 @@ function TypeBadge({ label, colors, position = "top-left" }: { label: string; co
 function PlayOverlay() {
   return (
     <div className="absolute inset-0 flex items-center justify-center">
-      <div className="w-8 h-8 bg-red-600/90 rounded-full flex items-center justify-center">
-        <svg className="w-3.5 h-3.5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+      <div className="w-10 h-10 bg-red-600/90 rounded-full flex items-center justify-center">
+        <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M8 5v14l11-7z" />
         </svg>
       </div>
@@ -95,7 +95,7 @@ function DurationBadge({ duration }: { duration: number }) {
   const secs = Math.round((duration % 1) * 60);
   const label = secs > 0 ? `${mins}:${String(secs).padStart(2, "0")}` : `${mins}:00`;
   return (
-    <span className="absolute bottom-1 right-1 bg-black/75 text-white text-[8px] px-1.5 py-px rounded">
+    <span className="absolute bottom-1.5 right-1.5 bg-black/75 text-white text-[10px] px-2 py-0.5 rounded">
       {label}
     </span>
   );

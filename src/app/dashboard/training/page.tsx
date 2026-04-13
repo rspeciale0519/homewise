@@ -101,7 +101,7 @@ export default async function AgentTrainingPage() {
         </div>
         <div
           id="modules-grid"
-          className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3"
+          className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
         >
           {content.map((item) => (
             <div
