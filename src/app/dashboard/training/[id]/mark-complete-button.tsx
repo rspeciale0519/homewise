@@ -50,7 +50,7 @@ export function MarkCompleteButton({
       <button
         type="button"
         onClick={handleToggle}
-        className="group inline-flex items-center gap-2.5 rounded-lg px-5 py-2.5 text-sm font-semibold bg-green-50 text-green-700 hover:bg-slate-100 hover:text-slate-600 transition-all duration-200 cursor-pointer"
+        className="group inline-flex items-center gap-2.5 rounded-lg px-5 py-2.5 text-sm font-semibold bg-green-50 text-green-700 hover:bg-slate-100 hover:text-slate-600 transition-all duration-200 cursor-pointer min-w-[180px] whitespace-nowrap"
       >
         {/* Checkmark — visible by default, hidden on hover */}
         <svg
