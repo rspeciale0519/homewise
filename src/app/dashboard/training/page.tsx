@@ -62,7 +62,7 @@ export default async function AgentTrainingPage() {
       {/* Courses */}
       {courses.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-bold text-navy-800 mb-3">📚 Your Courses</h2>
+          <h2 className="text-lg font-semibold text-navy-800 mb-4">📚 Your Courses</h2>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
             {courses.map((course) => {
               const modules = course.items.map((i) => ({
@@ -95,13 +95,13 @@ export default async function AgentTrainingPage() {
 
       {/* All Modules */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-navy-800">All Modules</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-navy-800">All Modules</h2>
           <TrainingFilters categories={categories} types={types} />
         </div>
         <div
           id="modules-grid"
-          className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
+          className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5"
         >
           {content.map((item) => (
             <div
