@@ -1,0 +1,30 @@
+export type DocumentSection = "office" | "listing" | "sales";
+
+export interface DocumentCategoryItem {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  section: DocumentSection;
+  sortOrder: number;
+  documentCount: number;
+}
+
+export interface DocumentItem {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  url: string | null;
+  external: boolean;
+  storageKey: string | null;
+  storageProvider: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  sortOrder: number;
+  published: boolean;
+  quickAccess: boolean;
+  createdAt: string;
+  updatedAt: string;
+  categories: Array<{ id: string; title: string; section: DocumentSection }>;
+}
