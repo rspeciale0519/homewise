@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AnnotationPlacer } from "@/components/documents/annotation-placer";
@@ -295,19 +295,18 @@ export function ViewerToolbar({
   );
 }
 
-function ToolButton({
-  active,
-  onClick,
-  title,
-  children,
-}: {
-  active: boolean;
-  onClick?: () => void;
-  title: string;
-  children: React.ReactNode;
-}) {
+const ToolButton = forwardRef<
+  HTMLButtonElement,
+  {
+    active: boolean;
+    onClick?: () => void;
+    title: string;
+    children: React.ReactNode;
+  } & React.ButtonHTMLAttributes<HTMLButtonElement>
+>(function ToolButton({ active, onClick, title, children, className: _, ...rest }, ref) {
   return (
     <button
+      ref={ref}
       onClick={onClick}
       title={title}
       className={cn(
@@ -316,8 +315,9 @@ function ToolButton({
           ? "bg-navy-100 text-navy-700"
           : "text-slate-500 hover:text-navy-700 hover:bg-slate-50"
       )}
+      {...rest}
     >
       {children}
     </button>
   );
-}
+});
