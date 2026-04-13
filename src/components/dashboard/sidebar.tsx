@@ -22,8 +22,8 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const AGENT_NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard/agent-hub", label: "Resources Hub", icon: "resources", exact: true },
-  { href: "/dashboard/agent-hub/documents", label: "Document Library", icon: "library" },
+  { href: "/dashboard/agent-hub", label: "Resources", icon: "resources", exact: true },
+  { href: "/dashboard/agent-hub/documents", label: "Documents", icon: "library" },
   { href: "/dashboard/training", label: "Training", icon: "training" },
   { href: "/dashboard/billing", label: "Billing", icon: "billing" },
 ];
