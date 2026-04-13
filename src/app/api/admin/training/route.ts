@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import {
+  generateUniqueSlug,
+  slugValidationError,
+  slugify,
+} from "@/lib/slug/slugify";
+import { isSlugTakenForTraining } from "@/lib/slug/resolve";
 
 const createSchema = z.object({
   title: z.string().min(1),
+  slug: z.string().optional(),
   description: z.string().optional(),
   body: z.string().optional(),
   category: z.string().min(1),
@@ -45,12 +52,38 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid data", details: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  let slug = parsed.data.slug?.trim();
+  if (slug) {
+    const validationError = slugValidationError(slug);
+    if (validationError) {
+      return NextResponse.json(
+        { error: validationError, field: "slug" },
+        { status: 400 },
+      );
+    }
+    if (await isSlugTakenForTraining(slug)) {
+      return NextResponse.json(
+        { error: "That slug is already in use", field: "slug" },
+        { status: 409 },
+      );
+    }
+  } else {
+    slug = await generateUniqueSlug(
+      slugify(parsed.data.title),
+      isSlugTakenForTraining,
+    );
   }
 
   const content = await prisma.trainingContent.create({
     data: {
       title: parsed.data.title,
+      slug,
       description: parsed.data.description,
       body: parsed.data.body,
       category: parsed.data.category,

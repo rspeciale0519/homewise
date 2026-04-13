@@ -28,15 +28,15 @@ export async function POST(request: NextRequest) {
   const agentId = await getAgentId(user.id);
   if (!agentId) return NextResponse.json({ success: true });
 
-  const { documentPath, documentName } = await request.json();
+  const { documentPath, documentName, documentId } = await request.json();
   if (!documentPath || !documentName) {
     return NextResponse.json({ error: "documentPath and documentName required" }, { status: 400 });
   }
 
   await prisma.documentRecent.upsert({
     where: { agentId_documentPath: { agentId, documentPath } },
-    update: { viewedAt: new Date(), documentName },
-    create: { agentId, documentPath, documentName },
+    update: { viewedAt: new Date(), documentName, documentId: documentId ?? null },
+    create: { agentId, documentPath, documentId: documentId ?? null, documentName },
   });
 
   const all = await prisma.documentRecent.findMany({

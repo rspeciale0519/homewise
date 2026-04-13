@@ -41,10 +41,11 @@ export async function POST(request: NextRequest) {
     where: {
       agentId_documentPath: { agentId, documentPath: parsed.data.documentPath },
     },
-    update: {},
+    update: { documentId: parsed.data.documentId ?? null },
     create: {
       agentId,
       documentPath: parsed.data.documentPath,
+      documentId: parsed.data.documentId ?? null,
       documentName: parsed.data.documentName,
     },
   });

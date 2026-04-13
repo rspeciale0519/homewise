@@ -3,6 +3,7 @@ import { ModuleThumbnail } from "./module-thumbnail";
 
 interface ModuleCardProps {
   id: string;
+  slug: string | null;
   title: string;
   type: string;
   category: string;
@@ -13,10 +14,11 @@ interface ModuleCardProps {
   completed: boolean;
 }
 
-export function ModuleCard({ id, title, type, category, duration, thumbnailUrl, url, body, completed }: ModuleCardProps) {
+export function ModuleCard({ id, slug, title, type, category, duration, thumbnailUrl, url, body, completed }: ModuleCardProps) {
+  const href = slug ? `/dashboard/training/${slug}` : `/dashboard/training/${id}`;
   return (
     <Link
-      href={`/dashboard/training/${id}`}
+      href={href}
       className="group block rounded-xl border border-slate-100 bg-white hover:border-crimson-200 hover:bg-crimson-50/30 transition-all duration-200 overflow-hidden"
     >
       <ModuleThumbnail

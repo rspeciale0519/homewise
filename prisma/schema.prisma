@@ -493,6 +493,7 @@ model LeadRoutingRule {
 model TrainingContent {
   id           String              @id @default(cuid())
   title        String
+  slug         String?             @unique
   description  String?
   category     String
   audience     String              @default("agent")
@@ -514,6 +515,18 @@ model TrainingContent {
   @@index([category])
   @@index([audience])
   @@index([published])
+}
+
+model SlugHistory {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  oldSlug    String
+  createdAt  DateTime @default(now())
+
+  @@unique([entityType, oldSlug])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 model TrainingCourse {
@@ -1004,45 +1017,108 @@ model DocumentSignature {
   @@index([userId])
 }
 
+model Document {
+  id              String                        @id @default(cuid())
+  slug            String                        @unique
+  name            String
+  description     String?
+  url             String?
+  external        Boolean                       @default(false)
+  storageKey      String?
+  storageProvider String                        @default("local")
+  mimeType        String?
+  sizeBytes       Int?
+  sortOrder       Int                           @default(0)
+  published       Boolean                       @default(true)
+  quickAccess     Boolean                       @default(false)
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+
+  categories      DocumentCategoryMembership[]
+  drafts          DocumentDraft[]
+  favorites       DocumentFavorite[]
+  recents         DocumentRecent[]
+
+  @@index([published])
+  @@index([quickAccess])
+  @@index([storageKey])
+}
+
+model DocumentCategory {
+  id          String                        @id @default(cuid())
+  slug        String                        @unique
+  title       String
+  description String?
+  section     String
+  sortOrder   Int                           @default(0)
+  createdAt   DateTime                      @default(now())
+  updatedAt   DateTime                      @updatedAt
+
+  documents   DocumentCategoryMembership[]
+
+  @@index([section, sortOrder])
+}
+
+model DocumentCategoryMembership {
+  documentId String
+  categoryId String
+  sortOrder  Int      @default(0)
+
+  document   Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  category   DocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, categoryId])
+  @@index([categoryId, sortOrder])
+}
+
 model DocumentDraft {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   agentId      String
+  documentId   String?
   documentPath String
   documentName String
   annotations  Json
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, documentPath])
   @@index([agentId])
+  @@index([documentId])
 }
 
 model DocumentFavorite {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   agentId      String
+  documentId   String?
   documentPath String
   documentName String
-  savedAt      DateTime @default(now())
+  savedAt      DateTime  @default(now())
 
-  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, documentPath])
   @@index([agentId])
+  @@index([documentId])
 }
 
 model DocumentRecent {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   agentId      String
+  documentId   String?
   documentPath String
   documentName String
-  viewedAt     DateTime @default(now())
+  viewedAt     DateTime  @default(now())
 
-  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, documentPath])
   @@index([agentId])
+  @@index([documentId])
   @@index([viewedAt])
 }
 

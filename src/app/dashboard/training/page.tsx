@@ -146,6 +146,7 @@ export default async function AgentTrainingPage() {
             >
               <ModuleCard
                 id={item.id}
+                slug={item.slug}
                 title={item.title}
                 type={item.type}
                 category={item.category}

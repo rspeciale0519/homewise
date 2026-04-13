@@ -3,11 +3,36 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { AccessDenied } from "@/components/dashboard/access-denied";
-import {
-  COMPANY_IDENTIFIERS,
-  QUICK_ACCESS_DOCUMENTS,
-  FORM_CATEGORIES,
-} from "@/data/content/agent-resources";
+import { COMPANY_IDENTIFIERS } from "@/data/content/agent-resources";
+
+const FORM_SECTIONS: Array<{
+  section: "office" | "listing" | "sales";
+  title: string;
+  description: string;
+  icon: "building" | "clipboard" | "document";
+}> = [
+  {
+    section: "office",
+    title: "Office Forms",
+    description:
+      "Business cards, letterhead, transaction checklists, and compliance documents",
+    icon: "building",
+  },
+  {
+    section: "listing",
+    title: "Listing Forms",
+    description:
+      "Data entry forms, listing agreements, property disclosures, and addendums",
+    icon: "clipboard",
+  },
+  {
+    section: "sales",
+    title: "Sales Forms",
+    description:
+      "Purchase contracts, buyer disclosures, association forms, and riders",
+    icon: "document",
+  },
+];
 import { PHONE, FAX } from "@/lib/constants";
 
 export default async function AgentHubPage() {
@@ -23,6 +48,49 @@ export default async function AgentHubPage() {
   if (profile?.role !== "agent" && profile?.role !== "admin") {
     return <AccessDenied />;
   }
+
+  const quickAccessDocs = await prisma.document.findMany({
+    where: { quickAccess: true, published: true },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      external: true,
+      url: true,
+      storageKey: true,
+    },
+  });
+
+  const sectionCounts = await prisma.documentCategoryMembership.groupBy({
+    by: ["categoryId"],
+    _count: { documentId: true },
+  });
+  const categoryIdToCount = new Map(
+    sectionCounts.map((row) => [row.categoryId, row._count.documentId]),
+  );
+  const categoryMeta = await prisma.documentCategory.findMany({
+    select: { id: true, section: true },
+  });
+  const sectionTotals: Record<"office" | "listing" | "sales", number> = {
+    office: 0,
+    listing: 0,
+    sales: 0,
+  };
+  for (const cat of categoryMeta) {
+    const count = categoryIdToCount.get(cat.id) ?? 0;
+    if (cat.section === "office" || cat.section === "listing" || cat.section === "sales") {
+      sectionTotals[cat.section] += count;
+    }
+  }
+  const formCategories = FORM_SECTIONS.map((s) => ({
+    title: s.title,
+    description: s.description,
+    icon: s.icon,
+    count: sectionTotals[s.section],
+    href: "/dashboard/agent-hub/documents",
+  }));
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
@@ -71,11 +139,11 @@ export default async function AgentHubPage() {
           Quick Access
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {QUICK_ACCESS_DOCUMENTS.map((doc) => {
-            const isExternal = doc.external === true;
-            const isPdf = doc.url.endsWith(".pdf") && doc.url.startsWith("/api/documents/");
-            const viewerUrl = isPdf
-              ? `/dashboard/documents/viewer?doc=${encodeURIComponent(doc.url.replace("/api/documents/", ""))}`
+          {quickAccessDocs.map((doc) => {
+            const isExternal = doc.external;
+            const isPdf = (doc.storageKey ?? "").toLowerCase().endsWith(".pdf");
+            const viewerUrl = !isExternal && isPdf
+              ? `/dashboard/documents/viewer?slug=${encodeURIComponent(doc.slug)}`
               : null;
 
             const cardClasses =
@@ -104,16 +172,20 @@ export default async function AgentHubPage() {
 
             if (viewerUrl) {
               return (
-                <Link key={doc.name} href={viewerUrl} className={cardClasses}>
+                <Link key={doc.id} href={viewerUrl} className={cardClasses}>
                   {inner}
                 </Link>
               );
             }
 
+            const fallbackHref = isExternal
+              ? doc.url ?? "#"
+              : `/api/documents/by-slug/${encodeURIComponent(doc.slug)}`;
+
             return (
               <a
-                key={doc.name}
-                href={doc.url}
+                key={doc.id}
+                href={fallbackHref}
                 {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : { download: true })}
                 className={cardClasses}
               >
@@ -130,10 +202,10 @@ export default async function AgentHubPage() {
           Document Libraries
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {FORM_CATEGORIES.map((category) => (
+          {formCategories.map((category) => (
             <Link
               key={category.title}
-              href="/dashboard/agent-hub/documents"
+              href={category.href}
               className="group relative p-5 rounded-2xl bg-white border border-slate-100 hover:border-crimson-200 hover:shadow-card transition-all duration-300"
             >
               <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-crimson-600 to-navy-600 opacity-0 group-hover:opacity-100 transition-opacity" />

@@ -75,6 +75,7 @@ export type ExportInput = z.infer<typeof exportSchema>;
 
 export const draftSchema = z.object({
   documentPath: z.string().min(1),
+  documentId: z.string().optional().nullable(),
   documentName: z.string().min(1),
   annotations: z.object({
     version: z.literal(1),
@@ -89,6 +90,7 @@ export type DraftInput = z.infer<typeof draftSchema>;
 
 export const documentFavoriteSchema = z.object({
   documentPath: z.string().min(1),
+  documentId: z.string().optional().nullable(),
   documentName: z.string().min(1),
 });
 

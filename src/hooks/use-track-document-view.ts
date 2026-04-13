@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from "react";
 
-export function useTrackDocumentView(documentPath: string, documentName: string) {
+export function useTrackDocumentView(
+  documentPath: string,
+  documentName: string,
+  documentId: string | null = null,
+) {
   const tracked = useRef(false);
 
   useEffect(() => {
@@ -12,7 +16,7 @@ export function useTrackDocumentView(documentPath: string, documentName: string)
     fetch("/api/documents/recents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentPath, documentName }),
+      body: JSON.stringify({ documentPath, documentId, documentName }),
     }).catch(() => {});
-  }, [documentPath, documentName]);
+  }, [documentPath, documentId, documentName]);
 }

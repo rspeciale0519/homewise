@@ -26,6 +26,7 @@ import type {
 
 interface PdfViewerShellProps {
   documentPath: string;
+  documentId: string | null;
   documentName: string;
   fileUrl: string;
   agentInfo: AgentInfo;
@@ -44,6 +45,7 @@ function genId() {
 
 export function PdfViewerShell({
   documentPath,
+  documentId,
   documentName,
   fileUrl,
   agentInfo,
@@ -108,7 +110,7 @@ export function PdfViewerShell({
   const autoSaveRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Track document view
-  useTrackDocumentView(documentPath, documentName);
+  useTrackDocumentView(documentPath, documentName, documentId);
 
   // Auto-save draft when annotations change
   useEffect(() => {
@@ -120,6 +122,7 @@ export function PdfViewerShell({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           documentPath,
+          documentId,
           documentName,
           annotations: {
             version: 1,
@@ -133,7 +136,7 @@ export function PdfViewerShell({
       setIsDirty(false);
     }, 30000);
     return () => clearTimeout(autoSaveRef.current);
-  }, [isDirty, annotations, documentPath, documentName, selectedContact]);
+  }, [isDirty, annotations, documentPath, documentId, documentName, selectedContact]);
 
   // Mark dirty when annotations change
   useEffect(() => {
@@ -147,16 +150,16 @@ export function PdfViewerShell({
       await fetch("/api/documents/favorites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentPath, documentName }),
+        body: JSON.stringify({ documentPath, documentId, documentName }),
       }).catch(() => setIsFavorite(false));
     } else {
       await fetch("/api/documents/favorites", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentPath }),
+        body: JSON.stringify({ documentPath, documentId }),
       }).catch(() => setIsFavorite(true));
     }
-  }, [isFavorite, documentPath, documentName]);
+  }, [isFavorite, documentPath, documentId, documentName]);
 
   const handleZoomIn = useCallback(() => {
     setZoom((z) => Math.min(z + ZOOM_STEP, MAX_ZOOM));
@@ -416,6 +419,7 @@ export function PdfViewerShell({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               documentPath,
+              documentId,
               documentName,
               annotations: {
                 version: 1,

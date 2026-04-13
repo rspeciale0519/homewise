@@ -5,7 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getYouTubeEmbedUrl } from "@/lib/training/youtube";
-import { MarkCompleteButton } from "./mark-complete-button";
+import { MarkCompleteButton } from "@/components/training/mark-complete-button";
+import { AdminAuthoredHtml } from "@/components/training/admin-authored-html";
+import { resolveTrainingSlug } from "@/lib/slug/resolve";
+
+export const dynamic = "force-dynamic";
 
 function getFileExtension(fileKey: string): string {
   const parts = fileKey.split(".");
@@ -18,22 +22,44 @@ function getFilename(fileKey: string): string {
 }
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
-  const item = await prisma.trainingContent.findUnique({
-    where: { id },
+  const { slug } = await params;
+  const resolved = await resolveTrainingSlug(slug);
+  if (!resolved) return { title: "Training — Dashboard" };
+  const content = await prisma.trainingContent.findUnique({
+    where: { id: resolved.record.id },
     select: { title: true },
   });
-  return { title: item ? `${item.title} — Training` : "Training — Dashboard" };
+  return { title: content ? `${content.title} — Training` : "Training — Dashboard" };
 }
 
-export default async function TrainingDetailPage({ params }: PageProps) {
-  const { id } = await params;
+const CUID_PATTERN = /^c[a-z0-9]{20,}$/i;
 
-  const item = await prisma.trainingContent.findUnique({ where: { id } });
+export default async function TrainingDetailPage({ params }: PageProps) {
+  const { slug } = await params;
+
+  if (CUID_PATTERN.test(slug)) {
+    const byId = await prisma.trainingContent.findUnique({
+      where: { id: slug },
+      select: { slug: true },
+    });
+    if (byId?.slug) redirect(`/dashboard/training/${byId.slug}`);
+    if (!byId) notFound();
+  }
+
+  const resolved = await resolveTrainingSlug(slug);
+  if (!resolved) notFound();
+
+  if (resolved.redirectFrom && resolved.record.slug) {
+    redirect(`/dashboard/training/${resolved.record.slug}`);
+  }
+
+  const item = await prisma.trainingContent.findUnique({
+    where: { id: resolved.record.id },
+  });
   if (!item || !item.published) notFound();
 
   const supabase = await createClient();
@@ -41,20 +67,19 @@ export default async function TrainingDetailPage({ params }: PageProps) {
   if (!user) redirect("/login");
 
   const progress = await prisma.trainingProgress.findUnique({
-    where: { userId_contentId: { userId: user.id, contentId: id } },
+    where: { userId_contentId: { userId: user.id, contentId: item.id } },
   });
 
-  // Course context — find if this module belongs to a course
-  let courseContext: { id: string; name: string; items: { content: { id: string; title: string; type: string } }[] } | null = null;
-  let upNextModule: { id: string; title: string; type: string } | null = null;
+  let courseContext: { id: string; name: string; items: { content: { id: string; slug: string | null; title: string; type: string } }[] } | null = null;
+  let upNextModule: { id: string; slug: string | null; title: string; type: string } | null = null;
   try {
     const courseItems = await prisma.trainingCourseItem.findMany({
-      where: { contentId: id },
+      where: { contentId: item.id },
       include: {
         course: {
           include: {
             items: {
-              include: { content: { select: { id: true, title: true, type: true, duration: true } } },
+              include: { content: { select: { id: true, slug: true, title: true, type: true, duration: true } } },
               orderBy: { sortOrder: "asc" },
             },
           },
@@ -63,7 +88,7 @@ export default async function TrainingDetailPage({ params }: PageProps) {
     });
     courseContext = courseItems[0]?.course ?? null;
     if (courseContext) {
-      const currentIdx = courseContext.items.findIndex((i) => i.content.id === id);
+      const currentIdx = courseContext.items.findIndex((i) => i.content.id === item.id);
       const next = courseContext.items[currentIdx + 1];
       if (next) upNextModule = next.content;
     }
@@ -78,8 +103,7 @@ export default async function TrainingDetailPage({ params }: PageProps) {
     signedUrl = data?.signedUrl ?? null;
   }
 
-  // Body content from admin TipTap editor (trusted source)
-  const sanitizedBody = item.body ?? "";
+  const bodyHtml = item.body ?? "";
   const embedUrl = item.type === "video" && item.url ? getYouTubeEmbedUrl(item.url) : null;
   const fileExt = item.fileKey ? getFileExtension(item.fileKey) : null;
   const filename = item.fileKey ? getFilename(item.fileKey) : null;
@@ -93,7 +117,6 @@ export default async function TrainingDetailPage({ params }: PageProps) {
         Back to Training Hub
       </Link>
 
-      {/* Course context breadcrumb */}
       {courseContext && (
         <div className="mt-2 mb-4">
           <Link href={`/dashboard/training/courses/${courseContext.id}`} className="text-xs text-slate-500 hover:text-navy-600">
@@ -104,7 +127,6 @@ export default async function TrainingDetailPage({ params }: PageProps) {
 
       <h1 className="text-2xl font-bold text-navy-700 mb-3">{item.title}</h1>
 
-      {/* Metadata */}
       <div className="flex items-center gap-3 mb-6">
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
           item.type === "video" ? "bg-red-100 text-red-700" :
@@ -118,19 +140,16 @@ export default async function TrainingDetailPage({ params }: PageProps) {
         {item.duration && <span className="text-sm text-slate-400">{item.duration} min</span>}
       </div>
 
-      {/* Video embed */}
       {embedUrl && (
         <div className="aspect-video rounded-lg overflow-hidden mb-6 bg-black">
           <iframe src={embedUrl} className="w-full h-full" allowFullScreen title={item.title} />
         </div>
       )}
 
-      {/* PDF embed */}
       {signedUrl && fileExt === "pdf" && (
         <iframe src={signedUrl} className="w-full h-[600px] rounded-lg border border-slate-200 mb-6" title={filename ?? "PDF"} />
       )}
 
-      {/* Download for non-PDF files */}
       {signedUrl && fileExt && fileExt !== "pdf" && (
         <div className="mb-6">
           <a href={signedUrl} download className="inline-flex items-center gap-2 px-4 py-2 bg-navy-600 text-white rounded-lg text-sm font-semibold hover:bg-navy-700">
@@ -142,25 +161,27 @@ export default async function TrainingDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Body content - sanitized with DOMPurify above to prevent XSS */}
-      {sanitizedBody && (
+      {bodyHtml && (
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizedBody }} />
+          <AdminAuthoredHtml html={bodyHtml} className="prose prose-sm max-w-none" />
         </div>
       )}
 
-      {item.description && !sanitizedBody && (
+      {item.description && !bodyHtml && (
         <p className="text-sm text-slate-600 mb-6">{item.description}</p>
       )}
 
-      {/* Mark complete */}
-      <MarkCompleteButton contentId={id} completed={!!progress?.completed} />
+      <MarkCompleteButton contentId={item.id} completed={!!progress?.completed} />
 
-      {/* Up Next in Course */}
       {upNextModule && courseContext && (
         <div className="mt-8 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
           <p className="text-xs font-semibold text-indigo-600 mb-2">Up next in {courseContext.name}</p>
-          <Link href={`/dashboard/training/${upNextModule.id}`} className="flex items-center gap-3 group">
+          <Link
+            href={upNextModule.slug
+              ? `/dashboard/training/${upNextModule.slug}`
+              : `/dashboard/training/${upNextModule.id}`}
+            className="flex items-center gap-3 group"
+          >
             <div className="h-8 w-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
