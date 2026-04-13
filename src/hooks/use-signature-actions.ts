@@ -28,12 +28,15 @@ interface UseSignatureActionsReturn {
   activeSignatureImage: string | null;
   setActiveSignatureImage: (image: string | null) => void;
   showSavePrompt: string | null;
+  pendingUploadImage: string | null;
   savedSigs: SavedSignature[];
   showSignaturePad: boolean;
   setShowSignaturePad: (show: boolean) => void;
   handleSelectSignature: (imageData: string) => void;
   handleDrawNewSignature: () => void;
   handleUploadSignature: () => void;
+  handleUploadLabelSave: (label: string) => Promise<void>;
+  handleUploadLabelCancel: () => void;
   handleSignatureSave: (dataUrl: string) => void;
   handleSaveToProfile: (label: string) => Promise<void>;
   handleSkipSavePrompt: () => void;
@@ -51,6 +54,7 @@ export function useSignatureActions({
 }: UseSignatureActionsParams): UseSignatureActionsReturn {
   const [activeSignatureImage, setActiveSignatureImage] = useState<string | null>(null);
   const [showSavePrompt, setShowSavePrompt] = useState<string | null>(null);
+  const [pendingUploadImage, setPendingUploadImage] = useState<string | null>(null);
   const [savedSigs, setSavedSigs] = useState<SavedSignature[]>(savedSignatures);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
 
@@ -71,34 +75,45 @@ export function useSignatureActions({
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".png,image/png";
-    input.onchange = async () => {
+    input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = async () => {
+      reader.onload = () => {
         const dataUrl = reader.result as string;
-        const label = prompt("Enter a label for this signature:");
-        if (!label?.trim()) return;
-        try {
-          const res = await fetch("/api/documents/signatures", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ label: label.trim(), imageData: dataUrl, source: "uploaded" }),
-          });
-          if (!res.ok) throw new Error("Failed to save");
-          const { signature } = await res.json();
-          setSavedSigs((prev) => [
-            ...prev,
-            { id: signature.id, label: signature.label, imageData: signature.imageData },
-          ]);
-          setActiveSignatureImage(dataUrl);
-          setActiveMode("signature");
-        } catch { /* upload failed silently */ }
+        setPendingUploadImage(dataUrl);
       };
       reader.readAsDataURL(file);
     };
     input.click();
-  }, [setActiveMode]);
+  }, []);
+
+  const handleUploadLabelSave = useCallback(
+    async (label: string) => {
+      if (!pendingUploadImage) return;
+      try {
+        const res = await fetch("/api/documents/signatures", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ label, imageData: pendingUploadImage, source: "uploaded" }),
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        const { signature } = await res.json();
+        setSavedSigs((prev) => [
+          ...prev,
+          { id: signature.id, label: signature.label, imageData: signature.imageData },
+        ]);
+        setActiveSignatureImage(pendingUploadImage);
+        setActiveMode("signature");
+      } catch { /* upload failed silently */ }
+      setPendingUploadImage(null);
+    },
+    [pendingUploadImage, setActiveMode]
+  );
+
+  const handleUploadLabelCancel = useCallback(() => {
+    setPendingUploadImage(null);
+  }, []);
 
   const handleSaveToProfile = useCallback(
     async (label: string) => {
@@ -189,12 +204,15 @@ export function useSignatureActions({
     activeSignatureImage,
     setActiveSignatureImage,
     showSavePrompt,
+    pendingUploadImage,
     savedSigs,
     showSignaturePad,
     setShowSignaturePad,
     handleSelectSignature,
     handleDrawNewSignature,
     handleUploadSignature,
+    handleUploadLabelSave,
+    handleUploadLabelCancel,
     handleSignatureSave,
     handleSaveToProfile,
     handleSkipSavePrompt,

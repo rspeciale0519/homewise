@@ -5,7 +5,7 @@ import { ViewerToolbar } from "@/components/documents/viewer-toolbar";
 import { PdfPageRenderer } from "@/components/documents/pdf-page-renderer";
 import { SignaturePad } from "@/components/documents/signature-pad";
 import { EmailDialog } from "@/components/documents/email-dialog";
-import { SaveSignaturePrompt } from "@/components/documents/save-signature-prompt";
+import { SignatureLabelModal } from "@/components/documents/signature-label-modal";
 import { useTrackDocumentView } from "@/hooks/use-track-document-view";
 import { useSignatureActions } from "@/hooks/use-signature-actions";
 import {
@@ -73,11 +73,14 @@ export function PdfViewerShell({
   // Signature state (extracted hook)
   const {
     showSavePrompt,
+    pendingUploadImage,
     savedSigs,
     showSignaturePad,
     handleSelectSignature,
     handleDrawNewSignature,
     handleUploadSignature,
+    handleUploadLabelSave,
+    handleUploadLabelCancel,
     handleSignatureSave,
     handleSaveToProfile,
     handleSkipSavePrompt,
@@ -388,9 +391,20 @@ export function PdfViewerShell({
       />
 
       {showSavePrompt && (
-        <SaveSignaturePrompt
+        <SignatureLabelModal
+          title="Save this signature to your profile?"
           onSave={handleSaveToProfile}
-          onSkip={handleSkipSavePrompt}
+          onCancel={handleSkipSavePrompt}
+        />
+      )}
+
+      {pendingUploadImage && (
+        <SignatureLabelModal
+          title="Name your uploaded signature"
+          onSave={handleUploadLabelSave}
+          onCancel={handleUploadLabelCancel}
+          saveText="Save Signature"
+          cancelText="Cancel"
         />
       )}
 
