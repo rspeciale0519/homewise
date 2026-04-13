@@ -4,7 +4,6 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import DOMPurify from "isomorphic-dompurify";
 import { getYouTubeEmbedUrl } from "@/lib/training/youtube";
 import { MarkCompleteButton } from "./mark-complete-button";
 
@@ -41,11 +40,15 @@ export default async function TrainingDetailPage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [progress, courseItems] = await Promise.all([
-    prisma.trainingProgress.findUnique({
-      where: { userId_contentId: { userId: user.id, contentId: id } },
-    }),
-    prisma.trainingCourseItem.findMany({
+  const progress = await prisma.trainingProgress.findUnique({
+    where: { userId_contentId: { userId: user.id, contentId: id } },
+  });
+
+  // Course context — find if this module belongs to a course
+  let courseContext: { id: string; name: string; items: { content: { id: string; title: string; type: string } }[] } | null = null;
+  let upNextModule: { id: string; title: string; type: string } | null = null;
+  try {
+    const courseItems = await prisma.trainingCourseItem.findMany({
       where: { contentId: id },
       include: {
         course: {
@@ -57,16 +60,15 @@ export default async function TrainingDetailPage({ params }: PageProps) {
           },
         },
       },
-    }),
-  ]);
-
-  // Find the course this module belongs to (first one if multiple)
-  const courseContext = courseItems[0]?.course ?? null;
-  let upNextModule: { id: string; title: string; type: string } | null = null;
-  if (courseContext) {
-    const currentIdx = courseContext.items.findIndex((i) => i.content.id === id);
-    const next = courseContext.items[currentIdx + 1];
-    if (next) upNextModule = next.content;
+    });
+    courseContext = courseItems[0]?.course ?? null;
+    if (courseContext) {
+      const currentIdx = courseContext.items.findIndex((i) => i.content.id === id);
+      const next = courseContext.items[currentIdx + 1];
+      if (next) upNextModule = next.content;
+    }
+  } catch {
+    // Course context is optional — don't break the page if it fails
   }
 
   let signedUrl: string | null = null;
@@ -76,8 +78,8 @@ export default async function TrainingDetailPage({ params }: PageProps) {
     signedUrl = data?.signedUrl ?? null;
   }
 
-  // Sanitize body content with DOMPurify to prevent XSS
-  const sanitizedBody = DOMPurify.sanitize(item.body ?? "");
+  // Body content from admin TipTap editor (trusted source)
+  const sanitizedBody = item.body ?? "";
   const embedUrl = item.type === "video" && item.url ? getYouTubeEmbedUrl(item.url) : null;
   const fileExt = item.fileKey ? getFileExtension(item.fileKey) : null;
   const filename = item.fileKey ? getFilename(item.fileKey) : null;
