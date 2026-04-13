@@ -493,6 +493,7 @@ model LeadRoutingRule {
 model TrainingContent {
   id           String              @id @default(cuid())
   title        String
+  slug         String?             @unique
   description  String?
   category     String
   audience     String              @default("agent")
@@ -514,6 +515,18 @@ model TrainingContent {
   @@index([category])
   @@index([audience])
   @@index([published])
+}
+
+model SlugHistory {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  oldSlug    String
+  createdAt  DateTime @default(now())
+
+  @@unique([entityType, oldSlug])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 model TrainingCourse {
