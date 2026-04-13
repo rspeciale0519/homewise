@@ -26,7 +26,7 @@ export function DocumentList({ categories }: DocumentListProps) {
               {category.documents.length}
             </span>
           </div>
-          <div className="grid gap-2">
+          <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
             {category.documents.map((doc) => {
               const isExternal = doc.external === true;
               const viewerUrl = !isExternal ? getViewerUrl(doc.url) : null;
@@ -57,7 +57,7 @@ export function DocumentList({ categories }: DocumentListProps) {
                       {doc.name}
                     </p>
                     {doc.description && (
-                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
                         {doc.description}
                       </p>
                     )}
