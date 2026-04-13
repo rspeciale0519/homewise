@@ -67,3 +67,75 @@ export async function recordTrainingSlugChange(
     create: { entityType: "training", entityId, oldSlug },
   });
 }
+
+export async function isSlugTakenForDocument(
+  slug: string,
+  excludeId?: string,
+): Promise<boolean> {
+  const [current, history] = await Promise.all([
+    prisma.document.findFirst({
+      where: { slug, ...(excludeId ? { NOT: { id: excludeId } } : {}) },
+      select: { id: true },
+    }),
+    prisma.slugHistory.findFirst({
+      where: {
+        entityType: "document",
+        oldSlug: slug,
+        ...(excludeId ? { NOT: { entityId: excludeId } } : {}),
+      },
+      select: { id: true },
+    }),
+  ]);
+  return Boolean(current || history);
+}
+
+export async function isSlugTakenForDocumentCategory(
+  slug: string,
+  excludeId?: string,
+): Promise<boolean> {
+  const current = await prisma.documentCategory.findFirst({
+    where: { slug, ...(excludeId ? { NOT: { id: excludeId } } : {}) },
+    select: { id: true },
+  });
+  return Boolean(current);
+}
+
+export async function resolveDocumentSlug(slug: string): Promise<
+  SlugLookup<{
+    id: string;
+    slug: string;
+  }> | null
+> {
+  const current = await prisma.document.findUnique({
+    where: { slug },
+    select: { id: true, slug: true },
+  });
+  if (current) return { record: current };
+
+  const history = await prisma.slugHistory.findUnique({
+    where: { entityType_oldSlug: { entityType: "document", oldSlug: slug } },
+  });
+  if (!history) return null;
+
+  const target = await prisma.document.findUnique({
+    where: { id: history.entityId },
+    select: { id: true, slug: true },
+  });
+  if (!target) return null;
+
+  return { record: target, redirectFrom: slug };
+}
+
+export async function recordDocumentSlugChange(
+  entityId: string,
+  oldSlug: string,
+): Promise<void> {
+  if (!oldSlug) return;
+  await prisma.slugHistory.upsert({
+    where: {
+      entityType_oldSlug: { entityType: "document", oldSlug },
+    },
+    update: { entityId },
+    create: { entityType: "document", entityId, oldSlug },
+  });
+}
