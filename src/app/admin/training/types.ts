@@ -1,6 +1,7 @@
 export interface TrainingItem {
   id: string;
   title: string;
+  slug: string | null;
   description: string | null;
   body: string | null;
   category: string;

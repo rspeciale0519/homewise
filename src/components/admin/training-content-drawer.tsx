@@ -5,8 +5,10 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { TiptapEditor } from "@/components/admin/tiptap-editor";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { FileUploadZone, formatFileSize } from "@/components/admin/file-upload-zone";
+import { SlugField } from "@/components/admin/slug-field";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
+import { slugify } from "@/lib/slug/slugify";
 import { extractYouTubeId, getYouTubeThumbnailUrl } from "@/lib/training/youtube";
 import type { TrainingItem, UploadedFile } from "@/app/admin/training/types";
 
@@ -41,6 +43,9 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugAutoSync, setSlugAutoSync] = useState(true);
+  const [slugError, setSlugError] = useState<string | null>(null);
   const [category, setCategory] = useState(categories[0] ?? "");
   const [type, setType] = useState("video");
   const [audience, setAudience] = useState("agent");
@@ -58,8 +63,11 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
 
   useEffect(() => {
     if (!open) return;
+    setSlugError(null);
     if (item) {
       setTitle(item.title);
+      setSlug(item.slug ?? "");
+      setSlugAutoSync(!item.slug);
       setCategory(item.category);
       setType(item.type);
       setAudience(item.audience);
@@ -73,12 +81,18 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
       );
       setThumbnailUrl(item.thumbnailUrl ?? null);
     } else {
-      setTitle(""); setCategory(categories[0] ?? ""); setType("video");
+      setTitle(""); setSlug(""); setSlugAutoSync(true);
+      setCategory(categories[0] ?? ""); setType("video");
       setAudience("agent"); setBody(""); setVideoUrl(""); setDuration("");
       setTagsStr(""); setPublished(false); setUploadedFile(null);
       setThumbnailUrl(null);
     }
   }, [open, item, categories]);
+
+  useEffect(() => {
+    if (!slugAutoSync) return;
+    setSlug(slugify(title));
+  }, [title, slugAutoSync]);
 
   const handleGeneratePdfThumbnail = useCallback(async (fileKey: string) => {
     try {
@@ -145,9 +159,12 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
   const handleSave = async () => {
     if (!title.trim()) { toast("Title is required", "error"); return; }
     setSaving(true);
+    setSlugError(null);
     try {
       const payload = {
-        title: title.trim(), category, type, audience,
+        title: title.trim(),
+        slug: slug || undefined,
+        category, type, audience,
         body: body || undefined, url: videoUrl || undefined,
         fileKey: uploadedFile?.fileKey ?? undefined,
         thumbnailUrl: thumbnailUrl ?? undefined,
@@ -164,7 +181,12 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
       }
       onSaved();
       onClose();
-    } catch (err) { toast((err as Error).message, "error"); }
+    } catch (err) {
+      const message = (err as Error).message;
+      const field = (err as { field?: string }).field;
+      if (field === "slug") setSlugError(message);
+      else toast(message, "error");
+    }
     setSaving(false);
   };
 
@@ -207,6 +229,17 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Title *</label>
                 <input value={title} onChange={(e) => setTitle(e.target.value)} className={INPUT_CLASS} placeholder="Content title" />
               </div>
+
+              <SlugField
+                value={slug}
+                onChange={(next) => { setSlug(next); setSlugError(null); }}
+                onUserEdit={() => setSlugAutoSync(false)}
+                title={title}
+                autoSync={slugAutoSync}
+                onResetAutoSync={() => { setSlugAutoSync(true); setSlug(slugify(title)); setSlugError(null); }}
+                routePrefix="/dashboard/training/"
+                error={slugError}
+              />
 
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Category</label>

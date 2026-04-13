@@ -104,7 +104,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
           return (
             <Link
               key={item.content.id}
-              href={`/dashboard/training/${item.content.id}`}
+              href={item.content.slug ? `/dashboard/training/${item.content.slug}` : `/dashboard/training/${item.content.id}`}
               className={`flex items-center gap-4 p-3 rounded-xl border transition-all hover:shadow-sm ${
                 isNext ? "border-indigo-300 bg-indigo-50/50" :
                 isCompleted ? "border-slate-100 bg-slate-50/50" :
