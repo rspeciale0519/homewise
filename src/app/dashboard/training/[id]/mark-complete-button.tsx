@@ -54,7 +54,7 @@ export function MarkCompleteButton({
       >
         {/* Checkmark — visible by default, hidden on hover */}
         <svg
-          className="h-4.5 w-4.5 transition-all duration-200 group-hover:hidden"
+          className="h-3.5 w-3.5 transition-all duration-200 group-hover:hidden"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -64,7 +64,7 @@ export function MarkCompleteButton({
         </svg>
         {/* Undo arrow — hidden by default, visible on hover */}
         <svg
-          className="h-4.5 w-4.5 hidden group-hover:block transition-all duration-200"
+          className="h-3.5 w-3.5 hidden group-hover:block transition-all duration-200"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
