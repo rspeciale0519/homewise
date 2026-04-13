@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { documentPath, annotations, action } = parsed.data;
+  const { documentPath, annotations, formValues, flatten, action } = parsed.data;
 
   if (documentPath.includes("..") || documentPath.startsWith("/")) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  const mergedPdf = await mergePdfWithAnnotations(pdfBuffer, annotations);
+  const mergedPdf = await mergePdfWithAnnotations(pdfBuffer, annotations, formValues, flatten);
   const fileName = path.basename(documentPath, ".pdf") + "-filled.pdf";
 
   if (action === "download") {

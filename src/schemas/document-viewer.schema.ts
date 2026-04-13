@@ -54,9 +54,17 @@ export const annotationSchema = z.object({
   height: z.number().optional(),
 });
 
+export const formValueSchema = z.union([
+  z.string(),
+  z.boolean(),
+  z.array(z.string()),
+]);
+
 export const exportSchema = z.object({
   documentPath: z.string().min(1),
   annotations: z.array(annotationSchema),
+  formValues: z.record(z.string(), formValueSchema).optional(),
+  flatten: z.boolean().optional(),
   action: z.enum(["download", "email"]),
   emailTo: z.string().email().optional(),
   emailSubject: z.string().max(200).optional(),

@@ -65,3 +65,11 @@ export interface SavedSignature {
   imageData: string;
   source: "drawn" | "uploaded";
 }
+
+import type { DocumentProps } from "react-pdf";
+
+type OnDocumentLoadSuccess = NonNullable<DocumentProps["onLoadSuccess"]>;
+export type PdfDocumentHandle = Parameters<OnDocumentLoadSuccess>[0];
+
+export type FormFieldValue = string | string[] | boolean;
+export type FormValues = Record<string, FormFieldValue>;

@@ -5,14 +5,19 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { AnnotationOverlay } from "@/components/documents/annotation-overlay";
-import type { Annotation, AnnotationMode, PageDimensions } from "@/types/document-viewer";
+import type {
+  Annotation,
+  AnnotationMode,
+  PageDimensions,
+  PdfDocumentHandle,
+} from "@/types/document-viewer";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PdfPageRendererProps {
   fileUrl: string;
   scale: number;
-  onDocumentLoad: (numPages: number) => void;
+  onDocumentLoad: (pdf: PdfDocumentHandle) => void;
   onPageInView: (pageNumber: number) => void;
   annotations: Annotation[];
   activeMode: AnnotationMode;
@@ -44,9 +49,9 @@ export function PdfPageRenderer({
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const onDocumentLoadSuccess = useCallback(
-    ({ numPages: total }: { numPages: number }) => {
-      setNumPages(total);
-      onDocumentLoad(total);
+    (pdf: PdfDocumentHandle) => {
+      setNumPages(pdf.numPages);
+      onDocumentLoad(pdf);
     },
     [onDocumentLoad]
   );
@@ -153,7 +158,8 @@ export function PdfPageRenderer({
                       pageNumber={pageNum}
                       scale={scale}
                       renderTextLayer={false}
-                      renderAnnotationLayer={false}
+                      renderAnnotationLayer={true}
+                      renderForms={true}
                       loading={<PageSkeleton />}
                       onRenderSuccess={() => handlePageRender(pageNum)}
                     />

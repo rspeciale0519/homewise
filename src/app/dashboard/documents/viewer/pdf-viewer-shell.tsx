@@ -19,7 +19,9 @@ import type {
   AgentFieldKey,
   AgentInfo,
   ContactFieldKey,
+  FormValues,
   PageDimensions,
+  PdfDocumentHandle,
 } from "@/types/document-viewer";
 
 interface PdfViewerShellProps {
@@ -47,10 +49,11 @@ export function PdfViewerShell({
   agentInfo,
   savedSignatures,
 }: PdfViewerShellProps) {
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(1.5);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const pdfDocRef = useRef<PdfDocumentHandle | null>(null);
 
   // Annotation state
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -167,8 +170,46 @@ export function PdfViewerShell({
     setZoom(1);
   }, []);
 
-  const handleDocumentLoad = useCallback((total: number) => {
-    setNumPages(total);
+  const handleDocumentLoad = useCallback((pdf: PdfDocumentHandle) => {
+    pdfDocRef.current = pdf;
+    setNumPages(pdf.numPages);
+  }, []);
+
+  const collectFormValues = useCallback(async (): Promise<FormValues> => {
+    const pdf = pdfDocRef.current;
+    if (!pdf) return {};
+
+    const storage = new Map<string, { value?: unknown }>();
+    for (const [key, entry] of pdf.annotationStorage as Iterable<
+      [unknown, unknown]
+    >) {
+      if (typeof key === "string" && entry && typeof entry === "object") {
+        storage.set(key, entry as { value?: unknown });
+      }
+    }
+    if (storage.size === 0) return {};
+
+    const fieldObjects = await pdf.getFieldObjects().catch(() => null);
+    if (!fieldObjects) return {};
+
+    const values: FormValues = {};
+    for (const [fieldName, objects] of Object.entries(fieldObjects)) {
+      for (const obj of objects as Array<{ id: string }>) {
+        const entry = storage.get(obj.id);
+        if (!entry) continue;
+        const raw = entry.value;
+        if (raw === undefined || raw === null) continue;
+        if (
+          typeof raw === "string" ||
+          typeof raw === "boolean" ||
+          (Array.isArray(raw) && raw.every((v) => typeof v === "string"))
+        ) {
+          values[fieldName] = raw as FormValues[string];
+          break;
+        }
+      }
+    }
+    return values;
   }, []);
 
   const handlePageInView = useCallback((pageNumber: number) => {
@@ -271,10 +312,11 @@ export function PdfViewerShell({
   const handleDownload = useCallback(async () => {
     setIsExporting(true);
     try {
+      const formValues = await collectFormValues();
       const res = await fetch("/api/documents/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentPath, annotations, action: "download" }),
+        body: JSON.stringify({ documentPath, annotations, formValues, action: "download" }),
       });
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
@@ -287,15 +329,22 @@ export function PdfViewerShell({
     } finally {
       setIsExporting(false);
     }
-  }, [documentPath, documentName, annotations]);
+  }, [documentPath, documentName, annotations, collectFormValues]);
 
   const handlePrint = useCallback(async () => {
     setIsExporting(true);
     try {
+      const formValues = await collectFormValues();
       const res = await fetch("/api/documents/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentPath, annotations, action: "download" }),
+        body: JSON.stringify({
+          documentPath,
+          annotations,
+          formValues,
+          flatten: true,
+          action: "download",
+        }),
       });
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
@@ -307,16 +356,19 @@ export function PdfViewerShell({
     } finally {
       setIsExporting(false);
     }
-  }, [documentPath, annotations]);
+  }, [documentPath, annotations, collectFormValues]);
 
   const handleEmailSend = useCallback(
     async (to: string, subject: string, message: string) => {
+      const formValues = await collectFormValues();
       const res = await fetch("/api/documents/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           documentPath,
           annotations,
+          formValues,
+          flatten: true,
           action: "email",
           emailTo: to,
           emailSubject: subject,
@@ -328,7 +380,7 @@ export function PdfViewerShell({
         throw new Error(body?.error ?? "Failed to send email");
       }
     },
-    [documentPath, annotations]
+    [documentPath, annotations, collectFormValues]
   );
 
   return (
