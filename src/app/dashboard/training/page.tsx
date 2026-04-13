@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { CourseCard } from "@/components/training/course-card";
@@ -40,30 +41,59 @@ export default async function AgentTrainingPage() {
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
-      {/* Header */}
-      <div className="mb-6">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
-          Agent Tools
+      {/* Header — matches Document Library pattern */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
+          <Link href="/dashboard/agent-hub" className="hover:text-navy-600 transition-colors">
+            Resources Hub
+          </Link>
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+          <span className="text-slate-500">Training Hub</span>
+        </div>
+        <h1 className="font-serif text-display-sm sm:text-display-md text-navy-700">
+          Training Hub
+        </h1>
+        <p className="mt-2 text-sm text-slate-500">
+          Videos, guides, and resources to help you succeed.
         </p>
-        <h1 className="text-xl font-bold text-navy-800 tracking-tight">Training Hub</h1>
-        <div className="flex gap-5 mt-3 pt-3 border-t border-slate-100">
-          <div className="text-[10px] text-slate-500">
-            <span className="text-sm font-bold text-navy-800">{courses.length}</span> Courses
+        {/* Stats */}
+        <div className="flex items-center gap-6 mt-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+              {courses.length}
+            </span>
+            <span className="text-sm text-slate-500">Courses</span>
           </div>
-          <div className="text-[10px] text-slate-500">
-            <span className="text-sm font-bold text-green-600">{completedCount}</span> Completed
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-green-700 font-medium bg-green-50 px-2 py-0.5 rounded-full">
+              {completedCount}
+            </span>
+            <span className="text-sm text-slate-500">Completed</span>
           </div>
-          <div className="text-[10px] text-slate-500">
-            <span className="text-sm font-bold text-navy-800">{content.length}</span> Modules
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+              {content.length}
+            </span>
+            <span className="text-sm text-slate-500">Modules</span>
           </div>
         </div>
       </div>
 
       {/* Courses */}
       {courses.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-lg font-semibold text-navy-800 mb-4">📚 Your Courses</h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
+        <section className="mb-10">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="h-1.5 w-1.5 rounded-full bg-crimson-600" />
+            <h2 className="font-serif text-xl font-semibold text-navy-700">
+              Your Courses
+            </h2>
+            <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+              {courses.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
             {courses.map((course) => {
               const modules = course.items.map((i) => ({
                 id: i.content.id,
@@ -90,18 +120,23 @@ export default async function AgentTrainingPage() {
         </section>
       )}
 
-      {/* Divider */}
-      {courses.length > 0 && <hr className="border-slate-100 mb-6" />}
-
       {/* All Modules */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-navy-800">All Modules</h2>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="h-1.5 w-1.5 rounded-full bg-crimson-600" />
+            <h2 className="font-serif text-xl font-semibold text-navy-700">
+              All Modules
+            </h2>
+            <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+              {content.length}
+            </span>
+          </div>
           <TrainingFilters categories={categories} types={types} />
         </div>
         <div
           id="modules-grid"
-          className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5"
+          className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4"
         >
           {content.map((item) => (
             <div
