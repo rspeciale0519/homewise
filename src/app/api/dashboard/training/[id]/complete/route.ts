@@ -85,3 +85,41 @@ export async function POST(
 
   return NextResponse.json({ success: true });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id: contentId } = await params;
+
+  await prisma.trainingProgress.updateMany({
+    where: { userId: user.id, contentId },
+    data: { completed: false, completedAt: null },
+  });
+
+  // Re-open any course enrollments that were marked complete
+  const courseItems = await prisma.trainingCourseItem.findMany({
+    where: { contentId },
+    select: { courseId: true },
+  });
+
+  if (courseItems.length > 0) {
+    await prisma.trainingEnrollment.updateMany({
+      where: {
+        userId: user.id,
+        courseId: { in: courseItems.map((c) => c.courseId) },
+        completedAt: { not: null },
+      },
+      data: { completedAt: null },
+    });
+  }
+
+  return NextResponse.json({ success: true });
+}
