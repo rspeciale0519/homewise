@@ -3,25 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { AccessDenied } from "@/components/dashboard/access-denied";
 import { PdfViewerShell } from "./pdf-viewer-shell";
-import {
-  OFFICE_FORMS,
-  LISTING_FORMS,
-  SALES_FORMS,
-  QUICK_ACCESS_DOCUMENTS,
-} from "@/data/content/agent-resources";
-import type { ResourceDocument } from "@/data/content/agent-resources";
+import { resolveDocumentSlug } from "@/lib/slug/resolve";
 import type { AgentInfo } from "@/types/document-viewer";
-
-function findDocumentByPath(docPath: string): ResourceDocument | undefined {
-  const apiUrl = `/api/documents/${docPath}`;
-  const allDocs = [
-    ...QUICK_ACCESS_DOCUMENTS,
-    ...OFFICE_FORMS.flatMap((c) => c.documents),
-    ...LISTING_FORMS.flatMap((c) => c.documents),
-    ...SALES_FORMS.flatMap((c) => c.documents),
-  ];
-  return allDocs.find((d) => d.url === apiUrl);
-}
 
 async function getAgentData(userId: string) {
   const profile = await prisma.userProfile.findUnique({
@@ -91,20 +74,48 @@ export default async function DocumentViewerPage({
   }
 
   const params = await searchParams;
-  const docPath =
-    typeof params.doc === "string" ? params.doc : undefined;
+  const slugParam = typeof params.slug === "string" ? params.slug : undefined;
+  const docPath = typeof params.doc === "string" ? params.doc : undefined;
 
-  if (!docPath) {
+  let documentId: string | null = null;
+  let documentSlug: string | null = null;
+  let documentName = "Document";
+  let fileUrl: string | null = null;
+
+  if (slugParam) {
+    const resolved = await resolveDocumentSlug(slugParam);
+    if (!resolved) redirect("/dashboard/agent-hub/documents");
+    if (resolved.redirectFrom && resolved.record.slug) {
+      redirect(`/dashboard/documents/viewer?slug=${resolved.record.slug}`);
+    }
+    const doc = await prisma.document.findUnique({
+      where: { id: resolved.record.id },
+    });
+    if (!doc || !doc.published) redirect("/dashboard/agent-hub/documents");
+    if (doc.external && doc.url) {
+      redirect(doc.url);
+    }
+    documentId = doc.id;
+    documentSlug = doc.slug;
+    documentName = doc.name;
+    fileUrl = `/api/documents/by-slug/${encodeURIComponent(doc.slug)}`;
+  } else if (docPath) {
+    if (docPath.includes("..") || docPath.startsWith("/")) {
+      redirect("/dashboard/agent-hub/documents");
+    }
+    // Prefer to redirect legacy path URLs to slug URLs when we can match them
+    const matched = await prisma.document.findFirst({
+      where: { storageKey: docPath },
+      select: { slug: true },
+    });
+    if (matched) {
+      redirect(`/dashboard/documents/viewer?slug=${matched.slug}`);
+    }
+    documentName = docPath.split("/").pop() ?? "Document";
+    fileUrl = `/api/documents/${docPath}`;
+  } else {
     redirect("/dashboard/agent-hub/documents");
   }
-
-  if (docPath.includes("..") || docPath.startsWith("/")) {
-    redirect("/dashboard/agent-hub/documents");
-  }
-
-  const docMeta = findDocumentByPath(docPath);
-  const documentName = docMeta?.name ?? docPath.split("/").pop() ?? "Document";
-  const fileUrl = `/api/documents/${docPath}`;
 
   const agent = await getAgentData(user.id);
   const agentInfo: AgentInfo = {
@@ -120,9 +131,10 @@ export default async function DocumentViewerPage({
 
   return (
     <PdfViewerShell
-      documentPath={docPath}
+      documentPath={docPath ?? documentSlug ?? ""}
+      documentId={documentId}
       documentName={documentName}
-      fileUrl={fileUrl}
+      fileUrl={fileUrl ?? ""}
       agentInfo={agentInfo}
       savedSignatures={savedSignatures}
     />

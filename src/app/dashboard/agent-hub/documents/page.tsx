@@ -3,12 +3,31 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { AccessDenied } from "@/components/dashboard/access-denied";
-import {
-  OFFICE_FORMS,
-  LISTING_FORMS,
-  SALES_FORMS,
-} from "@/data/content/agent-resources";
 import { DocumentTabs } from "./document-tabs";
+import type {
+  DocumentSection,
+  LibraryCategory,
+  LibraryDocument,
+  LibrarySection,
+} from "@/types/document-library";
+
+const SECTION_ORDER: Array<{ key: DocumentSection; label: string }> = [
+  { key: "office", label: "Office" },
+  { key: "listing", label: "Listing" },
+  { key: "sales", label: "Sales" },
+];
+
+const VIEWABLE_EXTENSIONS = [".pdf"];
+
+function isViewable(doc: {
+  external: boolean;
+  url: string | null;
+  storageKey: string | null;
+}): boolean {
+  if (doc.external) return false;
+  const ext = (doc.storageKey ?? doc.url ?? "").toLowerCase();
+  return VIEWABLE_EXTENSIONS.some((e) => ext.endsWith(e));
+}
 
 export default async function DocumentLibraryPage() {
   const supabase = await createClient();
@@ -24,27 +43,55 @@ export default async function DocumentLibraryPage() {
     return <AccessDenied />;
   }
 
-  const tabs = [
-    {
-      label: "Office",
-      count: OFFICE_FORMS.reduce((acc, c) => acc + c.documents.length, 0),
-      categories: OFFICE_FORMS,
+  const categories = await prisma.documentCategory.findMany({
+    orderBy: [{ section: "asc" }, { sortOrder: "asc" }],
+    include: {
+      documents: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          document: true,
+        },
+      },
     },
-    {
-      label: "Listing",
-      count: LISTING_FORMS.reduce((acc, c) => acc + c.documents.length, 0),
-      categories: LISTING_FORMS,
-    },
-    {
-      label: "Sales",
-      count: SALES_FORMS.reduce((acc, c) => acc + c.documents.length, 0),
-      categories: SALES_FORMS,
-    },
-  ];
+  });
+
+  const tabs: LibrarySection[] = SECTION_ORDER.map(({ key, label }) => {
+    const sectionCategories: LibraryCategory[] = categories
+      .filter((c) => c.section === key)
+      .map((c) => ({
+        id: c.id,
+        title: c.title,
+        description: c.description,
+        documents: c.documents
+          .filter((m) => m.document.published)
+          .map((m): LibraryDocument => ({
+            id: m.document.id,
+            slug: m.document.slug,
+            name: m.document.name,
+            description: m.document.description,
+            external: m.document.external,
+            url: m.document.url,
+            storageKey: m.document.storageKey,
+            storageProvider: m.document.storageProvider,
+            viewable: isViewable({
+              external: m.document.external,
+              url: m.document.url,
+              storageKey: m.document.storageKey,
+            }),
+          })),
+      }))
+      .filter((c) => c.documents.length > 0);
+
+    const count = sectionCategories.reduce(
+      (sum, c) => sum + c.documents.length,
+      0,
+    );
+
+    return { label, key, count, categories: sectionCategories };
+  });
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
-      {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
           <Link href="/dashboard/agent-hub" className="hover:text-navy-600 transition-colors">
@@ -63,7 +110,6 @@ export default async function DocumentLibraryPage() {
         </p>
       </div>
 
-      {/* Tabbed document browser */}
       <DocumentTabs tabs={tabs} />
     </div>
   );

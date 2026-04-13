@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { AccessDenied } from "@/components/dashboard/access-denied";
 import {
   COMPANY_IDENTIFIERS,
-  QUICK_ACCESS_DOCUMENTS,
   FORM_CATEGORIES,
 } from "@/data/content/agent-resources";
 import { PHONE, FAX } from "@/lib/constants";
@@ -23,6 +22,20 @@ export default async function AgentHubPage() {
   if (profile?.role !== "agent" && profile?.role !== "admin") {
     return <AccessDenied />;
   }
+
+  const quickAccessDocs = await prisma.document.findMany({
+    where: { quickAccess: true, published: true },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      external: true,
+      url: true,
+      storageKey: true,
+    },
+  });
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
@@ -71,11 +84,11 @@ export default async function AgentHubPage() {
           Quick Access
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {QUICK_ACCESS_DOCUMENTS.map((doc) => {
-            const isExternal = doc.external === true;
-            const isPdf = doc.url.endsWith(".pdf") && doc.url.startsWith("/api/documents/");
-            const viewerUrl = isPdf
-              ? `/dashboard/documents/viewer?doc=${encodeURIComponent(doc.url.replace("/api/documents/", ""))}`
+          {quickAccessDocs.map((doc) => {
+            const isExternal = doc.external;
+            const isPdf = (doc.storageKey ?? "").toLowerCase().endsWith(".pdf");
+            const viewerUrl = !isExternal && isPdf
+              ? `/dashboard/documents/viewer?slug=${encodeURIComponent(doc.slug)}`
               : null;
 
             const cardClasses =
@@ -104,16 +117,20 @@ export default async function AgentHubPage() {
 
             if (viewerUrl) {
               return (
-                <Link key={doc.name} href={viewerUrl} className={cardClasses}>
+                <Link key={doc.id} href={viewerUrl} className={cardClasses}>
                   {inner}
                 </Link>
               );
             }
 
+            const fallbackHref = isExternal
+              ? doc.url ?? "#"
+              : `/api/documents/by-slug/${encodeURIComponent(doc.slug)}`;
+
             return (
               <a
-                key={doc.name}
-                href={doc.url}
+                key={doc.id}
+                href={fallbackHref}
                 {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : { download: true })}
                 className={cardClasses}
               >
