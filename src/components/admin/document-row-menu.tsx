@@ -1,8 +1,7 @@
 "use client";
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { MoreVertical, Trash2, Eye, Link2, Star } from "lucide-react";
-import { useToast } from "@/components/admin/admin-toast";
+import { MoreVertical, Trash2, Eye, Star } from "lucide-react";
 import type { DocumentItem } from "@/app/admin/documents/types";
 
 interface DocumentRowMenuProps {
@@ -16,21 +15,12 @@ export function DocumentRowMenu({
   onRequestDelete,
   onToggleQuickAccess,
 }: DocumentRowMenuProps) {
-  const { toast } = useToast();
-  const documentPath = `/api/documents/by-slug/${document.slug}`;
-
   const handlePreview = () => {
-    window.open(documentPath, "_blank", "noopener,noreferrer");
-  };
-
-  const handleCopyLink = async () => {
-    try {
-      const fullUrl = `${window.location.origin}${documentPath}`;
-      await navigator.clipboard.writeText(fullUrl);
-      toast("Link copied", "success");
-    } catch {
-      toast("Failed to copy link", "error");
-    }
+    window.open(
+      `/api/documents/by-slug/${document.slug}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   const neutralItem =
@@ -73,17 +63,6 @@ export function DocumentRowMenu({
           <DropdownMenu.Item
             onSelect={(e) => {
               e.preventDefault();
-              handleCopyLink();
-            }}
-            className={neutralItem}
-          >
-            <Link2 className="h-4 w-4" />
-            Copy link
-          </DropdownMenu.Item>
-
-          <DropdownMenu.Item
-            onSelect={(e) => {
-              e.preventDefault();
               onToggleQuickAccess(document);
             }}
             className={neutralItem}
@@ -91,9 +70,7 @@ export function DocumentRowMenu({
             <Star
               className={`h-4 w-4 ${document.quickAccess ? "fill-amber-500 text-amber-500" : ""}`}
             />
-            {document.quickAccess
-              ? "Remove from Quick Access"
-              : "Add to Quick Access"}
+            Quick Access
           </DropdownMenu.Item>
 
           <DropdownMenu.Separator className="h-px bg-slate-100 my-1" />
