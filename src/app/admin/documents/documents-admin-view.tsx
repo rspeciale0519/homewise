@@ -114,6 +114,22 @@ export function DocumentsAdminView() {
     }
   };
 
+  const handleToggleQuickAccess = async (doc: DocumentItem) => {
+    try {
+      await adminFetch(`/api/admin/documents/${doc.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ quickAccess: !doc.quickAccess }),
+      });
+      toast(
+        doc.quickAccess ? "Removed from Quick Access" : "Added to Quick Access",
+        "success",
+      );
+      fetchAll();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!pendingDelete) return;
     setDeleting(true);
@@ -279,6 +295,7 @@ export function DocumentsAdminView() {
                           <DocumentRowMenu
                             document={doc}
                             onRequestDelete={(d) => setPendingDelete(d)}
+                            onToggleQuickAccess={handleToggleQuickAccess}
                           />
                         </div>
                       </td>

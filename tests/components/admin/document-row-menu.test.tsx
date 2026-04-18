@@ -31,7 +31,13 @@ const makeDoc = (overrides: Partial<DocumentItem> = {}): DocumentItem => ({
 
 describe("DocumentRowMenu", () => {
   it("renders trigger with a document-specific aria-label", () => {
-    render(<DocumentRowMenu document={makeDoc()} onRequestDelete={vi.fn()} />);
+    render(
+      <DocumentRowMenu
+        document={makeDoc()}
+        onRequestDelete={vi.fn()}
+        onToggleQuickAccess={vi.fn()}
+      />,
+    );
     expect(
       screen.getByRole("button", { name: "Actions for Lead Paint Disclosure" }),
     ).toBeInTheDocument();
@@ -42,6 +48,7 @@ describe("DocumentRowMenu", () => {
       <DocumentRowMenu
         document={makeDoc({ name: "Broker Relationship Disclosure" })}
         onRequestDelete={vi.fn()}
+        onToggleQuickAccess={vi.fn()}
       />,
     );
     expect(
@@ -53,7 +60,11 @@ describe("DocumentRowMenu", () => {
     const parentClick = vi.fn();
     const { container } = render(
       <div onClick={parentClick}>
-        <DocumentRowMenu document={makeDoc()} onRequestDelete={vi.fn()} />
+        <DocumentRowMenu
+          document={makeDoc()}
+          onRequestDelete={vi.fn()}
+          onToggleQuickAccess={vi.fn()}
+        />
       </div>,
     );
     const trigger = container.querySelector(
