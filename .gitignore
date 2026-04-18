@@ -57,6 +57,7 @@ public/videos/*.mp4
 .agents/
 .superpowers/
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 skills-lock.json
 
 # temp docs
