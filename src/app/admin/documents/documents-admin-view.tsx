@@ -5,6 +5,8 @@ import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import { DocumentDrawer } from "@/components/admin/document-drawer";
 import { DocumentCategoryDrawer } from "@/components/admin/document-category-drawer";
+import { DocumentRowMenu } from "@/components/admin/document-row-menu";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import type {
   DocumentCategoryItem,
   DocumentItem,
@@ -33,6 +35,8 @@ export function DocumentsAdminView() {
   const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
   const [catDrawerOpen, setCatDrawerOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<DocumentCategoryItem | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<DocumentItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -50,7 +54,6 @@ export function DocumentsAdminView() {
   }, [toast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching
     fetchAll();
   }, [fetchAll]);
 
@@ -108,6 +111,39 @@ export function DocumentsAdminView() {
       fetchAll();
     } catch (err) {
       toast((err as Error).message, "error");
+    }
+  };
+
+  const handleToggleQuickAccess = async (doc: DocumentItem) => {
+    try {
+      await adminFetch(`/api/admin/documents/${doc.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ quickAccess: !doc.quickAccess }),
+      });
+      toast(
+        doc.quickAccess ? "Removed from Quick Access" : "Added to Quick Access",
+        "success",
+      );
+      fetchAll();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await adminFetch(`/api/admin/documents/${pendingDelete.id}`, {
+        method: "DELETE",
+      });
+      toast("Document deleted", "success");
+      setPendingDelete(null);
+      fetchAll();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -196,6 +232,7 @@ export function DocumentsAdminView() {
                     <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Categories</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Source</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Status</th>
+                    <th className="w-12" aria-hidden="true" />
                   </tr>
                 </thead>
                 <tbody>
@@ -250,11 +287,23 @@ export function DocumentsAdminView() {
                           {doc.published ? "Published" : "Draft"}
                         </button>
                       </td>
+                      <td className="py-2 px-2 w-12">
+                        <div
+                          className="inline-flex"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DocumentRowMenu
+                            document={doc}
+                            onRequestDelete={(d) => setPendingDelete(d)}
+                            onToggleQuickAccess={handleToggleQuickAccess}
+                          />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-slate-400 text-sm">
+                      <td colSpan={6} className="py-8 text-center text-slate-400 text-sm">
                         No documents match.
                       </td>
                     </tr>
@@ -318,6 +367,23 @@ export function DocumentsAdminView() {
         onClose={() => { setCatDrawerOpen(false); setEditingCat(null); }}
         item={editingCat}
         onSaved={fetchAll}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete Document"
+        message={
+          pendingDelete
+            ? `This will permanently delete "${pendingDelete.name}" and its file. Agent favorites and drafts that reference this document will remain but show as missing. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete permanently"
+        typeToConfirm="DELETE"
+        busy={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          if (!deleting) setPendingDelete(null);
+        }}
       />
     </div>
   );

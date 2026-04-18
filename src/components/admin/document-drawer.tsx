@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { SlugField } from "@/components/admin/slug-field";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch, AdminFetchError } from "@/lib/admin-fetch";
@@ -59,7 +58,6 @@ export function DocumentDrawer({
   const [quickAccess, setQuickAccess] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const availableCategories = useMemo(
     () => categories.filter((c) => c.section === section),
@@ -215,19 +213,6 @@ export function DocumentDrawer({
       else toast(fetchErr.message, "error");
     }
     setSaving(false);
-  };
-
-  const handleDelete = async () => {
-    if (!item) return;
-    try {
-      await adminFetch(`/api/admin/documents/${item.id}`, { method: "DELETE" });
-      toast("Document deleted", "success");
-      onSaved();
-      onClose();
-    } catch (err) {
-      toast((err as Error).message, "error");
-    }
-    setConfirmDelete(false);
   };
 
   return (
@@ -460,27 +445,10 @@ export function DocumentDrawer({
               >
                 Cancel
               </button>
-              {item && (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="ml-auto px-4 py-2 text-sm text-red-600 hover:text-red-700 font-semibold"
-                >
-                  Delete
-                </button>
-              )}
             </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
-
-      <ConfirmDialog
-        open={confirmDelete}
-        title="Delete Document"
-        message={`Are you sure you want to delete "${name}"? Agent favorites and drafts pointing at this document will remain (with the document removed), but the file will be permanently deleted.`}
-        confirmLabel="Delete"
-        onConfirm={handleDelete}
-        onCancel={() => setConfirmDelete(false)}
-      />
     </>
   );
 }
