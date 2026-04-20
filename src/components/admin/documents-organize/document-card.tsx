@@ -67,7 +67,8 @@ export function DocumentCard(props: DocumentCardProps) {
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : searchMatches ? 1 : 0.3,
+    opacity: isDragging ? 0 : searchMatches ? 1 : 0.3,
+    visibility: isDragging ? "hidden" : "visible",
     zIndex: isDragging ? 10 : "auto",
   };
 

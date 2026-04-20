@@ -59,7 +59,14 @@ export function DndContextProvider({
       onDragCancel={onDragCancel}
     >
       {children}
-      <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+      <DragOverlay
+        dropAnimation={{
+          duration: 150,
+          easing: "cubic-bezier(0.2, 0, 0, 1)",
+        }}
+        adjustScale={false}
+        zIndex={10000}
+      >
         {overlay ?? null}
       </DragOverlay>
     </DndContext>

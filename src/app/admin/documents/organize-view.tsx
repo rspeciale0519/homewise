@@ -109,7 +109,12 @@ export function OrganizeView() {
     (event: DragStartEvent) => {
       if (!tree) return;
       const data = event.active.data.current as
-        | { type?: "document" | "category"; documentId?: string; categoryId?: string; fromCategoryId?: string }
+        | {
+            type?: "document" | "category";
+            documentId?: string;
+            categoryId?: string;
+            fromCategoryId?: string;
+          }
         | undefined;
       if (data?.type === "document" && data.documentId && data.fromCategoryId) {
         const cat = allCategoriesOfTree(tree).find(
@@ -134,11 +139,8 @@ export function OrganizeView() {
 
   const handleDragEnd = useCallback(
     async (event: Parameters<typeof rawHandleDragEnd>[0]) => {
-      try {
-        await rawHandleDragEnd(event);
-      } finally {
-        clearActiveDrag();
-      }
+      clearActiveDrag();
+      await rawHandleDragEnd(event);
     },
     [rawHandleDragEnd, clearActiveDrag],
   );
