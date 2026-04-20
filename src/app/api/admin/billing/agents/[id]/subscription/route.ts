@@ -47,7 +47,7 @@ export async function PUT(
   }
 
   try {
-    const bundleConfigs = await prisma.bundleConfig.findMany({
+    const bundleConfigs = await prisma.productConfig.findMany({
       where: { isActive: true },
     });
 

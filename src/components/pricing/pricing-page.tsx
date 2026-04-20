@@ -7,14 +7,14 @@ import { BundleCard } from "./bundle-card";
 import { FeaturePicker } from "./feature-picker";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import type { BundleWithFeatures, FeatureEntitlement } from "@/app/(marketing)/pricing/page";
+import type { ProductWithFeatures, FeatureEntitlement } from "@/app/(marketing)/pricing/page";
 
 type BillingInterval = "monthly" | "annual";
 type PlanMode = "bundles" | "build_your_own";
 
 interface PricingPageProps {
-  bundles: BundleWithFeatures[];
-  addOns: BundleWithFeatures[];
+  bundles: ProductWithFeatures[];
+  addOns: ProductWithFeatures[];
   entitlements: FeatureEntitlement[];
 }
 

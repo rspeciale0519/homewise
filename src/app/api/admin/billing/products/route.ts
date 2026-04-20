@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
-import { bundleCreateSchema } from "@/schemas/billing.schema";
+import { productCreateSchema } from "@/schemas/billing.schema";
 
 export async function GET() {
   const auth = await requireAdminApi();
   if (isError(auth)) return auth.error;
 
   try {
-    const bundles = await prisma.bundleConfig.findMany({
+    const bundles = await prisma.productConfig.findMany({
       include: { features: true },
       orderBy: { sortOrder: "asc" },
     });
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = bundleCreateSchema.safeParse(body);
+  const parsed = productCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", details: parsed.error.flatten() },
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    const bundle = await prisma.bundleConfig.create({
+    const bundle = await prisma.productConfig.create({
       data: {
         name,
         slug,

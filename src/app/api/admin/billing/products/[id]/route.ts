@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
-import { bundleUpdateSchema } from "@/schemas/billing.schema";
+import { productUpdateSchema } from "@/schemas/billing.schema";
 
 export async function GET(
   _request: NextRequest,
@@ -14,7 +14,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const bundle = await prisma.bundleConfig.findUnique({
+    const bundle = await prisma.productConfig.findUnique({
       where: { id },
       include: { features: true },
     });
@@ -48,7 +48,7 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = bundleUpdateSchema.safeParse(body);
+  const parsed = productUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", details: parsed.error.flatten() },
@@ -57,7 +57,7 @@ export async function PUT(
   }
 
   try {
-    const existing = await prisma.bundleConfig.findUnique({ where: { id } });
+    const existing = await prisma.productConfig.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
     }
@@ -118,24 +118,24 @@ export async function PUT(
         : {}),
     };
 
-    const bundle = await prisma.bundleConfig.update({
+    const bundle = await prisma.productConfig.update({
       where: { id },
       data: bundleData,
       include: { features: true },
     });
 
     if (parsed.data.featureKeys !== undefined) {
-      await prisma.bundleFeature.deleteMany({ where: { bundleId: id } });
+      await prisma.productFeature.deleteMany({ where: { productId: id } });
       if (parsed.data.featureKeys.length > 0) {
-        await prisma.bundleFeature.createMany({
+        await prisma.productFeature.createMany({
           data: parsed.data.featureKeys.map((featureKey) => ({
-            bundleId: id,
+            productId: id,
             featureKey,
           })),
         });
       }
 
-      const updated = await prisma.bundleConfig.findUnique({
+      const updated = await prisma.productConfig.findUnique({
         where: { id },
         include: { features: true },
       });
@@ -161,12 +161,12 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const existing = await prisma.bundleConfig.findUnique({ where: { id } });
+    const existing = await prisma.productConfig.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
     }
 
-    const bundle = await prisma.bundleConfig.update({
+    const bundle = await prisma.productConfig.update({
       where: { id },
       data: { isActive: false },
     });

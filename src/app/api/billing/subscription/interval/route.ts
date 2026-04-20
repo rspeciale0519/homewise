@@ -47,8 +47,8 @@ export async function PUT(request: NextRequest) {
     const existingItems = agent.subscription.items;
     const stripeSubscriptionId = agent.subscription.stripeSubscriptionId;
 
-    // Load all active bundle configs to map current price IDs to new interval price IDs
-    const bundleConfigs = await prisma.bundleConfig.findMany({
+    // Load all active product configs to map current price IDs to new interval price IDs
+    const bundleConfigs = await prisma.productConfig.findMany({
       where: { isActive: true },
     });
 

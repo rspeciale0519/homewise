@@ -5,9 +5,9 @@ vi.mock("@/lib/prisma", () => ({
     agent: { findUnique: vi.fn() },
     entitlementConfig: { findUnique: vi.fn() },
     subscription: { findUnique: vi.fn() },
-    bundleFeature: { findFirst: vi.fn() },
+    productFeature: { findFirst: vi.fn() },
     usageRecord: { findUnique: vi.fn(), upsert: vi.fn() },
-    bundleConfig: { findFirst: vi.fn() },
+    productConfig: { findFirst: vi.fn() },
   },
 }));
 
@@ -23,14 +23,14 @@ const mockEntitlementConfig = prisma.entitlementConfig as {
 const mockSubscription = prisma.subscription as {
   findUnique: ReturnType<typeof vi.fn>;
 };
-const mockBundleFeature = prisma.bundleFeature as {
+const mockProductFeature = prisma.productFeature as {
   findFirst: ReturnType<typeof vi.fn>;
 };
 const mockUsageRecord = prisma.usageRecord as {
   findUnique: ReturnType<typeof vi.fn>;
   upsert: ReturnType<typeof vi.fn>;
 };
-const mockBundleConfig = prisma.bundleConfig as {
+const mockProductConfig = prisma.productConfig as {
   findFirst: ReturnType<typeof vi.fn>;
 };
 
@@ -111,7 +111,7 @@ describe("checkEntitlement", () => {
       items: [{ productType: "pro" }],
     });
 
-    mockBundleFeature.findFirst.mockResolvedValue({
+    mockProductFeature.findFirst.mockResolvedValue({
       featureKey: "pro_feature",
       limit: null,
     });
@@ -145,7 +145,7 @@ describe("checkEntitlement", () => {
       items: [{ productType: "pro" }],
     });
 
-    mockBundleFeature.findFirst.mockResolvedValue({
+    mockProductFeature.findFirst.mockResolvedValue({
       featureKey: "pro_feature",
       limit: 10,
     });
@@ -181,7 +181,7 @@ describe("checkEntitlement", () => {
       items: [{ productType: "pro" }],
     });
 
-    mockBundleFeature.findFirst.mockResolvedValue({
+    mockProductFeature.findFirst.mockResolvedValue({
       featureKey: "pro_feature",
       limit: 10,
     });
@@ -212,7 +212,7 @@ describe("checkEntitlement", () => {
 
     mockUsageRecord.findUnique.mockResolvedValue({ usageCount: 2 });
 
-    mockBundleConfig.findFirst.mockResolvedValue({ slug: "pro-bundle" });
+    mockProductConfig.findFirst.mockResolvedValue({ slug: "pro-bundle" });
 
     const result = await checkEntitlement("agent-1", "gated_feature");
 
@@ -222,7 +222,7 @@ describe("checkEntitlement", () => {
       limit: 5,
       upgradeBundle: null,
     });
-    expect(mockBundleConfig.findFirst).not.toHaveBeenCalled();
+    expect(mockProductConfig.findFirst).not.toHaveBeenCalled();
   });
 
   it("returns not allowed with upgradeBundle slug when agent has no bundle and is at/over free limit", async () => {
@@ -239,7 +239,7 @@ describe("checkEntitlement", () => {
 
     mockUsageRecord.findUnique.mockResolvedValue({ usageCount: 5 });
 
-    mockBundleConfig.findFirst.mockResolvedValue({ slug: "pro-bundle" });
+    mockProductConfig.findFirst.mockResolvedValue({ slug: "pro-bundle" });
 
     const result = await checkEntitlement("agent-1", "gated_feature");
 
@@ -263,7 +263,7 @@ describe("checkEntitlement", () => {
 
     mockSubscription.findUnique.mockResolvedValue(null);
 
-    mockBundleConfig.findFirst.mockResolvedValue({ slug: "enterprise-bundle" });
+    mockProductConfig.findFirst.mockResolvedValue({ slug: "enterprise-bundle" });
 
     const result = await checkEntitlement("agent-1", "premium_feature");
 
@@ -293,7 +293,7 @@ describe("checkEntitlement", () => {
       items: [{ productType: "pro" }],
     });
 
-    mockBundleFeature.findFirst.mockResolvedValue({
+    mockProductFeature.findFirst.mockResolvedValue({
       featureKey: "pro_feature",
       limit: null,
     });
@@ -327,13 +327,13 @@ describe("checkEntitlement", () => {
     });
 
     mockUsageRecord.findUnique.mockResolvedValue({ usageCount: 1 });
-    mockBundleConfig.findFirst.mockResolvedValue({ slug: "pro-bundle" });
+    mockProductConfig.findFirst.mockResolvedValue({ slug: "pro-bundle" });
 
     const result = await checkEntitlement("agent-1", "pro_feature");
 
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(2);
-    expect(mockBundleFeature.findFirst).not.toHaveBeenCalled();
+    expect(mockProductFeature.findFirst).not.toHaveBeenCalled();
   });
 
   describe("platform gating", () => {
@@ -371,7 +371,7 @@ describe("checkEntitlement", () => {
         currentPeriodStart: new Date("2026-04-01"),
         items: [{ productType: "ai_power_tools" }],
       });
-      mockBundleFeature.findFirst.mockResolvedValue({ limit: null });
+      mockProductFeature.findFirst.mockResolvedValue({ limit: null });
 
       const result = await checkEntitlement("agent-hw", "ai_cma_reports");
 
@@ -392,7 +392,7 @@ describe("checkEntitlement", () => {
         currentPeriodStart: new Date("2026-04-01"),
         items: [{ productType: "ai_power_tools" }],
       });
-      mockBundleFeature.findFirst.mockResolvedValue({ limit: null });
+      mockProductFeature.findFirst.mockResolvedValue({ limit: null });
 
       const result = await checkEntitlement("agent-riusa", "ai_cma_reports");
 
@@ -409,7 +409,7 @@ describe("checkEntitlement", () => {
         platforms: ["homewise"],
       });
       mockSubscription.findUnique.mockResolvedValue(null);
-      mockBundleConfig.findFirst.mockResolvedValue({ slug: "ai_power_tools" });
+      mockProductConfig.findFirst.mockResolvedValue({ slug: "ai_power_tools" });
 
       const result = await checkEntitlement("unknown-agent", "ai_cma_reports");
 

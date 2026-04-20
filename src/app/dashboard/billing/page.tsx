@@ -40,7 +40,7 @@ export default async function BillingPage() {
         },
       },
     }),
-    prisma.bundleConfig.findMany({
+    prisma.productConfig.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
       select: {
@@ -72,11 +72,11 @@ export default async function BillingPage() {
     }),
   ]);
 
-  if (!agent) {
+  if (!agent && profile.role !== "admin") {
     return <AccessDenied />;
   }
 
-  const subscription = agent.subscription
+  const subscription = agent?.subscription
     ? {
         status: agent.subscription.status,
         currentPeriodStart: agent.subscription.currentPeriodStart.toISOString(),
@@ -92,15 +92,16 @@ export default async function BillingPage() {
       }
     : null;
 
-  const paymentRecords = agent.paymentRecords.map((pr) => ({
-    id: pr.id,
-    amount: pr.amount,
-    currency: pr.currency,
-    paymentType: pr.paymentType,
-    status: pr.status,
-    notes: pr.notes,
-    createdAt: pr.createdAt.toISOString(),
-  }));
+  const paymentRecords =
+    agent?.paymentRecords.map((pr) => ({
+      id: pr.id,
+      amount: pr.amount,
+      currency: pr.currency,
+      paymentType: pr.paymentType,
+      status: pr.status,
+      notes: pr.notes,
+      createdAt: pr.createdAt.toISOString(),
+    })) ?? [];
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
@@ -119,7 +120,7 @@ export default async function BillingPage() {
       <BillingDashboard
         subscription={subscription}
         paymentRecords={paymentRecords}
-        hasStripeCustomer={!!agent.stripeCustomer}
+        hasStripeCustomer={!!agent?.stripeCustomer}
         bundleConfigs={bundleConfigs}
         entitlements={entitlements}
       />

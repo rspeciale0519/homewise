@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-interface BundleFeature {
+interface ProductFeature {
   id: string;
   featureKey: string;
   limit: number | null;
 }
 
-interface Bundle {
+interface Product {
   id: string;
   name: string;
   slug: string;
@@ -21,12 +21,12 @@ interface Bundle {
   isActive: boolean;
   sortOrder: number;
   platforms: string[];
-  features: BundleFeature[];
+  features: ProductFeature[];
 }
 
 type FormMode = "closed" | "create" | "edit";
 
-interface BundleFormData {
+interface ProductFormData {
   name: string;
   slug: string;
   description: string;
@@ -38,7 +38,7 @@ interface BundleFormData {
   featureKeys: string;
 }
 
-const emptyForm: BundleFormData = {
+const emptyForm: ProductFormData = {
   name: "",
   slug: "",
   description: "",
@@ -54,22 +54,40 @@ function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export function BundleManagement() {
-  const [bundles, setBundles] = useState<Bundle[]>([]);
+function categorize(productType: string): "Memberships" | "Bundles" | "Add-ons" {
+  if (productType === "membership") return "Memberships";
+  if (productType === "add_on") return "Add-ons";
+  return "Bundles";
+}
+
+function getProductTypeLabel(productType: string): string {
+  if (productType === "membership") return "Membership";
+  if (productType === "add_on") return "Add-on";
+  return "Bundle";
+}
+
+const CATEGORY_ORDER: ("Memberships" | "Bundles" | "Add-ons")[] = [
+  "Memberships",
+  "Bundles",
+  "Add-ons",
+];
+
+export function ProductManagement() {
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [formMode, setFormMode] = useState<FormMode>("closed");
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<BundleFormData>(emptyForm);
+  const [form, setForm] = useState<ProductFormData>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchBundles = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/billing/bundles");
+      const res = await fetch("/api/admin/billing/products");
       if (res.ok) {
         const data = await res.json();
-        setBundles(data.bundles);
+        setProducts(data.bundles);
       }
     } finally {
       setLoading(false);
@@ -77,8 +95,8 @@ export function BundleManagement() {
   }, []);
 
   useEffect(() => {
-    fetchBundles();
-  }, [fetchBundles]);
+    fetchProducts();
+  }, [fetchProducts]);
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -87,27 +105,27 @@ export function BundleManagement() {
     setError(null);
   };
 
-  const openEdit = (bundle: Bundle) => {
+  const openEdit = (product: Product) => {
     setForm({
-      name: bundle.name,
-      slug: bundle.slug,
-      description: bundle.description,
-      monthlyAmount: (bundle.monthlyAmount / 100).toFixed(2),
-      annualAmount: (bundle.annualAmount / 100).toFixed(2),
-      productType: bundle.productType,
-      isActive: bundle.isActive,
-      sortOrder: String(bundle.sortOrder),
-      featureKeys: bundle.features.map((f) => f.featureKey).join(", "),
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      monthlyAmount: (product.monthlyAmount / 100).toFixed(2),
+      annualAmount: (product.annualAmount / 100).toFixed(2),
+      productType: product.productType,
+      isActive: product.isActive,
+      sortOrder: String(product.sortOrder),
+      featureKeys: product.features.map((f) => f.featureKey).join(", "),
     });
-    setEditId(bundle.id);
+    setEditId(product.id);
     setFormMode("edit");
     setError(null);
   };
 
-  const handleArchive = async (bundleId: string) => {
-    const res = await fetch(`/api/admin/billing/bundles/${bundleId}`, { method: "DELETE" });
+  const handleArchive = async (productId: string) => {
+    const res = await fetch(`/api/admin/billing/products/${productId}`, { method: "DELETE" });
     if (res.ok) {
-      fetchBundles();
+      fetchProducts();
     }
   };
 
@@ -143,8 +161,8 @@ export function BundleManagement() {
 
     try {
       const url = formMode === "create"
-        ? "/api/admin/billing/bundles"
-        : `/api/admin/billing/bundles/${editId}`;
+        ? "/api/admin/billing/products"
+        : `/api/admin/billing/products/${editId}`;
       const method = formMode === "create" ? "POST" : "PUT";
 
       const res = await fetch(url, {
@@ -155,12 +173,12 @@ export function BundleManagement() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Failed to save bundle");
+        setError(data.error ?? "Failed to save product");
         return;
       }
 
       setFormMode("closed");
-      fetchBundles();
+      fetchProducts();
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -168,7 +186,7 @@ export function BundleManagement() {
     }
   };
 
-  const updateField = (field: keyof BundleFormData, value: string | boolean) => {
+  const updateField = (field: keyof ProductFormData, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -180,16 +198,21 @@ export function BundleManagement() {
     );
   }
 
+  const grouped = CATEGORY_ORDER.map((cat) => ({
+    category: cat,
+    items: products.filter((p) => categorize(p.productType) === cat),
+  })).filter((g) => g.items.length > 0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{bundles.length} bundle(s)</p>
+        <p className="text-sm text-slate-500">{products.length} product(s)</p>
         {formMode === "closed" && (
           <button
             onClick={openCreate}
             className="px-4 py-2 rounded-lg text-xs font-semibold bg-crimson-600 text-white hover:bg-crimson-700 transition-colors"
           >
-            + Create Bundle
+            + Create Product
           </button>
         )}
       </div>
@@ -197,12 +220,12 @@ export function BundleManagement() {
       {formMode !== "closed" && (
         <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
           <h3 className="font-semibold text-navy-700 text-sm mb-4">
-            {formMode === "create" ? "Create Bundle" : "Edit Bundle"}
+            {formMode === "create" ? "Create Product" : `Edit ${getProductTypeLabel(form.productType)}`}
           </h3>
           {formMode === "edit" && (
             <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Existing bundles keep their original slug, product type, and prices so
-              active Stripe subscriptions stay in sync. Create a new bundle if you need
+              Existing products keep their original slug, product type, and prices so
+              active Stripe subscriptions stay in sync. Create a new product if you need
               a new pricing structure.
             </p>
           )}
@@ -271,7 +294,7 @@ export function BundleManagement() {
                   value={form.productType}
                   onChange={(e) => updateField("productType", e.target.value)}
                   required
-                  placeholder="e.g. core, marketing, premium"
+                  placeholder="e.g. membership, ai_power_tools, add_on"
                   disabled={formMode === "edit"}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:bg-slate-50 disabled:text-slate-400"
                 />
@@ -312,7 +335,7 @@ export function BundleManagement() {
             {error && <p className="text-xs text-red-600">{error}</p>}
             <div className="flex gap-2 pt-2">
               <Button type="submit" size="sm" loading={saving}>
-                {formMode === "create" ? "Create Bundle" : "Save Changes"}
+                {formMode === "create" ? "Create Product" : "Save Changes"}
               </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => setFormMode("closed")}>
                 Cancel
@@ -338,68 +361,80 @@ export function BundleManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {bundles.map((bundle) => (
-                <tr key={bundle.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="px-5 py-3">
-                    <p className="font-medium text-navy-700">{bundle.name}</p>
-                    <p className="text-[10px] text-slate-400">{bundle.slug}</p>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {bundle.platforms.map((p) => (
-                        <span
-                          key={p}
-                          className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                            p === "homewise"
-                              ? "bg-navy-50 text-navy-700"
-                              : "bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {p}
+              {grouped.map(({ category, items }) => (
+                <>
+                  <tr key={`header-${category}`}>
+                    <td
+                      colSpan={8}
+                      className="px-5 py-2 bg-slate-50 text-slate-500 uppercase tracking-wide text-[10px] font-semibold"
+                    >
+                      {category}
+                    </td>
+                  </tr>
+                  {items.map((product) => (
+                    <tr key={product.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-5 py-3">
+                        <p className="font-medium text-navy-700">{product.name}</p>
+                        <p className="text-[10px] text-slate-400">{product.slug}</p>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {product.platforms.map((p) => (
+                            <span
+                              key={p}
+                              className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                p === "homewise"
+                                  ? "bg-navy-50 text-navy-700"
+                                  : "bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              {p}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                          {product.productType}
                         </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
-                      {bundle.productType}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-navy-700">{formatCents(bundle.monthlyAmount)}</td>
-                  <td className="px-5 py-3 text-navy-700">{formatCents(bundle.annualAmount)}</td>
-                  <td className="px-5 py-3 text-slate-500">{bundle.features.length}</td>
-                  <td className="px-5 py-3">
-                    <span className={cn(
-                      "text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full",
-                      bundle.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"
-                    )}>
-                      {bundle.isActive ? "Active" : "Archived"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => openEdit(bundle)}
-                        className="text-xs font-medium text-navy-600 hover:text-navy-800 transition-colors"
-                      >
-                        Edit
-                      </button>
-                      {bundle.isActive && (
-                        <button
-                          onClick={() => handleArchive(bundle.id)}
-                          className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors"
-                        >
-                          Archive
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                      </td>
+                      <td className="px-5 py-3 text-navy-700">{formatCents(product.monthlyAmount)}</td>
+                      <td className="px-5 py-3 text-navy-700">{formatCents(product.annualAmount)}</td>
+                      <td className="px-5 py-3 text-slate-500">{product.features.length}</td>
+                      <td className="px-5 py-3">
+                        <span className={cn(
+                          "text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full",
+                          product.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"
+                        )}>
+                          {product.isActive ? "Active" : "Archived"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openEdit(product)}
+                            className="text-xs font-medium text-navy-600 hover:text-navy-800 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          {product.isActive && (
+                            <button
+                              onClick={() => handleArchive(product.id)}
+                              className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors"
+                            >
+                              Archive
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </>
               ))}
-              {bundles.length === 0 && (
+              {products.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-5 py-10 text-center text-slate-400">
-                    No bundles configured yet.
+                    No products configured yet.
                   </td>
                 </tr>
               )}

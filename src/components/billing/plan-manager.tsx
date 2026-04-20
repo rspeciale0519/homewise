@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { PlanBundleCard } from "./plan-bundle-card";
 import { FeaturePicker } from "@/components/pricing/feature-picker";
 import type {
-  BundleWithFeatures,
+  ProductWithFeatures,
   FeatureEntitlement,
 } from "@/app/(marketing)/pricing/page";
 
@@ -22,7 +22,7 @@ interface SubscriptionItem {
 interface PlanManagerProps {
   subscription: { items: SubscriptionItem[] } | null;
   items?: SubscriptionItem[];
-  bundleConfigs: BundleWithFeatures[];
+  bundleConfigs: ProductWithFeatures[];
   entitlements: FeatureEntitlement[];
   billingInterval?: BillingInterval;
   onBillingIntervalChange?: (interval: BillingInterval) => void;

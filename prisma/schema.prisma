@@ -934,10 +934,10 @@ model EntitlementConfig {
   updatedAt       DateTime @updatedAt
 }
 
-model BundleConfig {
-  id              String          @id @default(cuid())
+model ProductConfig {
+  id              String           @id @default(cuid())
   name            String
-  slug            String          @unique
+  slug            String           @unique
   description     String
   stripeProductId String?
   monthlyPriceId  String?
@@ -945,24 +945,24 @@ model BundleConfig {
   monthlyAmount   Int
   annualAmount    Int
   productType     String
-  isActive        Boolean         @default(true)
-  sortOrder       Int             @default(0)
-  platforms       String[]        @default(["homewise"])
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  features        BundleFeature[]
+  isActive        Boolean          @default(true)
+  sortOrder       Int              @default(0)
+  platforms       String[]         @default(["homewise"])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  features        ProductFeature[]
 }
 
-model BundleFeature {
-  id         String       @id @default(cuid())
-  bundleId   String
-  bundle     BundleConfig @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+model ProductFeature {
+  id         String        @id @default(cuid())
+  productId  String
+  product    ProductConfig @relation(fields: [productId], references: [id], onDelete: Cascade)
   featureKey String
   limit      Int?
-  createdAt  DateTime     @default(now())
+  createdAt  DateTime      @default(now())
 
-  @@unique([bundleId, featureKey])
-  @@index([bundleId])
+  @@unique([productId, featureKey])
+  @@index([productId])
 }
 
 model UsageRecord {

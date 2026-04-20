@@ -53,7 +53,7 @@ export async function PUT(request: NextRequest) {
   const slugsToRemove = removeBundles as string[];
 
   try {
-    const bundleConfigs = await prisma.bundleConfig.findMany({
+    const bundleConfigs = await prisma.productConfig.findMany({
       where: {
         isActive: true,
         slug: { in: [...slugsToAdd, ...slugsToRemove] },

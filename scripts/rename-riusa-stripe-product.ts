@@ -11,7 +11,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const prisma = new PrismaClient();
 
 async function main() {
-  const bundle = await prisma.bundleConfig.findUnique({
+  const bundle = await prisma.productConfig.findUnique({
     where: { slug: "riusa_annual_dues" },
     select: { stripeProductId: true, name: true, description: true },
   });

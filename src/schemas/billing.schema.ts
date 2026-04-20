@@ -12,9 +12,9 @@ export const checkoutSessionSchema = z.object({
 
 export type CheckoutSessionInput = z.infer<typeof checkoutSessionSchema>;
 
-// ─── Admin: Bundle Management ──────────────────────────────
+// ─── Admin: Product Management ──────────────────────────────
 
-export const bundleCreateSchema = z.object({
+export const productCreateSchema = z.object({
   name: z.string().min(1).max(200).trim(),
   slug: z.string().min(1).max(100).trim().toLowerCase().regex(/^[a-z0-9_-]+$/),
   description: z.string().min(1).max(2000).trim(),
@@ -26,11 +26,11 @@ export const bundleCreateSchema = z.object({
   featureKeys: z.array(z.string()).default([]),
 });
 
-export type BundleCreateInput = z.infer<typeof bundleCreateSchema>;
+export type ProductCreateInput = z.infer<typeof productCreateSchema>;
 
-export const bundleUpdateSchema = bundleCreateSchema.partial();
+export const productUpdateSchema = productCreateSchema.partial();
 
-export type BundleUpdateInput = z.infer<typeof bundleUpdateSchema>;
+export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
 
 // ─── Admin: Feature/Entitlement Management ─────────────────
 

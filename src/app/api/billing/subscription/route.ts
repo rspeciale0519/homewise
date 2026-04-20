@@ -27,7 +27,7 @@ export async function GET() {
 
   const [graceStatus, availableBundles] = await Promise.all([
     getGraceStatus(agent.id),
-    prisma.bundleConfig.findMany({
+    prisma.productConfig.findMany({
       where: { isActive: true },
       include: { features: true },
       orderBy: { sortOrder: "asc" },

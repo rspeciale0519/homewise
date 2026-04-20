@@ -7,7 +7,7 @@ import { PaymentMethodsTab } from "./payment-methods-tab";
 import { InvoicesTab } from "./invoices-tab";
 import { SettingsTab } from "./settings-tab";
 import type {
-  BundleWithFeatures,
+  ProductWithFeatures,
   FeatureEntitlement,
 } from "@/app/(marketing)/pricing/page";
 
@@ -44,7 +44,7 @@ interface BillingDashboardProps {
   subscription: Subscription | null;
   paymentRecords: PaymentRecord[];
   hasStripeCustomer: boolean;
-  bundleConfigs: BundleWithFeatures[];
+  bundleConfigs: ProductWithFeatures[];
   entitlements: FeatureEntitlement[];
 }
 

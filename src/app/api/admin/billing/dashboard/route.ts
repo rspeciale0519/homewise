@@ -45,8 +45,8 @@ export async function GET() {
       }),
     ]);
 
-    // Calculate MRR from active subscription items by looking up bundle prices
-    const bundleConfigs = await prisma.bundleConfig.findMany({
+    // Calculate MRR from active subscription items by looking up product prices
+    const bundleConfigs = await prisma.productConfig.findMany({
       where: { isActive: true },
     });
 

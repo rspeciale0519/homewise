@@ -37,11 +37,11 @@ async function getUpgradeBundleSlug(
   productType: string,
   platform: string,
 ): Promise<string | null> {
-  const bundle = await prisma.bundleConfig.findFirst({
+  const product = await prisma.productConfig.findFirst({
     where: { productType, isActive: true, platforms: { has: platform } },
     orderBy: { sortOrder: "asc" },
   });
-  return bundle?.slug ?? null;
+  return product?.slug ?? null;
 }
 
 export async function checkEntitlement(
@@ -78,25 +78,25 @@ export async function checkEntitlement(
     subscription.items.some((item) => item.productType === config.requiredProduct);
 
   if (hasProduct) {
-    const bundleFeature = await prisma.bundleFeature.findFirst({
+    const productFeature = await prisma.productFeature.findFirst({
       where: {
         featureKey,
-        bundle: { productType: config.requiredProduct, isActive: true },
+        product: { productType: config.requiredProduct, isActive: true },
       },
     });
 
-    if (!bundleFeature || bundleFeature.limit === null) {
+    if (!productFeature || productFeature.limit === null) {
       return { allowed: true, remaining: null, limit: null, upgradeBundle: null };
     }
 
     const periodStart = subscription.currentPeriodStart;
     const usageCount = await getUsageCount(agentId, featureKey, periodStart);
-    const remaining = bundleFeature.limit - usageCount;
+    const remaining = productFeature.limit - usageCount;
 
     return {
       allowed: remaining > 0,
       remaining: Math.max(0, remaining),
-      limit: bundleFeature.limit,
+      limit: productFeature.limit,
       upgradeBundle: null,
     };
   }

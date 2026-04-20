@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "Transparent pricing for Home Wise agents. Choose the bundles and features that match how you work — no required annual fees.",
 };
 
-export type BundleWithFeatures = {
+export type ProductWithFeatures = {
   id: string;
   name: string;
   slug: string;
@@ -33,7 +33,7 @@ export type FeatureEntitlement = {
 
 export default async function PricingServerPage() {
   const [configs, entitlements] = await Promise.all([
-    prisma.bundleConfig.findMany({
+    prisma.productConfig.findMany({
       where: { isActive: true, platforms: { has: "homewise" } },
       orderBy: { sortOrder: "asc" },
       select: {

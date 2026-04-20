@@ -1,12 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { BundleWithFeatures } from "@/app/(marketing)/pricing/page";
+import type { ProductWithFeatures } from "@/app/(marketing)/pricing/page";
 
 type BillingInterval = "monthly" | "annual";
 
 interface BundleCardProps {
-  bundle: BundleWithFeatures;
+  bundle: ProductWithFeatures;
   billingInterval: BillingInterval;
   selected: boolean;
   recommended?: boolean;

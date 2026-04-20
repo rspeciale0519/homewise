@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
   const customerId = await getOrCreateStripeCustomer(agent.id);
 
-  const bundleConfigs = await prisma.bundleConfig.findMany({
+  const bundleConfigs = await prisma.productConfig.findMany({
     where: { isActive: true },
   });
 
