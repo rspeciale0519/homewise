@@ -92,8 +92,8 @@ export function BundleManagement() {
       name: bundle.name,
       slug: bundle.slug,
       description: bundle.description,
-      monthlyAmount: String(bundle.monthlyAmount),
-      annualAmount: String(bundle.annualAmount),
+      monthlyAmount: (bundle.monthlyAmount / 100).toFixed(2),
+      annualAmount: (bundle.annualAmount / 100).toFixed(2),
       productType: bundle.productType,
       isActive: bundle.isActive,
       sortOrder: String(bundle.sortOrder),
@@ -126,8 +126,8 @@ export function BundleManagement() {
           name: form.name,
           slug: form.slug,
           description: form.description,
-          monthlyAmount: parseInt(form.monthlyAmount, 10),
-          annualAmount: parseInt(form.annualAmount, 10),
+          monthlyAmount: Math.round(parseFloat(form.monthlyAmount) * 100),
+          annualAmount: Math.round(parseFloat(form.annualAmount) * 100),
           productType: form.productType,
           isActive: form.isActive,
           sortOrder: parseInt(form.sortOrder, 10),
@@ -238,25 +238,29 @@ export function BundleManagement() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Monthly Price (cents)</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Monthly Price ($)</label>
                 <input
                   type="number"
                   value={form.monthlyAmount}
                   onChange={(e) => updateField("monthlyAmount", e.target.value)}
                   required
                   min={0}
+                  step={0.01}
+                  placeholder="0.00"
                   disabled={formMode === "edit"}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:bg-slate-50 disabled:text-slate-400"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Annual Price (cents)</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Annual Price ($)</label>
                 <input
                   type="number"
                   value={form.annualAmount}
                   onChange={(e) => updateField("annualAmount", e.target.value)}
                   required
                   min={0}
+                  step={0.01}
+                  placeholder="0.00"
                   disabled={formMode === "edit"}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:bg-slate-50 disabled:text-slate-400"
                 />
