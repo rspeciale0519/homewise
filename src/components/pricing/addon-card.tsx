@@ -2,10 +2,10 @@
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type { BundleWithFeatures } from "@/app/(marketing)/pricing/page";
+import type { ProductWithFeatures } from "@/app/(marketing)/pricing/page";
 
 interface AddonCardProps {
-  addon: BundleWithFeatures;
+  addon: ProductWithFeatures;
   selected: boolean;
   onToggle: () => void;
   loading: boolean;

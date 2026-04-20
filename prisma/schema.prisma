@@ -9,30 +9,32 @@ datasource db {
 }
 
 model Agent {
-  id               String        @id @default(cuid())
-  firstName        String
-  lastName         String
-  slug             String        @unique
-  email            String?
-  phone            String?
-  photoUrl         String?
-  languages        String[]
-  designations     String[]
-  bio              String?
-  active           Boolean       @default(true)
-  inviteCode       String?       @unique
-  inviteExpiresAt  DateTime?
-  inviteUsed       Boolean       @default(false)
-  mlsAgentId       String?
-  mlsOfficeId      String?
-  emailSignature   String?
-  emailTagline     String?
-  brandColor       String?
-  userId           String?       @unique
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                   String                @id @default(cuid())
+  firstName            String
+  lastName             String
+  slug                 String                @unique
+  email                String?
+  phone                String?
+  photoUrl             String?
+  languages            String[]
+  designations         String[]
+  bio                  String?
+  active               Boolean               @default(true)
+  inviteCode           String?               @unique
+  inviteExpiresAt      DateTime?
+  inviteUsed           Boolean               @default(false)
+  mlsAgentId           String?
+  mlsOfficeId          String?
+  emailSignature       String?
+  emailTagline         String?
+  brandColor           String?
+  platform             String                @default("homewise")
+  upgradedFromRiusaAt  DateTime?
+  userId               String?               @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
   preferredByUsers     UserProfile[]
-  user                 UserProfile?        @relation("AgentUser", fields: [userId], references: [id])
+  user                 UserProfile?          @relation("AgentUser", fields: [userId], references: [id])
   contacts             Contact[]
   stripeCustomer       StripeCustomer?
   subscription         Subscription?
@@ -45,6 +47,7 @@ model Agent {
 
   @@index([lastName])
   @@index([active])
+  @@index([platform])
 }
 
 model ContactSubmission {
@@ -61,24 +64,24 @@ model ContactSubmission {
 }
 
 model HomeEvaluation {
-  id             String   @id @default(cuid())
-  name           String
-  email          String
-  phone          String
-  streetAddress  String
-  city           String
-  state          String   @default("FL")
-  zip            String
-  bedrooms       Int?
-  bathrooms      Float?
-  sqft           Int?
-  garageSpaces   Int?
-  propertyType   String?
-  sellTimeline   String?
-  listingStatus  String?
-  comments       String?
-  status         String   @default("new")
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  name          String
+  email         String
+  phone         String
+  streetAddress String
+  city          String
+  state         String   @default("FL")
+  zip           String
+  bedrooms      Int?
+  bathrooms     Float?
+  sqft          Int?
+  garageSpaces  Int?
+  propertyType  String?
+  sellTimeline  String?
+  listingStatus String?
+  comments      String?
+  status        String   @default("new")
+  createdAt     DateTime @default(now())
 
   @@index([status])
   @@index([createdAt])
@@ -105,18 +108,18 @@ model BuyerRequest {
 }
 
 model PropertyAlert {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   email     String
   name      String?
   cities    String[]
   minPrice  Int?
   maxPrice  Int?
   beds      Int?
-  active    Boolean      @default(true)
+  active    Boolean  @default(true)
   userId    String?
-  createdAt DateTime     @default(now())
+  createdAt DateTime @default(now())
 
-  user      UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([email])
   @@index([userId])
@@ -134,54 +137,54 @@ model UserProfile {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  favorites      FavoriteProperty[]
-  savedSearches  SavedSearch[]
-  recentlyViewed RecentlyViewed[]
-  propertyAlerts PropertyAlert[]
-  agent              Agent?   @relation(fields: [preferredAgent], references: [id])
-  agentProfile       Agent?   @relation("AgentUser")
+  favorites          FavoriteProperty[]
+  savedSearches      SavedSearch[]
+  recentlyViewed     RecentlyViewed[]
+  propertyAlerts     PropertyAlert[]
+  agent              Agent?              @relation(fields: [preferredAgent], references: [id])
+  agentProfile       Agent?              @relation("AgentUser")
   documentSignatures DocumentSignature[]
 
   @@index([email])
 }
 
 model FavoriteProperty {
-  id         String      @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     String
   propertyId String
   notes      String?
-  savedAt    DateTime    @default(now())
+  savedAt    DateTime @default(now())
 
-  user       UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, propertyId])
   @@index([userId])
 }
 
 model SavedSearch {
-  id           String      @id @default(cuid())
+  id           String   @id @default(cuid())
   userId       String
   name         String
   filters      Json
   polygon      Json?
-  matchingMode String      @default("balanced")
-  rigidity     Int         @default(30)
-  alertEnabled Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  matchingMode String   @default("balanced")
+  rigidity     Int      @default(30)
+  alertEnabled Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  user         UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model RecentlyViewed {
-  id         String      @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     String
   propertyId String
-  viewedAt   DateTime    @default(now())
+  viewedAt   DateTime @default(now())
 
-  user       UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, propertyId])
   @@index([userId])
@@ -189,70 +192,70 @@ model RecentlyViewed {
 }
 
 model Listing {
-  id                  String   @id @default(cuid())
-  mlsId               String   @unique
-  mlsSource           String   @default("stellar")
-  status              String   @default("Active")
-  price               Float
-  closePrice          Float?
-  originalListPrice   Float?
-  address             String
-  city                String
-  state               String   @default("FL")
-  zip                 String
-  county              String?
-  subdivision         String?
-  beds                Int
-  bathsFull           Int
-  bathsHalf           Int
-  baths               Float
-  sqft                Int
-  lotSize             Float?
-  yearBuilt           Int?
-  propertyType        String
-  propertySubType     String?
-  description         String?
-  photos              String[]
-  imageUrl            String?
-  latitude            Float?
-  longitude           Float?
-  hoaFee              Float?
-  hoaFrequency        String?
-  taxAmount           Float?
-  taxYear             Int?
-  hasPool             Boolean  @default(false)
-  hasWaterfront       Boolean  @default(false)
-  hasGarage           Boolean  @default(false)
-  garageSpaces        Int      @default(0)
-  isNewConstruction   Boolean  @default(false)
-  hasGatedCommunity   Boolean  @default(false)
-  daysOnMarket        Int      @default(0)
-  listDate            DateTime?
-  closeDate           DateTime?
-  openHouseSchedule   Json?
-  schoolDistrict      String?
-  elementarySchool    String?
-  middleSchool        String?
-  highSchool          String?
-  listingAgentName    String?
-  listingAgentMlsId   String?
-  listingAgentPhone   String?
-  listingAgentEmail   String?
-  listingOfficeName   String?
-  listingOfficeMlsId  String?
-  walkScore           Int?
-  transitScore        Int?
-  bikeScore           Int?
-  walkScoreUpdatedAt  DateTime?
-  featured            Boolean  @default(false)
-  virtualTourUrl      String?
-  remarks             String?
-  embedding           Float[]
-  embeddingText       String?
-  mlsLastModified     DateTime?
-  syncedAt            DateTime @default(now())
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  mlsId              String    @unique
+  mlsSource          String    @default("stellar")
+  status             String    @default("Active")
+  price              Float
+  closePrice         Float?
+  originalListPrice  Float?
+  address            String
+  city               String
+  state              String    @default("FL")
+  zip                String
+  county             String?
+  subdivision        String?
+  beds               Int
+  bathsFull          Int
+  bathsHalf          Int
+  baths              Float
+  sqft               Int
+  lotSize            Float?
+  yearBuilt          Int?
+  propertyType       String
+  propertySubType    String?
+  description        String?
+  photos             String[]
+  imageUrl           String?
+  latitude           Float?
+  longitude          Float?
+  hoaFee             Float?
+  hoaFrequency       String?
+  taxAmount          Float?
+  taxYear            Int?
+  hasPool            Boolean   @default(false)
+  hasWaterfront      Boolean   @default(false)
+  hasGarage          Boolean   @default(false)
+  garageSpaces       Int       @default(0)
+  isNewConstruction  Boolean   @default(false)
+  hasGatedCommunity  Boolean   @default(false)
+  daysOnMarket       Int       @default(0)
+  listDate           DateTime?
+  closeDate          DateTime?
+  openHouseSchedule  Json?
+  schoolDistrict     String?
+  elementarySchool   String?
+  middleSchool       String?
+  highSchool         String?
+  listingAgentName   String?
+  listingAgentMlsId  String?
+  listingAgentPhone  String?
+  listingAgentEmail  String?
+  listingOfficeName  String?
+  listingOfficeMlsId String?
+  walkScore          Int?
+  transitScore       Int?
+  bikeScore          Int?
+  walkScoreUpdatedAt DateTime?
+  featured           Boolean   @default(false)
+  virtualTourUrl     String?
+  remarks            String?
+  embedding          Float[]
+  embeddingText      String?
+  mlsLastModified    DateTime?
+  syncedAt           DateTime  @default(now())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([city])
   @@index([status])
@@ -292,15 +295,15 @@ model SchoolCache {
 }
 
 model SyncState {
-  id           String   @id @default(cuid())
-  provider     String   @unique @default("stellar")
-  lastSyncAt   DateTime?
-  totalSynced  Int      @default(0)
-  lastError    String?
-  status       String   @default("idle")
-  metadata     Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String    @id @default(cuid())
+  provider    String    @unique @default("stellar")
+  lastSyncAt  DateTime?
+  totalSynced Int       @default(0)
+  lastError   String?
+  status      String    @default("idle")
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // =============================================================================
@@ -308,29 +311,29 @@ model SyncState {
 // =============================================================================
 
 model Contact {
-  id              String            @id @default(cuid())
-  firstName       String
-  lastName        String
-  email           String            @unique
-  phone           String?
-  source          String            @default("website")
-  type            String            @default("buyer")
-  stage           String            @default("new_lead")
-  score           Int               @default(0)
-  assignedAgentId String?
-  notes           String?
-  birthday        DateTime?
+  id               String    @id @default(cuid())
+  firstName        String
+  lastName         String
+  email            String    @unique
+  phone            String?
+  source           String    @default("website")
+  type             String    @default("buyer")
+  stage            String    @default("new_lead")
+  score            Int       @default(0)
+  assignedAgentId  String?
+  notes            String?
+  birthday         DateTime?
   closeAnniversary DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  assignedAgent   Agent?            @relation(fields: [assignedAgentId], references: [id], onDelete: SetNull)
-  tags            ContactTag[]
-  activities      ActivityEvent[]
-  tasks           Task[]
-  transactions    Transaction[]
-  enrollments     CampaignEnrollment[]
-  emailEvents     EmailEvent[]
+  assignedAgent Agent?               @relation(fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  tags          ContactTag[]
+  activities    ActivityEvent[]
+  tasks         Task[]
+  transactions  Transaction[]
+  enrollments   CampaignEnrollment[]
+  emailEvents   EmailEvent[]
 
   @@index([email])
   @@index([assignedAgentId])
@@ -346,12 +349,12 @@ model Contact {
 // =============================================================================
 
 model Tag {
-  id        String       @id @default(cuid())
-  name      String       @unique
-  color     String       @default("#6366f1")
-  createdAt DateTime     @default(now())
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6366f1")
+  createdAt DateTime @default(now())
 
-  contacts  ContactTag[]
+  contacts ContactTag[]
 }
 
 model ContactTag {
@@ -360,8 +363,8 @@ model ContactTag {
   tagId     String
   createdAt DateTime @default(now())
 
-  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@unique([contactId, tagId])
   @@index([contactId])
@@ -381,7 +384,7 @@ model ActivityEvent {
   metadata    Json?
   createdAt   DateTime @default(now())
 
-  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   @@index([contactId])
   @@index([type])
@@ -393,19 +396,19 @@ model ActivityEvent {
 // =============================================================================
 
 model Task {
-  id            String    @id @default(cuid())
-  contactId     String?
-  assignedTo    String?
-  title         String
-  description   String?
-  dueDate       DateTime?
-  completedAt   DateTime?
-  priority      String    @default("medium")
+  id              String    @id @default(cuid())
+  contactId       String?
+  assignedTo      String?
+  title           String
+  description     String?
+  dueDate         DateTime?
+  completedAt     DateTime?
+  priority        String    @default("medium")
   calendarEventId String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  contact       Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
 
   @@index([contactId])
   @@index([assignedTo])
@@ -418,19 +421,19 @@ model Task {
 // =============================================================================
 
 model Transaction {
-  id              String                @id @default(cuid())
-  contactId       String
-  address         String
-  purchasePrice   Float
-  closingDate     DateTime?
-  status          String                @default("active")
-  propertyId      String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  id            String    @id @default(cuid())
+  contactId     String
+  address       String
+  purchasePrice Float
+  closingDate   DateTime?
+  status        String    @default("active")
+  propertyId    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  contact         Contact               @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  milestones      TransactionMilestone[]
-  documents       TransactionDocument[]
+  contact    Contact                @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  milestones TransactionMilestone[]
+  documents  TransactionDocument[]
 
   @@index([contactId])
   @@index([status])
@@ -438,31 +441,31 @@ model Transaction {
 }
 
 model TransactionMilestone {
-  id            String       @id @default(cuid())
+  id            String    @id @default(cuid())
   transactionId String
   name          String
   targetDate    DateTime?
   completedAt   DateTime?
   notes         String?
-  sortOrder     Int          @default(0)
-  createdAt     DateTime     @default(now())
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
 
-  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 
   @@index([transactionId])
 }
 
 model TransactionDocument {
-  id            String       @id @default(cuid())
+  id            String    @id @default(cuid())
   transactionId String
   name          String
   type          String
   url           String?
   uploadedAt    DateTime?
-  required      Boolean      @default(true)
-  createdAt     DateTime     @default(now())
+  required      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
 
-  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 
   @@index([transactionId])
 }
@@ -472,15 +475,15 @@ model TransactionDocument {
 // =============================================================================
 
 model LeadRoutingRule {
-  id            String   @id @default(cuid())
-  name          String
-  agentId       String
-  conditions    Json
-  priority      Int      @default(0)
-  roundRobin    Boolean  @default(false)
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         String   @id @default(cuid())
+  name       String
+  agentId    String
+  conditions Json
+  priority   Int      @default(0)
+  roundRobin Boolean  @default(false)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([active])
   @@index([priority])
@@ -491,26 +494,26 @@ model LeadRoutingRule {
 // =============================================================================
 
 model TrainingContent {
-  id           String              @id @default(cuid())
+  id           String   @id @default(cuid())
   title        String
-  slug         String?             @unique
+  slug         String?  @unique
   description  String?
   category     String
-  audience     String              @default("agent")
-  type         String              @default("video")
+  audience     String   @default("agent")
+  type         String   @default("video")
   url          String?
   body         String?
   fileKey      String?
   thumbnailUrl String?
   duration     Int?
   tags         String[]
-  sortOrder    Int                 @default(0)
-  published    Boolean             @default(true)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  sortOrder    Int      @default(0)
+  published    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  progress     TrainingProgress[]
-  courseItems   TrainingCourseItem[]
+  progress    TrainingProgress[]
+  courseItems TrainingCourseItem[]
 
   @@index([category])
   @@index([audience])
@@ -530,31 +533,31 @@ model SlugHistory {
 }
 
 model TrainingCourse {
-  id             String                @id @default(cuid())
+  id             String   @id @default(cuid())
   name           String
   description    String?
   thumbnailUrl   String?
-  required       Boolean               @default(false)
-  autoEnroll     Boolean               @default(false)
+  required       Boolean  @default(false)
+  autoEnroll     Boolean  @default(false)
   reminderDays   Int?
   reminderRepeat Int?
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  items          TrainingCourseItem[]
-  enrollments    TrainingEnrollment[]
+  items       TrainingCourseItem[]
+  enrollments TrainingEnrollment[]
 
   @@map("TrainingTrack")
 }
 
 model TrainingCourseItem {
-  id        String           @id @default(cuid())
-  courseId  String           @map("trackId")
+  id        String @id @default(cuid())
+  courseId  String @map("trackId")
   contentId String
-  sortOrder Int              @default(0)
+  sortOrder Int    @default(0)
 
-  course    TrainingCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  content   TrainingContent  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  course  TrainingCourse  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  content TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, contentId], map: "TrainingTrackItem_trackId_contentId_key")
   @@index([courseId], map: "TrainingTrackItem_trackId_idx")
@@ -562,30 +565,30 @@ model TrainingCourseItem {
 }
 
 model TrainingEnrollment {
-  id          String         @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
-  courseId    String         @map("trackId")
+  courseId    String    @map("trackId")
   completedAt DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  course      TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId], map: "TrainingEnrollment_userId_trackId_key")
   @@index([userId])
 }
 
 model TrainingProgress {
-  id          String          @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   contentId   String
-  completed   Boolean         @default(false)
+  completed   Boolean   @default(false)
   completedAt DateTime?
-  timeSpent   Int             @default(0)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  timeSpent   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  content     TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  content TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
   @@unique([userId, contentId])
   @@index([userId])
@@ -596,11 +599,11 @@ model TrainingProgress {
 // =============================================================================
 
 model RegistrationConfig {
-  id             String  @id @default(cuid())
-  viewThreshold  Int     @default(5)
-  mode           String  @default("soft")
-  enabled        Boolean @default(true)
-  abTestVariant  String?
+  id            String  @id @default(cuid())
+  viewThreshold Int     @default(5)
+  mode          String  @default("soft")
+  enabled       Boolean @default(true)
+  abTestVariant String?
 }
 
 // =============================================================================
@@ -608,55 +611,55 @@ model RegistrationConfig {
 // =============================================================================
 
 model Campaign {
-  id            String               @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String
-  type          String               @default("drip")
-  status        String               @default("draft")
+  type          String   @default("drip")
+  status        String   @default("draft")
   triggerSource String?
   triggerType   String?
   triggerStage  String?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  emails        CampaignEmail[]
-  enrollments   CampaignEnrollment[]
+  emails      CampaignEmail[]
+  enrollments CampaignEnrollment[]
 
   @@index([status])
   @@index([type])
 }
 
 model CampaignEmail {
-  id            String   @id @default(cuid())
-  campaignId    String
-  subject       String
-  body          String
-  delayDays     Int      @default(0)
-  delayHours    Int      @default(0)
-  sortOrder     Int      @default(0)
-  channel       String   @default("email")
-  smsBody       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         String   @id @default(cuid())
+  campaignId String
+  subject    String
+  body       String
+  delayDays  Int      @default(0)
+  delayHours Int      @default(0)
+  sortOrder  Int      @default(0)
+  channel    String   @default("email")
+  smsBody    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  variants      SubjectLineVariant[]
+  campaign Campaign             @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  variants SubjectLineVariant[]
 
   @@index([campaignId])
 }
 
 model CampaignEnrollment {
-  id            String    @id @default(cuid())
-  campaignId    String
-  contactId     String
-  currentStep   Int       @default(0)
-  status        String    @default("active")
-  nextSendAt    DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  campaignId  String
+  contactId   String
+  currentStep Int       @default(0)
+  status      String    @default("active")
+  nextSendAt  DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  contact       Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, contactId])
   @@index([campaignId])
@@ -670,18 +673,18 @@ model CampaignEnrollment {
 // =============================================================================
 
 model EmailEvent {
-  id            String   @id @default(cuid())
-  contactId     String?
-  emailAddress  String
-  messageId     String?
-  type          String
-  subject       String?
-  campaignId    String?
-  variant       String?
-  metadata      Json?
-  createdAt     DateTime @default(now())
+  id           String   @id @default(cuid())
+  contactId    String?
+  emailAddress String
+  messageId    String?
+  type         String
+  subject      String?
+  campaignId   String?
+  variant      String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
 
-  contact       Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
 
   @@index([contactId])
   @@index([emailAddress])
@@ -696,16 +699,16 @@ model EmailEvent {
 // =============================================================================
 
 model SubjectLineVariant {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   campaignEmailId String
   variant         String
   subject         String
-  sendCount       Int           @default(0)
-  openCount       Int           @default(0)
-  clickCount      Int           @default(0)
-  createdAt       DateTime      @default(now())
+  sendCount       Int      @default(0)
+  openCount       Int      @default(0)
+  clickCount      Int      @default(0)
+  createdAt       DateTime @default(now())
 
-  campaignEmail   CampaignEmail @relation(fields: [campaignEmailId], references: [id], onDelete: Cascade)
+  campaignEmail CampaignEmail @relation(fields: [campaignEmailId], references: [id], onDelete: Cascade)
 
   @@unique([campaignEmailId, variant])
   @@index([campaignEmailId])
@@ -735,19 +738,19 @@ model AutomationRule {
 // =============================================================================
 
 model Broadcast {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   subject     String
   body        String
   audienceTag String?
   audienceIds String[]
-  status      String   @default("draft")
+  status      String    @default("draft")
   sentAt      DateTime?
-  sentCount   Int      @default(0)
-  openCount   Int      @default(0)
-  clickCount  Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sentCount   Int       @default(0)
+  openCount   Int       @default(0)
+  clickCount  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([status])
 }
@@ -757,16 +760,16 @@ model Broadcast {
 // =============================================================================
 
 model Conversation {
-  id          String        @id @default(cuid())
-  sessionId   String
-  userId      String?
-  agentId     String?
-  config      String        @default("public")
-  metadata    Json?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String?
+  agentId   String?
+  config    String   @default("public")
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  messages    ChatMessage[]
+  messages ChatMessage[]
 
   @@index([sessionId])
   @@index([userId])
@@ -775,16 +778,16 @@ model Conversation {
 }
 
 model ChatMessage {
-  id             String       @id @default(cuid())
+  id             String   @id @default(cuid())
   conversationId String
   role           String
   content        String
   toolCalls      Json?
   toolResults    Json?
-  tokenCount     Int          @default(0)
-  createdAt      DateTime     @default(now())
+  tokenCount     Int      @default(0)
+  createdAt      DateTime @default(now())
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
   @@index([createdAt])
@@ -795,15 +798,15 @@ model ChatMessage {
 // =============================================================================
 
 model AiUsageLog {
-  id          String   @id @default(cuid())
-  feature     String
-  userId      String?
-  model       String
-  inputTokens  Int     @default(0)
-  outputTokens Int     @default(0)
-  cached      Boolean  @default(false)
-  latencyMs   Int      @default(0)
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  feature      String
+  userId       String?
+  model        String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  cached       Boolean  @default(false)
+  latencyMs    Int      @default(0)
+  createdAt    DateTime @default(now())
 
   @@index([feature])
   @@index([userId])
@@ -815,20 +818,20 @@ model AiUsageLog {
 // =============================================================================
 
 model SeoContent {
-  id          String    @id @default(cuid())
-  type        String
-  slug        String    @unique
-  title       String
-  body        String
-  metaTitle   String?
-  metaDesc    String?
-  city        String?
+  id           String    @id @default(cuid())
+  type         String
+  slug         String    @unique
+  title        String
+  body         String
+  metaTitle    String?
+  metaDesc     String?
+  city         String?
   neighborhood String?
-  status      String    @default("draft")
-  publishedAt DateTime?
-  refreshedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  status       String    @default("draft")
+  publishedAt  DateTime?
+  refreshedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([type])
   @@index([status])
@@ -840,20 +843,20 @@ model SeoContent {
 // =============================================================================
 
 model MarketStats {
-  id              String   @id @default(cuid())
-  area            String
-  areaType        String   @default("city")
-  period          String
-  activeCount     Int      @default(0)
-  soldCount       Int      @default(0)
-  medianPrice     Float    @default(0)
-  avgPrice        Float    @default(0)
-  saleToListRatio Float    @default(0)
-  avgDom          Int      @default(0)
-  monthsOfInventory Float  @default(0)
-  newListings     Int      @default(0)
-  pricePerSqft    Float    @default(0)
-  createdAt       DateTime @default(now())
+  id                String   @id @default(cuid())
+  area              String
+  areaType          String   @default("city")
+  period            String
+  activeCount       Int      @default(0)
+  soldCount         Int      @default(0)
+  medianPrice       Float    @default(0)
+  avgPrice          Float    @default(0)
+  saleToListRatio   Float    @default(0)
+  avgDom            Int      @default(0)
+  monthsOfInventory Float    @default(0)
+  newListings       Int      @default(0)
+  pricePerSqft      Float    @default(0)
+  createdAt         DateTime @default(now())
 
   @@unique([area, areaType, period])
   @@index([area])
@@ -926,14 +929,15 @@ model EntitlementConfig {
   freeLimit       Int?
   description     String?
   isActive        Boolean  @default(true)
+  platforms       String[] @default(["homewise"])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
 
-model BundleConfig {
-  id              String          @id @default(cuid())
+model ProductConfig {
+  id              String           @id @default(cuid())
   name            String
-  slug            String          @unique
+  slug            String           @unique
   description     String
   stripeProductId String?
   monthlyPriceId  String?
@@ -941,23 +945,24 @@ model BundleConfig {
   monthlyAmount   Int
   annualAmount    Int
   productType     String
-  isActive        Boolean         @default(true)
-  sortOrder       Int             @default(0)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  features        BundleFeature[]
+  isActive        Boolean          @default(true)
+  sortOrder       Int              @default(0)
+  platforms       String[]         @default(["homewise"])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  features        ProductFeature[]
 }
 
-model BundleFeature {
-  id         String       @id @default(cuid())
-  bundleId   String
-  bundle     BundleConfig @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+model ProductFeature {
+  id         String        @id @default(cuid())
+  productId  String
+  product    ProductConfig @relation(fields: [productId], references: [id], onDelete: Cascade)
   featureKey String
   limit      Int?
-  createdAt  DateTime     @default(now())
+  createdAt  DateTime      @default(now())
 
-  @@unique([bundleId, featureKey])
-  @@index([bundleId])
+  @@unique([productId, featureKey])
+  @@index([productId])
 }
 
 model UsageRecord {
@@ -1018,26 +1023,27 @@ model DocumentSignature {
 }
 
 model Document {
-  id              String                        @id @default(cuid())
-  slug            String                        @unique
+  id              String   @id @default(cuid())
+  slug            String   @unique
   name            String
   description     String?
   url             String?
-  external        Boolean                       @default(false)
+  external        Boolean  @default(false)
   storageKey      String?
-  storageProvider String                        @default("local")
+  storageProvider String   @default("local")
   mimeType        String?
   sizeBytes       Int?
-  sortOrder       Int                           @default(0)
-  published       Boolean                       @default(true)
-  quickAccess     Boolean                       @default(false)
-  createdAt       DateTime                      @default(now())
-  updatedAt       DateTime                      @updatedAt
+  sortOrder       Int      @default(0)
+  published       Boolean  @default(true)
+  quickAccess     Boolean  @default(false)
+  platforms       String[] @default(["homewise"])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  categories      DocumentCategoryMembership[]
-  drafts          DocumentDraft[]
-  favorites       DocumentFavorite[]
-  recents         DocumentRecent[]
+  categories DocumentCategoryMembership[]
+  drafts     DocumentDraft[]
+  favorites  DocumentFavorite[]
+  recents    DocumentRecent[]
 
   @@index([published])
   @@index([quickAccess])
@@ -1045,16 +1051,16 @@ model Document {
 }
 
 model DocumentCategory {
-  id          String                        @id @default(cuid())
-  slug        String                        @unique
+  id          String   @id @default(cuid())
+  slug        String   @unique
   title       String
   description String?
   section     String
-  sortOrder   Int                           @default(0)
-  createdAt   DateTime                      @default(now())
-  updatedAt   DateTime                      @updatedAt
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  documents   DocumentCategoryMembership[]
+  documents DocumentCategoryMembership[]
 
   @@index([section, sortOrder])
 }
@@ -1062,24 +1068,24 @@ model DocumentCategory {
 model DocumentCategoryMembership {
   documentId String
   categoryId String
-  sortOrder  Int      @default(0)
+  sortOrder  Int    @default(0)
 
-  document   Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  category   DocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  document Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  category DocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@id([documentId, categoryId])
   @@index([categoryId, sortOrder])
 }
 
 model DocumentDraft {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   agentId      String
   documentId   String?
   documentPath String
   documentName String
   annotations  Json
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
   document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -1090,12 +1096,12 @@ model DocumentDraft {
 }
 
 model DocumentFavorite {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   agentId      String
   documentId   String?
   documentPath String
   documentName String
-  savedAt      DateTime  @default(now())
+  savedAt      DateTime @default(now())
 
   agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
   document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -1106,12 +1112,12 @@ model DocumentFavorite {
 }
 
 model DocumentRecent {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   agentId      String
   documentId   String?
   documentPath String
   documentName String
-  viewedAt     DateTime  @default(now())
+  viewedAt     DateTime @default(now())
 
   agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
   document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)

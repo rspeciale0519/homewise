@@ -7,7 +7,7 @@ import { PaymentMethodsTab } from "./payment-methods-tab";
 import { InvoicesTab } from "./invoices-tab";
 import { SettingsTab } from "./settings-tab";
 import type {
-  BundleWithFeatures,
+  ProductWithFeatures,
   FeatureEntitlement,
 } from "@/app/(marketing)/pricing/page";
 
@@ -44,7 +44,7 @@ interface BillingDashboardProps {
   subscription: Subscription | null;
   paymentRecords: PaymentRecord[];
   hasStripeCustomer: boolean;
-  bundleConfigs: BundleWithFeatures[];
+  productConfigs: ProductWithFeatures[];
   entitlements: FeatureEntitlement[];
 }
 
@@ -117,7 +117,7 @@ export function BillingDashboard({
   subscription,
   paymentRecords: _paymentRecords,
   hasStripeCustomer: _hasStripeCustomer,
-  bundleConfigs,
+  productConfigs,
   entitlements,
 }: BillingDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("plan");
@@ -125,10 +125,10 @@ export function BillingDashboard({
   const billingInterval = useMemo<BillingInterval>(() => {
     if (!subscription) return "monthly";
     const hasAnnual = subscription.items.some((item) =>
-      bundleConfigs.some((b) => b.annualPriceId === item.stripePriceId),
+      productConfigs.some((b) => b.annualPriceId === item.stripePriceId),
     );
     return hasAnnual ? "annual" : "monthly";
-  }, [subscription, bundleConfigs]);
+  }, [subscription, productConfigs]);
 
   const [currentInterval, setCurrentInterval] =
     useState<BillingInterval>(billingInterval);
@@ -140,7 +140,7 @@ export function BillingDashboard({
   const estimatedTotal = useMemo(() => {
     if (!subscription) return 0;
     return subscription.items.reduce((sum, item) => {
-      const config = bundleConfigs.find(
+      const config = productConfigs.find(
         (b) =>
           b.monthlyPriceId === item.stripePriceId ||
           b.annualPriceId === item.stripePriceId,
@@ -151,44 +151,27 @@ export function BillingDashboard({
       }
       return sum + config.monthlyAmount;
     }, 0);
-  }, [subscription, bundleConfigs, currentInterval]);
+  }, [subscription, productConfigs, currentInterval]);
 
   if (!subscription) {
-    const membershipConfig = bundleConfigs.find((b) => b.productType === "membership");
-
     return (
-      <div className="space-y-6">
-        <div className="rounded-xl bg-navy-800 px-6 py-5 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            <span className="text-sm font-semibold">Annual Brokerage Membership</span>
-          </div>
-          {membershipConfig && (
-            <span className="text-lg font-bold">
-              ${(membershipConfig.annualAmount / 100).toFixed(0)}
-              <span className="text-xs font-normal text-navy-300">/year</span>
-            </span>
-          )}
+      <div className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
+        <div className="text-center mb-8">
+          <h3 className="font-serif text-xl font-semibold text-navy-700 mb-2">
+            Choose your plan
+          </h3>
+          <p className="text-sm text-slate-500 max-w-md mx-auto">
+            Pick the bundles or individual features that match how you work.
+            You can upgrade, downgrade, or cancel at any time.
+          </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
-          <div className="text-center mb-8">
-            <h3 className="font-serif text-xl font-semibold text-navy-700 mb-2">
-              Enhance your membership
-            </h3>
-            <p className="text-sm text-slate-500 max-w-md mx-auto">
-              Add optional bundles to unlock AI tools, marketing automation,
-              and growth analytics on top of your brokerage membership.
-            </p>
-          </div>
-
-          <PlanManager
-            subscription={null}
-            bundleConfigs={bundleConfigs}
-            entitlements={entitlements}
-            isNewSubscription
-          />
-        </div>
+        <PlanManager
+          subscription={null}
+          productConfigs={productConfigs}
+          entitlements={entitlements}
+          isNewSubscription
+        />
       </div>
     );
   }
@@ -286,7 +269,7 @@ export function BillingDashboard({
           <PlanManager
             subscription={subscription}
             items={subscription.items}
-            bundleConfigs={bundleConfigs}
+            productConfigs={productConfigs}
             entitlements={entitlements}
             billingInterval={currentInterval}
             onBillingIntervalChange={setCurrentInterval}
