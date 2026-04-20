@@ -24,6 +24,7 @@ type ActiveData =
 type OverData =
   | { type: "document"; documentId: string; fromCategoryId: string }
   | { type: "category"; categoryId: string }
+  | { type: "category-drop"; categoryId: string }
   | { type: "empty-category"; categoryId: string };
 
 interface UseOrganizeDragEndArgs {
@@ -94,9 +95,11 @@ export function useOrganizeDragEnd({
           ? overData.fromCategoryId
           : overData?.type === "category"
             ? overData.categoryId
-            : overData?.type === "empty-category"
+            : overData?.type === "category-drop"
               ? overData.categoryId
-              : null;
+              : overData?.type === "empty-category"
+                ? overData.categoryId
+                : null;
       if (!toCategoryId) return;
 
       if (fromCategoryId === toCategoryId) {

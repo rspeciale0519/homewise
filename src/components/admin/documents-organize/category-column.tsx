@@ -1,8 +1,9 @@
 "use client";
 
+import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import type {
   AdminCategoryTree,
@@ -48,6 +49,10 @@ function matchesSearch(
   );
 }
 
+function categoryDroppableId(categoryId: string): string {
+  return `catdrop::${categoryId}`;
+}
+
 export function CategoryColumn(props: CategoryColumnProps) {
   const {
     category,
@@ -73,6 +78,12 @@ export function CategoryColumn(props: CategoryColumnProps) {
     documentDragId(d.id, category.id),
   );
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: categoryDroppableId(category.id),
+    data: { type: "category-drop", categoryId: category.id },
+    disabled: preview,
+  });
+
   if (preview && visibleDocs.length === 0) {
     return null;
   }
@@ -85,36 +96,42 @@ export function CategoryColumn(props: CategoryColumnProps) {
         onEdit={onEditCategory}
       />
 
-      <SortableContext
-        items={sortableIds}
-        strategy={verticalListSortingStrategy}
-      >
-        {visibleDocs.length === 0 && !preview ? (
-          <EmptyCategoryPlaceholder
-            categoryId={category.id}
-            onAddDocument={() => onAddDocumentToCategory(category)}
-          />
-        ) : (
-          <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
-            {visibleDocs.map((doc) => (
-              <DocumentCard
-                key={doc.id}
-                document={doc}
-                currentCategoryId={category.id}
-                preview={preview}
-                searchMatches={matchesSearch(doc, search)}
-                targetCategories={targetCategories}
-                onCardClick={onCardClick}
-                onEdit={onEditDoc}
-                onTogglePublish={onTogglePublish}
-                onToggleQuickAccess={onToggleQuickAccess}
-                onMoveTo={onMoveTo}
-                onOpenInViewer={onOpenInViewer}
-                onDelete={onDeleteDoc}
-              />
-            ))}
-          </div>
-        )}
+      <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+        <div
+          ref={setNodeRef}
+          className={`rounded-xl transition-colors ${
+            isOver && !preview
+              ? "bg-crimson-50/40 ring-2 ring-crimson-300/60 ring-offset-2 ring-offset-slate-50"
+              : ""
+          }`}
+        >
+          {visibleDocs.length === 0 && !preview ? (
+            <EmptyCategoryPlaceholder
+              categoryId={category.id}
+              onAddDocument={() => onAddDocumentToCategory(category)}
+            />
+          ) : (
+            <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
+              {visibleDocs.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  document={doc}
+                  currentCategoryId={category.id}
+                  preview={preview}
+                  searchMatches={matchesSearch(doc, search)}
+                  targetCategories={targetCategories}
+                  onCardClick={onCardClick}
+                  onEdit={onEditDoc}
+                  onTogglePublish={onTogglePublish}
+                  onToggleQuickAccess={onToggleQuickAccess}
+                  onMoveTo={onMoveTo}
+                  onOpenInViewer={onOpenInViewer}
+                  onDelete={onDeleteDoc}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </SortableContext>
     </section>
   );

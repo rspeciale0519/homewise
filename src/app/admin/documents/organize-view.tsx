@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { DragStartEvent } from "@dnd-kit/core";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import { DocumentDrawer } from "@/components/admin/document-drawer";
@@ -23,6 +24,7 @@ import {
   documentToItem,
 } from "@/lib/documents-organize/shapers";
 import { DndContextProvider } from "@/components/admin/documents-organize/dnd-context";
+import { DragPreviewCard } from "@/components/admin/documents-organize/drag-preview-card";
 import { OrganizeToolbar } from "@/components/admin/documents-organize/organize-toolbar";
 import { SectionBoard } from "@/components/admin/documents-organize/section-board";
 import { useOrganizeDragEnd } from "@/components/admin/documents-organize/use-organize-drag-end";
@@ -54,6 +56,11 @@ export function OrganizeView() {
   const [pendingDelete, setPendingDelete] =
     useState<AdminDocumentInCategory | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [activeDragDoc, setActiveDragDoc] =
+    useState<AdminDocumentInCategory | null>(null);
+  const [activeDragCategory, setActiveDragCategory] =
+    useState<AdminCategoryTree | null>(null);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -90,13 +97,51 @@ export function OrganizeView() {
     [flatCategories],
   );
 
-  const handleDragEnd = useOrganizeDragEnd({
+  const rawHandleDragEnd = useOrganizeDragEnd({
     tree,
     activeTab,
     setTree,
     onSuccess: (m) => toast(m, "success"),
     onError: (m) => toast(m, "error"),
   });
+
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      if (!tree) return;
+      const data = event.active.data.current as
+        | { type?: "document" | "category"; documentId?: string; categoryId?: string; fromCategoryId?: string }
+        | undefined;
+      if (data?.type === "document" && data.documentId && data.fromCategoryId) {
+        const cat = allCategoriesOfTree(tree).find(
+          (c) => c.id === data.fromCategoryId,
+        );
+        const doc = cat?.documents.find((d) => d.id === data.documentId);
+        if (doc) setActiveDragDoc(doc);
+      } else if (data?.type === "category" && data.categoryId) {
+        const cat = allCategoriesOfTree(tree).find(
+          (c) => c.id === data.categoryId,
+        );
+        if (cat) setActiveDragCategory(cat);
+      }
+    },
+    [tree],
+  );
+
+  const clearActiveDrag = useCallback(() => {
+    setActiveDragDoc(null);
+    setActiveDragCategory(null);
+  }, []);
+
+  const handleDragEnd = useCallback(
+    async (event: Parameters<typeof rawHandleDragEnd>[0]) => {
+      try {
+        await rawHandleDragEnd(event);
+      } finally {
+        clearActiveDrag();
+      }
+    },
+    [rawHandleDragEnd, clearActiveDrag],
+  );
 
   const handleMoveViaMenu = useCallback(
     async (
@@ -323,7 +368,21 @@ export function OrganizeView() {
         this page on a tablet or desktop.
       </div>
 
-      <DndContextProvider onDragEnd={handleDragEnd}>
+      <DndContextProvider
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={clearActiveDrag}
+        overlay={
+          activeDragDoc ? (
+            <DragPreviewCard document={activeDragDoc} />
+          ) : activeDragCategory ? (
+            <div className="px-4 py-3 rounded-xl border border-crimson-200 bg-white shadow-2xl font-serif text-lg font-semibold text-navy-700 pointer-events-none">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-crimson-600 mr-2 align-middle" />
+              {activeDragCategory.title}
+            </div>
+          ) : null
+        }
+      >
         <SectionBoard
           section={activeTab}
           categories={tree.sections[activeTab].categories}
