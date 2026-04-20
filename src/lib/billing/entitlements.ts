@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { resolveAgentPlatform } from "@/lib/platform/filter";
 
 export interface EntitlementCheck {
   allowed: boolean;
@@ -32,9 +33,12 @@ async function getUsageCount(
   return record?.usageCount ?? 0;
 }
 
-async function getUpgradeBundleSlug(productType: string): Promise<string | null> {
+async function getUpgradeBundleSlug(
+  productType: string,
+  platform: string,
+): Promise<string | null> {
   const bundle = await prisma.bundleConfig.findFirst({
-    where: { productType, isActive: true },
+    where: { productType, isActive: true, platforms: { has: platform } },
     orderBy: { sortOrder: "asc" },
   });
   return bundle?.slug ?? null;
@@ -44,12 +48,22 @@ export async function checkEntitlement(
   agentId: string,
   featureKey: string,
 ): Promise<EntitlementCheck> {
+  const agent = await prisma.agent.findUnique({
+    where: { id: agentId },
+    select: { platform: true },
+  });
+  const platform = resolveAgentPlatform(agent);
+
   const config = await prisma.entitlementConfig.findUnique({
     where: { featureKey },
   });
 
   if (!config || !config.isActive || !config.requiredProduct) {
     return { allowed: true, remaining: null, limit: null, upgradeBundle: null };
+  }
+
+  if (!config.platforms.includes(platform)) {
+    return { allowed: false, remaining: 0, limit: null, upgradeBundle: null };
   }
 
   const subscription = await prisma.subscription.findUnique({
@@ -103,7 +117,7 @@ export async function checkEntitlement(
     }
   }
 
-  const upgradeBundle = await getUpgradeBundleSlug(config.requiredProduct);
+  const upgradeBundle = await getUpgradeBundleSlug(config.requiredProduct, platform);
 
   return {
     allowed: false,
