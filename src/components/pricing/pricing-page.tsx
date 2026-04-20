@@ -13,7 +13,6 @@ type BillingInterval = "monthly" | "annual";
 type PlanMode = "bundles" | "build_your_own";
 
 interface PricingPageProps {
-  membership: BundleWithFeatures | null;
   bundles: BundleWithFeatures[];
   addOns: BundleWithFeatures[];
   entitlements: FeatureEntitlement[];
@@ -24,11 +23,6 @@ function formatDollars(cents: number): string {
 }
 
 const FAQ_ITEMS = [
-  {
-    question: "Is the annual membership required?",
-    answer:
-      "Yes. The Annual Brokerage Membership is the base plan required for all agents. It provides access to all core platform features including your CRM, property search tools, client portal, and transaction coordination.",
-  },
   {
     question: "Can I add or remove bundles later?",
     answer:
@@ -52,12 +46,11 @@ const FAQ_ITEMS = [
   {
     question: "Are there any setup fees?",
     answer:
-      "No setup fees. You only pay the annual membership and any optional bundle or individual feature subscriptions you select.",
+      "No setup fees. You only pay for the bundles or individual features you select.",
   },
 ];
 
 export function PricingPage({
-  membership,
   bundles,
   addOns: _addOns,
   entitlements,
@@ -131,8 +124,6 @@ export function PricingPage({
     }
   }, [billingInterval, planMode, selectedBundles, selectedFeatures, router]);
 
-  const membershipPrice = membership?.annualAmount ?? 49900;
-
   const bundlesMonthlyTotal = useMemo(() => {
     return Array.from(selectedBundles).reduce((acc, slug) => {
       const bundle = bundles.find((item) => item.slug === slug);
@@ -190,8 +181,7 @@ export function PricingPage({
             Choose Your Plan
           </h1>
           <p className="text-slate-300 text-lg sm:text-xl max-w-3xl mx-auto leading-relaxed">
-            Start with the Annual Brokerage Membership, then add bundles or build
-            your own plan.
+            Pick the bundles or individual features that fit how you work.
           </p>
         </Container>
       </div>
@@ -199,28 +189,6 @@ export function PricingPage({
       {/* Main content */}
       <div className="bg-cream-50 min-h-screen pb-28">
         <Container size="xl" className="py-10 sm:py-14 space-y-10">
-
-          {/* Membership Banner */}
-          {membership && (
-            <div className="rounded-2xl bg-navy-700 px-6 sm:px-8 py-5 sm:py-6 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <span className="text-3xl sm:text-4xl" aria-hidden="true">🏠</span>
-                <div>
-                  <h2 className="font-serif text-lg sm:text-xl font-semibold">{membership.name}</h2>
-                  <p className="text-sm text-navy-200 mt-1">
-                    Required &bull; CRM, search tools, training, transactions, basic analytics
-                  </p>
-                </div>
-              </div>
-              <div className="text-left sm:text-right shrink-0">
-                <p className="font-serif text-3xl sm:text-4xl font-bold">
-                  {formatDollars(membershipPrice)}
-                  <span className="text-base font-normal text-navy-300">/year</span>
-                </p>
-                <p className="text-xs text-navy-300 mt-1">Billed annually</p>
-              </div>
-            </div>
-          )}
 
           {/* Plan Mode Tabs + Billing Interval */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -369,9 +337,6 @@ export function PricingPage({
               {/* Left: selected items summary */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1 bg-slate-100 text-navy-700 text-[11px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap">
-                    🏠 {formatDollars(membershipPrice)}/yr
-                  </span>
                   {selectedItems.map((item) => (
                     <span key={item.label} className="inline-flex items-center gap-1">
                       <span className="text-slate-300 text-xs">+</span>
@@ -391,13 +356,12 @@ export function PricingPage({
                     <p className="text-lg font-bold text-navy-700 leading-tight">
                       {formatDollars(grandTotalMonthly)}
                       <span className="text-xs font-normal text-slate-400">/mo</span>
-                      <span className="text-xs text-slate-400 ml-1">+ {formatDollars(membershipPrice)}/yr</span>
                     </p>
                   </div>
                 )}
                 <button
                   onClick={handleSubscribe}
-                  disabled={loading}
+                  disabled={loading || !hasSelections}
                   className="inline-flex items-center gap-2 rounded-xl bg-crimson-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-crimson-700 transition-colors disabled:opacity-60 shadow-lg whitespace-nowrap"
                 >
                   {loading && (
