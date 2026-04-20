@@ -39,11 +39,9 @@ export function DndContextProvider({
   onDragCancel,
 }: DndContextProviderProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 3 },
-    }),
+    useSensor(PointerSensor),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 250, tolerance: 6 },
+      activationConstraint: { delay: 180, tolerance: 6 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
