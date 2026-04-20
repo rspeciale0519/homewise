@@ -149,4 +149,78 @@ describe("computeCrossCategoryMove", () => {
     expect(catEmpty.documents.map((d) => d.id)).toEqual(["d1"]);
     expect(catEmpty.documents[0]!.membership.categoryId).toBe("catEmpty");
   });
+
+  it("moves a doc across sections (Office → Listing)", () => {
+    const crossTree: OrganizeTree = {
+      sections: {
+        office: {
+          categories: [
+            makeCat("catOffice", "office", 0, [
+              makeDoc("d1", "catOffice", 0),
+              makeDoc("d2", "catOffice", 1),
+            ]),
+          ],
+        },
+        listing: {
+          categories: [
+            makeCat("catListing", "listing", 0, [
+              makeDoc("d3", "catListing", 0),
+            ]),
+          ],
+        },
+        sales: { categories: [] },
+      },
+    };
+    const result = computeCrossCategoryMove(
+      crossTree,
+      "d1",
+      "catOffice",
+      "catListing",
+      1,
+    );
+    const office = result.sections.office.categories.find(
+      (c) => c.id === "catOffice",
+    )!;
+    const listing = result.sections.listing.categories.find(
+      (c) => c.id === "catListing",
+    )!;
+    expect(office.documents.map((d) => d.id)).toEqual(["d2"]);
+    expect(listing.documents.map((d) => d.id)).toEqual(["d3", "d1"]);
+    expect(listing.documents[1]!.membership.categoryId).toBe("catListing");
+    expect(listing.documents[1]!.membership.sortOrder).toBe(1);
+  });
+
+  it("moves a doc across sections into an empty target category", () => {
+    const crossTree: OrganizeTree = {
+      sections: {
+        office: {
+          categories: [
+            makeCat("catOffice", "office", 0, [makeDoc("d1", "catOffice", 0)]),
+          ],
+        },
+        listing: {
+          categories: [makeCat("catListingEmpty", "listing", 0, [])],
+        },
+        sales: { categories: [] },
+      },
+    };
+    const result = computeCrossCategoryMove(
+      crossTree,
+      "d1",
+      "catOffice",
+      "catListingEmpty",
+      0,
+    );
+    const office = result.sections.office.categories.find(
+      (c) => c.id === "catOffice",
+    )!;
+    const listing = result.sections.listing.categories.find(
+      (c) => c.id === "catListingEmpty",
+    )!;
+    expect(office.documents).toEqual([]);
+    expect(listing.documents.map((d) => d.id)).toEqual(["d1"]);
+    expect(listing.documents[0]!.membership.categoryId).toBe(
+      "catListingEmpty",
+    );
+  });
 });

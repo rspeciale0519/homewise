@@ -42,17 +42,29 @@ export function computeCrossCategoryMove(
   toCategoryId: string,
   toIndex: number,
 ): OrganizeTree {
-  const sections = tree.sections;
-  const updatedSections = { ...sections };
+  const sectionKeys = Object.keys(tree.sections) as Array<
+    keyof OrganizeTree["sections"]
+  >;
 
-  (Object.keys(sections) as Array<keyof typeof sections>).forEach((key) => {
-    const section = sections[key];
-    const fromCat = section.categories.find((c) => c.id === fromCategoryId);
-    const toCat = section.categories.find((c) => c.id === toCategoryId);
-    if (!fromCat && !toCat) return;
+  let movingDoc: AdminDocumentInCategory | undefined;
+  for (const key of sectionKeys) {
+    const fromCat = tree.sections[key].categories.find(
+      (c) => c.id === fromCategoryId,
+    );
+    if (fromCat) {
+      movingDoc = fromCat.documents.find((d) => d.id === documentId);
+      if (movingDoc) break;
+    }
+  }
+  if (!movingDoc) return tree;
 
-    const movingDoc = fromCat?.documents.find((d) => d.id === documentId);
-    if (!movingDoc) return;
+  const updatedSections = { ...tree.sections };
+
+  for (const key of sectionKeys) {
+    const section = tree.sections[key];
+    const hasFromCat = section.categories.some((c) => c.id === fromCategoryId);
+    const hasToCat = section.categories.some((c) => c.id === toCategoryId);
+    if (!hasFromCat && !hasToCat) continue;
 
     const updatedCategories = section.categories.map((cat) => {
       if (cat.id === fromCategoryId) {
@@ -66,7 +78,7 @@ export function computeCrossCategoryMove(
       }
       if (cat.id === toCategoryId) {
         const insert: AdminDocumentInCategory = {
-          ...movingDoc,
+          ...movingDoc!,
           membership: { categoryId: toCategoryId, sortOrder: toIndex },
         };
         const existingWithoutMoving = cat.documents.filter(
@@ -84,7 +96,7 @@ export function computeCrossCategoryMove(
     });
 
     updatedSections[key] = { categories: updatedCategories };
-  });
+  }
 
   return { sections: updatedSections };
 }
