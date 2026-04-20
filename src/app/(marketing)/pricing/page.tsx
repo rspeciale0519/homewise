@@ -5,10 +5,10 @@ import { PricingPage } from "@/components/pricing/pricing-page";
 export const metadata: Metadata = {
   title: "Pricing — Home Wise Realty Group",
   description:
-    "Join Home Wise Realty Group with our annual membership. Add optional bundles for AI tools, marketing automation, and growth analytics.",
+    "Transparent pricing for Home Wise agents. Choose the bundles and features that match how you work — no required annual fees.",
 };
 
-export type BundleWithFeatures = {
+export type ProductWithFeatures = {
   id: string;
   name: string;
   slug: string;
@@ -33,8 +33,8 @@ export type FeatureEntitlement = {
 
 export default async function PricingServerPage() {
   const [configs, entitlements] = await Promise.all([
-    prisma.bundleConfig.findMany({
-      where: { isActive: true },
+    prisma.productConfig.findMany({
+      where: { isActive: true, platforms: { has: "homewise" } },
       orderBy: { sortOrder: "asc" },
       select: {
         id: true,
@@ -53,7 +53,11 @@ export default async function PricingServerPage() {
       },
     }),
     prisma.entitlementConfig.findMany({
-      where: { isActive: true, requiredProduct: { not: null } },
+      where: {
+        isActive: true,
+        requiredProduct: { not: null },
+        platforms: { has: "homewise" },
+      },
       select: {
         id: true,
         featureKey: true,
@@ -65,8 +69,6 @@ export default async function PricingServerPage() {
     }),
   ]);
 
-  const membership = configs.find((b) => b.productType === "membership") ?? null;
-
   const bundleOrder = ["marketing_suite", "ai_power_tools", "growth_engine"];
   const bundles = configs
     .filter((b) => bundleOrder.includes(b.productType))
@@ -76,7 +78,6 @@ export default async function PricingServerPage() {
 
   return (
     <PricingPage
-      membership={membership}
       bundles={bundles}
       addOns={addOns}
       entitlements={entitlements}

@@ -75,6 +75,13 @@ async function seedBilling() {
   // ── 1. BundleConfig — Stripe Products/Prices + DB records ───────────────────
   console.log("1. Seeding BundleConfig records...");
 
+  const orphan = await prisma.productConfig.deleteMany({
+    where: { slug: "annual_brokerage_membership" },
+  });
+  if (orphan.count > 0) {
+    console.log(`  Removed ${orphan.count} legacy 'annual_brokerage_membership' row(s)`);
+  }
+
   for (const product of PRODUCTS) {
     console.log(`\n  Processing: ${product.name}`);
 
@@ -105,7 +112,7 @@ async function seedBilling() {
       );
     }
 
-    await prisma.bundleConfig.upsert({
+    await prisma.productConfig.upsert({
       where: { slug: product.slug },
       update: {
         name: product.name,
@@ -118,6 +125,7 @@ async function seedBilling() {
         productType: product.productType,
         sortOrder: product.sortOrder,
         isActive: true,
+        platforms: product.platforms,
       },
       create: {
         name: product.name,
@@ -131,6 +139,7 @@ async function seedBilling() {
         productType: product.productType,
         sortOrder: product.sortOrder,
         isActive: true,
+        platforms: product.platforms,
       },
     });
 
@@ -149,6 +158,7 @@ async function seedBilling() {
         freeLimit: entitlement.freeLimit,
         description: entitlement.description,
         isActive: true,
+        platforms: entitlement.platforms,
       },
       create: {
         featureKey: entitlement.featureKey,
@@ -157,6 +167,7 @@ async function seedBilling() {
         freeLimit: entitlement.freeLimit,
         description: entitlement.description,
         isActive: true,
+        platforms: entitlement.platforms,
       },
     });
     console.log(`  Upserted EntitlementConfig: ${entitlement.featureKey}`);
@@ -166,7 +177,7 @@ async function seedBilling() {
   console.log("\n3. Seeding BundleFeature records...");
 
   for (const [bundleSlug, featureKeys] of Object.entries(BUNDLE_FEATURES)) {
-    const bundle = await prisma.bundleConfig.findUnique({
+    const bundle = await prisma.productConfig.findUnique({
       where: { slug: bundleSlug },
     });
 

@@ -1,11 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { BundleWithFeatures, FeatureEntitlement } from "@/app/(marketing)/pricing/page";
+import type { ProductWithFeatures, FeatureEntitlement } from "@/app/(marketing)/pricing/page";
 
 interface FeaturePickerProps {
   entitlements: FeatureEntitlement[];
-  bundles: BundleWithFeatures[];
+  bundles: ProductWithFeatures[];
   selectedFeatures: Set<string>;
   onToggleFeature: (featureKey: string) => void;
   loading: boolean;

@@ -95,12 +95,12 @@ export async function syncSubscriptionFromStripe(
     where: { subscriptionId: subscription.id },
   });
 
-  const bundleConfigs = await prisma.bundleConfig.findMany({
+  const productConfigs = await prisma.productConfig.findMany({
     where: { isActive: true },
   });
 
   const priceToBundle = new Map(
-    bundleConfigs.flatMap((bundle) => {
+    productConfigs.flatMap((bundle) => {
       const entries: [string, typeof bundle][] = [];
       if (bundle.monthlyPriceId) entries.push([bundle.monthlyPriceId, bundle]);
       if (bundle.annualPriceId) entries.push([bundle.annualPriceId, bundle]);

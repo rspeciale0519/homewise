@@ -41,7 +41,6 @@ export function SubscriptionStatus({
 
   const bundles = items.filter((item) => item.productType === "bundle");
   const addons = items.filter((item) => item.productType === "addon");
-  const membership = items.find((item) => item.productType === "membership");
 
   return (
     <div className="space-y-4">
@@ -78,13 +77,6 @@ export function SubscriptionStatus({
             {new Date(currentPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </p>
         </div>
-
-        {membership && (
-          <div>
-            <p className="text-xs text-slate-400 mb-0.5">Membership</p>
-            <p className="text-navy-700">{membership.productName}</p>
-          </div>
-        )}
       </div>
 
       {bundles.length > 0 && (

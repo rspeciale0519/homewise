@@ -168,7 +168,7 @@ Expected: FAIL — `Cannot find module '../filter'`.
 Create `src/lib/platform/filter.ts`:
 
 ```ts
-import { PlatformSchema, type Platform } from "@/schemas/platform.schema";
+import { platformSchema, type Platform } from "@/schemas/platform.schema";
 
 export type { Platform };
 
@@ -178,7 +178,7 @@ export function platformFilter(platform: Platform = "homewise") {
 
 export function resolveAgentPlatform(agent: { platform: string } | null): Platform {
   if (!agent) return "homewise";
-  const parsed = PlatformSchema.safeParse(agent.platform);
+  const parsed = platformSchema.safeParse(agent.platform);
   return parsed.success ? parsed.data : "homewise";
 }
 ```

@@ -10,19 +10,21 @@ export interface ProductDef {
   hasMonthly: boolean;
   hasAnnual: boolean;
   sortOrder: number;
+  platforms: string[];
 }
 
 export const PRODUCTS: ProductDef[] = [
   {
-    slug: "annual_brokerage_membership",
-    name: "Annual Brokerage Membership",
-    description: "Full brokerage membership with access to all core platform features.",
+    slug: "riusa_annual_dues",
+    name: "RIUSA Annual Dues",
+    description: "Annual membership dues for Realty International USA agents.",
     productType: "membership",
     monthlyAmount: 0,
-    annualAmount: 49900,
+    annualAmount: 19500,
     hasMonthly: false,
     hasAnnual: true,
     sortOrder: 0,
+    platforms: ["riusa"],
   },
   {
     slug: "ai_power_tools",
@@ -34,6 +36,7 @@ export const PRODUCTS: ProductDef[] = [
     hasMonthly: true,
     hasAnnual: true,
     sortOrder: 1,
+    platforms: ["homewise"],
   },
   {
     slug: "marketing_suite",
@@ -45,6 +48,7 @@ export const PRODUCTS: ProductDef[] = [
     hasMonthly: true,
     hasAnnual: true,
     sortOrder: 2,
+    platforms: ["homewise"],
   },
   {
     slug: "growth_engine",
@@ -56,6 +60,7 @@ export const PRODUCTS: ProductDef[] = [
     hasMonthly: true,
     hasAnnual: true,
     sortOrder: 3,
+    platforms: ["homewise"],
   },
   {
     slug: "extra_ai_credits",
@@ -67,6 +72,7 @@ export const PRODUCTS: ProductDef[] = [
     hasMonthly: true,
     hasAnnual: false,
     sortOrder: 4,
+    platforms: ["homewise"],
   },
   {
     slug: "advanced_training_library",
@@ -78,6 +84,7 @@ export const PRODUCTS: ProductDef[] = [
     hasMonthly: true,
     hasAnnual: false,
     sortOrder: 5,
+    platforms: ["homewise"],
   },
   {
     slug: "property_alerts_pack",
@@ -89,6 +96,7 @@ export const PRODUCTS: ProductDef[] = [
     hasMonthly: true,
     hasAnnual: false,
     sortOrder: 6,
+    platforms: ["homewise"],
   },
   {
     slug: "white_label_cma_reports",
@@ -100,6 +108,7 @@ export const PRODUCTS: ProductDef[] = [
     hasMonthly: true,
     hasAnnual: false,
     sortOrder: 7,
+    platforms: ["homewise"],
   },
 ];
 
@@ -109,6 +118,7 @@ export interface EntitlementDef {
   requiredProduct: string | null;
   freeLimit: number | null;
   description: string;
+  platforms: string[];
 }
 
 export const ENTITLEMENTS: EntitlementDef[] = [
@@ -119,6 +129,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "ai_power_tools",
     freeLimit: 5,
     description: "AI-generated Comparative Market Analysis reports.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "ai_lead_scoring",
@@ -126,6 +137,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "ai_power_tools",
     freeLimit: null,
     description: "Basic AI lead scoring is free; advanced scoring requires AI Power Tools.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "ai_listing_descriptions",
@@ -133,6 +145,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "ai_power_tools",
     freeLimit: null,
     description: "Basic AI listing descriptions free; enhanced requires AI Power Tools.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "ai_social_posts",
@@ -140,6 +153,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "ai_power_tools",
     freeLimit: null,
     description: "Generate social media posts for listings using AI.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "ai_meeting_prep",
@@ -147,6 +161,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "ai_power_tools",
     freeLimit: null,
     description: "AI-generated meeting preparation briefs.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "ai_follow_up_drafts",
@@ -154,6 +169,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "ai_power_tools",
     freeLimit: null,
     description: "AI-drafted follow-up messages for leads and clients.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "ai_email_content",
@@ -161,6 +177,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "ai_power_tools",
     freeLimit: null,
     description: "AI-generated email content for campaigns and outreach.",
+    platforms: ["homewise"],
   },
   // Marketing Suite features
   {
@@ -169,6 +186,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "marketing_suite",
     freeLimit: null,
     description: "Visual drip campaign builder with templates.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "drip_sequences",
@@ -176,6 +194,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "marketing_suite",
     freeLimit: null,
     description: "Automated drip email sequences for lead nurturing.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "ab_subject_testing",
@@ -183,6 +202,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "marketing_suite",
     freeLimit: null,
     description: "Split test email subject lines to improve open rates.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "broadcast_emails",
@@ -190,6 +210,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "marketing_suite",
     freeLimit: null,
     description: "Send bulk broadcast emails to segmented audiences.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "email_analytics",
@@ -197,6 +218,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "marketing_suite",
     freeLimit: null,
     description: "Detailed open, click, and conversion analytics for emails.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "automation_triggers",
@@ -204,6 +226,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "marketing_suite",
     freeLimit: null,
     description: "Trigger automated actions based on lead behavior.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "sms_campaigns",
@@ -211,6 +234,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "marketing_suite",
     freeLimit: null,
     description: "Send SMS messages as part of campaign sequences.",
+    platforms: ["homewise"],
   },
   // Growth Engine features
   {
@@ -219,6 +243,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "growth_engine",
     freeLimit: null,
     description: "Advanced rule-based priority lead routing.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "advanced_lead_scoring",
@@ -226,6 +251,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "growth_engine",
     freeLimit: null,
     description: "Custom scoring rules and weighted criteria for lead prioritization.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "team_dashboards",
@@ -233,6 +259,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "growth_engine",
     freeLimit: null,
     description: "Team performance dashboards with cross-agent visibility.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "unlimited_transactions",
@@ -240,6 +267,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "growth_engine",
     freeLimit: null,
     description: "Unlimited transaction tracking records.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "performance_analytics",
@@ -247,6 +275,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "growth_engine",
     freeLimit: null,
     description: "Advanced performance reporting and pipeline analytics.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "api_access",
@@ -254,6 +283,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "growth_engine",
     freeLimit: null,
     description: "REST API access for custom integrations.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "white_label_cma",
@@ -261,6 +291,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: "growth_engine",
     freeLimit: null,
     description: "Fully branded CMA reports with agent/brokerage logo.",
+    platforms: ["homewise"],
   },
   // Free-tier features with limits
   {
@@ -269,6 +300,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: null,
     freeLimit: 50,
     description: "CRM contact records. Free tier limited to 50 contacts.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "property_alerts",
@@ -276,6 +308,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: null,
     freeLimit: 3,
     description: "Active property alert subscriptions for clients.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "transaction_tracking",
@@ -283,6 +316,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: null,
     freeLimit: 3,
     description: "Active transaction records. Free tier limited to 3.",
+    platforms: ["homewise"],
   },
   {
     featureKey: "training_library",
@@ -290,6 +324,7 @@ export const ENTITLEMENTS: EntitlementDef[] = [
     requiredProduct: null,
     freeLimit: null,
     description: "Training content library. Required courses are free.",
+    platforms: ["homewise"],
   },
 ];
 

@@ -72,14 +72,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const {
-    bundles,
-    addOns,
-    billingInterval,
-    skipMembership,
-    successUrl,
-    cancelUrl,
-  } = parsed.data;
+  const { bundles, addOns, billingInterval, successUrl, cancelUrl } = parsed.data;
 
   const resolvedSuccessUrl = resolveTrustedReturnUrl(
     successUrl,
@@ -101,36 +94,21 @@ export async function POST(request: NextRequest) {
 
   const customerId = await getOrCreateStripeCustomer(agent.id);
 
-  const bundleConfigs = await prisma.bundleConfig.findMany({
+  const productConfigs = await prisma.productConfig.findMany({
     where: { isActive: true },
   });
 
   type LineItem = { price: string; quantity: number };
   const lineItems: LineItem[] = [];
 
-  if (!skipMembership) {
-    const membershipBundle = bundleConfigs.find(
-      (b) => b.productType === "membership",
-    );
-
-    if (!membershipBundle?.annualPriceId) {
-      return NextResponse.json(
-        { error: "Membership bundle is not configured" },
-        { status: 500 },
-      );
-    }
-
-    lineItems.push({ price: membershipBundle.annualPriceId, quantity: 1 });
-  }
-
   for (const slug of bundles) {
-    const bundle = bundleConfigs.find((b) => b.slug === slug);
-    if (!bundle) continue;
+    const product = productConfigs.find((b) => b.slug === slug);
+    if (!product) continue;
 
     const priceId =
       billingInterval === "annual"
-        ? (bundle.annualPriceId ?? bundle.monthlyPriceId)
-        : bundle.monthlyPriceId;
+        ? (product.annualPriceId ?? product.monthlyPriceId)
+        : product.monthlyPriceId;
 
     if (priceId) {
       lineItems.push({ price: priceId, quantity: 1 });
@@ -138,9 +116,16 @@ export async function POST(request: NextRequest) {
   }
 
   for (const slug of addOns) {
-    const addOn = bundleConfigs.find((b) => b.slug === slug);
+    const addOn = productConfigs.find((b) => b.slug === slug);
     if (!addOn?.monthlyPriceId) continue;
     lineItems.push({ price: addOn.monthlyPriceId, quantity: 1 });
+  }
+
+  if (lineItems.length === 0) {
+    return NextResponse.json(
+      { error: "No items selected. Pick at least one bundle or feature." },
+      { status: 400 },
+    );
   }
 
   try {

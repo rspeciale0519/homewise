@@ -53,14 +53,14 @@ export async function PUT(request: NextRequest) {
   const slugsToRemove = removeBundles as string[];
 
   try {
-    const bundleConfigs = await prisma.bundleConfig.findMany({
+    const productConfigs = await prisma.productConfig.findMany({
       where: {
         isActive: true,
         slug: { in: [...slugsToAdd, ...slugsToRemove] },
       },
     });
 
-    const bundleBySlug = new Map(bundleConfigs.map((b) => [b.slug, b]));
+    const productBySlug = new Map(productConfigs.map((b) => [b.slug, b]));
 
     const stripeSubscriptionId = agent.subscription.stripeSubscriptionId;
     const existingItems = agent.subscription.items;
@@ -79,10 +79,10 @@ export async function PUT(request: NextRequest) {
     // Keep existing items that are not being removed
     for (const item of existingItems) {
       const isBeingRemoved = slugsToRemove.some((slug) => {
-        const bundle = bundleBySlug.get(slug);
+        const product = productBySlug.get(slug);
         return (
-          bundle?.monthlyPriceId === item.stripePriceId ||
-          bundle?.annualPriceId === item.stripePriceId
+          product?.monthlyPriceId === item.stripePriceId ||
+          product?.annualPriceId === item.stripePriceId
         );
       });
 
@@ -95,8 +95,8 @@ export async function PUT(request: NextRequest) {
 
     // Add new items for bundles being added
     for (const slug of slugsToAdd) {
-      const bundle = bundleBySlug.get(slug);
-      if (!bundle) {
+      const product = productBySlug.get(slug);
+      if (!product) {
         return NextResponse.json(
           { error: `Bundle not found: ${slug}` },
           { status: 400 },
@@ -107,12 +107,12 @@ export async function PUT(request: NextRequest) {
       // Fall back to monthly if no existing items
       const existingPriceIds = existingItems.map((i) => i.stripePriceId);
       const usesAnnual = existingPriceIds.some((p) =>
-        bundleConfigs.some((b) => b.annualPriceId === p),
+        productConfigs.some((b) => b.annualPriceId === p),
       );
 
       const priceId = usesAnnual
-        ? (bundle.annualPriceId ?? bundle.monthlyPriceId)
-        : (bundle.monthlyPriceId ?? bundle.annualPriceId);
+        ? (product.annualPriceId ?? product.monthlyPriceId)
+        : (product.monthlyPriceId ?? product.annualPriceId);
 
       if (!priceId) {
         return NextResponse.json(
