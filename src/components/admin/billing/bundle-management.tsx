@@ -20,6 +20,7 @@ interface Bundle {
   productType: string;
   isActive: boolean;
   sortOrder: number;
+  platforms: string[];
   features: BundleFeature[];
 }
 
@@ -323,6 +324,7 @@ export function BundleManagement() {
             <thead>
               <tr className="border-b border-slate-100 text-left">
                 <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Platforms</th>
                 <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
                 <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Monthly</th>
                 <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Annual</th>
@@ -337,6 +339,22 @@ export function BundleManagement() {
                   <td className="px-5 py-3">
                     <p className="font-medium text-navy-700">{bundle.name}</p>
                     <p className="text-[10px] text-slate-400">{bundle.slug}</p>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {bundle.platforms.map((p) => (
+                        <span
+                          key={p}
+                          className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            p === "homewise"
+                              ? "bg-navy-50 text-navy-700"
+                              : "bg-amber-50 text-amber-700"
+                          }`}
+                        >
+                          {p}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-5 py-3">
                     <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
@@ -376,7 +394,7 @@ export function BundleManagement() {
               ))}
               {bundles.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-slate-400">
+                  <td colSpan={8} className="px-5 py-10 text-center text-slate-400">
                     No bundles configured yet.
                   </td>
                 </tr>
