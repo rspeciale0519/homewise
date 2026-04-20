@@ -106,7 +106,6 @@ export function PlanManager({
           bundles: Array.from(selectedNewBundles),
           addOns: [],
           billingInterval,
-          skipMembership: true,
         }),
       });
       const text = await res.text();
