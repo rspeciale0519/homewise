@@ -124,15 +124,17 @@ The roadmap update is included in each checkpoint commit, keeping progress track
 
 ```bash
 # .env.local MUST use these pooler hosts:
-DATABASE_URL=postgresql://postgres.xrixrioaarbnpzjqzfsl:PASSWORD@aws-1-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
-DIRECT_DATABASE_URL=postgresql://postgres.xrixrioaarbnpzjqzfsl:PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.fkwkjlsftlkjpiyspdbm:PASSWORD@aws-0-us-west-2.pooler.supabase.com:6543/postgres?pgbouncer=true
+DIRECT_DATABASE_URL=postgresql://postgres.fkwkjlsftlkjpiyspdbm:PASSWORD@aws-0-us-west-2.pooler.supabase.com:5432/postgres
 ```
 
 **Key Points:**
-- Pooler host is `aws-1-us-east-1.pooler.supabase.com` (NOT `aws-0`)
+- Supabase project ID is `fkwkjlsftlkjpiyspdbm` in region `us-west-2`
+- Pooler host is `aws-0-us-west-2.pooler.supabase.com`
+- Production and local development share this single Supabase project — running migrations or seeds locally writes to the production database
 - Transaction mode (port 6543) for application queries
 - Session mode (port 5432) for migrations and direct operations
-- NEVER use `db.xrixrioaarbnpzjqzfsl.supabase.co` (direct connection) - it resolves IPv6-only and is unreachable
+- NEVER use `db.fkwkjlsftlkjpiyspdbm.supabase.co` (direct connection) - it resolves IPv6-only and is unreachable
 
 **Verification:** Run E2E seed to confirm: `npx tsx tests/e2e/fixtures/seed-e2e.ts`
 
