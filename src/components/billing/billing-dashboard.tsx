@@ -44,7 +44,7 @@ interface BillingDashboardProps {
   subscription: Subscription | null;
   paymentRecords: PaymentRecord[];
   hasStripeCustomer: boolean;
-  bundleConfigs: ProductWithFeatures[];
+  productConfigs: ProductWithFeatures[];
   entitlements: FeatureEntitlement[];
 }
 
@@ -117,7 +117,7 @@ export function BillingDashboard({
   subscription,
   paymentRecords: _paymentRecords,
   hasStripeCustomer: _hasStripeCustomer,
-  bundleConfigs,
+  productConfigs,
   entitlements,
 }: BillingDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("plan");
@@ -125,10 +125,10 @@ export function BillingDashboard({
   const billingInterval = useMemo<BillingInterval>(() => {
     if (!subscription) return "monthly";
     const hasAnnual = subscription.items.some((item) =>
-      bundleConfigs.some((b) => b.annualPriceId === item.stripePriceId),
+      productConfigs.some((b) => b.annualPriceId === item.stripePriceId),
     );
     return hasAnnual ? "annual" : "monthly";
-  }, [subscription, bundleConfigs]);
+  }, [subscription, productConfigs]);
 
   const [currentInterval, setCurrentInterval] =
     useState<BillingInterval>(billingInterval);
@@ -140,7 +140,7 @@ export function BillingDashboard({
   const estimatedTotal = useMemo(() => {
     if (!subscription) return 0;
     return subscription.items.reduce((sum, item) => {
-      const config = bundleConfigs.find(
+      const config = productConfigs.find(
         (b) =>
           b.monthlyPriceId === item.stripePriceId ||
           b.annualPriceId === item.stripePriceId,
@@ -151,7 +151,7 @@ export function BillingDashboard({
       }
       return sum + config.monthlyAmount;
     }, 0);
-  }, [subscription, bundleConfigs, currentInterval]);
+  }, [subscription, productConfigs, currentInterval]);
 
   if (!subscription) {
     return (
@@ -168,7 +168,7 @@ export function BillingDashboard({
 
         <PlanManager
           subscription={null}
-          bundleConfigs={bundleConfigs}
+          productConfigs={productConfigs}
           entitlements={entitlements}
           isNewSubscription
         />
@@ -269,7 +269,7 @@ export function BillingDashboard({
           <PlanManager
             subscription={subscription}
             items={subscription.items}
-            bundleConfigs={bundleConfigs}
+            productConfigs={productConfigs}
             entitlements={entitlements}
             billingInterval={currentInterval}
             onBillingIntervalChange={setCurrentInterval}

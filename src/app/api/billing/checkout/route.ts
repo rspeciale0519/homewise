@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
   const customerId = await getOrCreateStripeCustomer(agent.id);
 
-  const bundleConfigs = await prisma.productConfig.findMany({
+  const productConfigs = await prisma.productConfig.findMany({
     where: { isActive: true },
   });
 
@@ -102,13 +102,13 @@ export async function POST(request: NextRequest) {
   const lineItems: LineItem[] = [];
 
   for (const slug of bundles) {
-    const bundle = bundleConfigs.find((b) => b.slug === slug);
-    if (!bundle) continue;
+    const product = productConfigs.find((b) => b.slug === slug);
+    if (!product) continue;
 
     const priceId =
       billingInterval === "annual"
-        ? (bundle.annualPriceId ?? bundle.monthlyPriceId)
-        : bundle.monthlyPriceId;
+        ? (product.annualPriceId ?? product.monthlyPriceId)
+        : product.monthlyPriceId;
 
     if (priceId) {
       lineItems.push({ price: priceId, quantity: 1 });
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
   }
 
   for (const slug of addOns) {
-    const addOn = bundleConfigs.find((b) => b.slug === slug);
+    const addOn = productConfigs.find((b) => b.slug === slug);
     if (!addOn?.monthlyPriceId) continue;
     lineItems.push({ price: addOn.monthlyPriceId, quantity: 1 });
   }

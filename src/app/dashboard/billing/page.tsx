@@ -24,7 +24,7 @@ export default async function BillingPage() {
     return <AccessDenied />;
   }
 
-  const [agent, bundleConfigs, entitlements] = await Promise.all([
+  const [agent, productConfigs, entitlements] = await Promise.all([
     prisma.agent.findFirst({
       where: {
         OR: [{ userId: user.id }, { email: user.email ?? "" }],
@@ -121,7 +121,7 @@ export default async function BillingPage() {
         subscription={subscription}
         paymentRecords={paymentRecords}
         hasStripeCustomer={!!agent?.stripeCustomer}
-        bundleConfigs={bundleConfigs}
+        productConfigs={productConfigs}
         entitlements={entitlements}
       />
     </div>

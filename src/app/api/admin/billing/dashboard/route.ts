@@ -46,22 +46,22 @@ export async function GET() {
     ]);
 
     // Calculate MRR from active subscription items by looking up product prices
-    const bundleConfigs = await prisma.productConfig.findMany({
+    const productConfigs = await prisma.productConfig.findMany({
       where: { isActive: true },
     });
 
     const priceToAmount = new Map<string, { monthly: number; annual: number }>();
-    for (const bundle of bundleConfigs) {
-      if (bundle.monthlyPriceId) {
-        priceToAmount.set(bundle.monthlyPriceId, {
-          monthly: bundle.monthlyAmount,
-          annual: bundle.annualAmount,
+    for (const product of productConfigs) {
+      if (product.monthlyPriceId) {
+        priceToAmount.set(product.monthlyPriceId, {
+          monthly: product.monthlyAmount,
+          annual: product.annualAmount,
         });
       }
-      if (bundle.annualPriceId) {
-        priceToAmount.set(bundle.annualPriceId, {
-          monthly: bundle.monthlyAmount,
-          annual: bundle.annualAmount,
+      if (product.annualPriceId) {
+        priceToAmount.set(product.annualPriceId, {
+          monthly: product.monthlyAmount,
+          annual: product.annualAmount,
         });
       }
     }
@@ -74,7 +74,7 @@ export async function GET() {
       if (!amounts) continue;
 
       // If price is annual, divide by 12 for MRR
-      const isAnnual = bundleConfigs.some(
+      const isAnnual = productConfigs.some(
         (b) => b.annualPriceId === item.stripePriceId,
       );
       const mrr = isAnnual

@@ -22,7 +22,7 @@ interface SubscriptionItem {
 interface PlanManagerProps {
   subscription: { items: SubscriptionItem[] } | null;
   items?: SubscriptionItem[];
-  bundleConfigs: ProductWithFeatures[];
+  productConfigs: ProductWithFeatures[];
   entitlements: FeatureEntitlement[];
   billingInterval?: BillingInterval;
   onBillingIntervalChange?: (interval: BillingInterval) => void;
@@ -40,7 +40,7 @@ const BUNDLE_ORDER = ["marketing_suite", "ai_power_tools", "growth_engine"];
 export function PlanManager({
   subscription,
   items: itemsProp,
-  bundleConfigs,
+  productConfigs,
   entitlements,
   billingInterval: billingIntervalProp,
   onBillingIntervalChange,
@@ -68,7 +68,7 @@ export function PlanManager({
     items
       .filter((item) => item.productType === "bundle")
       .map((item) => {
-        const config = bundleConfigs.find(
+        const config = productConfigs.find(
           (b) =>
             b.monthlyPriceId === item.stripePriceId ||
             b.annualPriceId === item.stripePriceId,
@@ -78,7 +78,7 @@ export function PlanManager({
       .filter(Boolean) as string[],
   );
 
-  const bundles = bundleConfigs
+  const bundles = productConfigs
     .filter((b) => BUNDLE_ORDER.includes(b.productType))
     .sort(
       (a, b) =>

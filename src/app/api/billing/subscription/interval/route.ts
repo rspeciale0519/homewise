@@ -48,15 +48,15 @@ export async function PUT(request: NextRequest) {
     const stripeSubscriptionId = agent.subscription.stripeSubscriptionId;
 
     // Load all active product configs to map current price IDs to new interval price IDs
-    const bundleConfigs = await prisma.productConfig.findMany({
+    const productConfigs = await prisma.productConfig.findMany({
       where: { isActive: true },
     });
 
-    const priceToBundle = new Map(
-      bundleConfigs.flatMap((bundle) => {
-        const entries: [string, typeof bundle][] = [];
-        if (bundle.monthlyPriceId) entries.push([bundle.monthlyPriceId, bundle]);
-        if (bundle.annualPriceId) entries.push([bundle.annualPriceId, bundle]);
+    const priceToProduct = new Map(
+      productConfigs.flatMap((product) => {
+        const entries: [string, typeof product][] = [];
+        if (product.monthlyPriceId) entries.push([product.monthlyPriceId, product]);
+        if (product.annualPriceId) entries.push([product.annualPriceId, product]);
         return entries;
       }),
     );
@@ -64,20 +64,20 @@ export async function PUT(request: NextRequest) {
     const itemUpdates: { id: string; price: string }[] = [];
 
     for (const item of existingItems) {
-      const bundle = priceToBundle.get(item.stripePriceId);
-      if (!bundle) {
+      const product = priceToProduct.get(item.stripePriceId);
+      if (!product) {
         // Unknown price — keep as-is by not touching it, skip
         continue;
       }
 
       const targetPriceId =
         interval === "annual"
-          ? (bundle.annualPriceId ?? bundle.monthlyPriceId)
-          : (bundle.monthlyPriceId ?? bundle.annualPriceId);
+          ? (product.annualPriceId ?? product.monthlyPriceId)
+          : (product.monthlyPriceId ?? product.annualPriceId);
 
       if (!targetPriceId) {
         return NextResponse.json(
-          { error: `No ${interval} price configured for bundle: ${bundle.slug}` },
+          { error: `No ${interval} price configured for bundle: ${product.slug}` },
           { status: 400 },
         );
       }

@@ -47,7 +47,7 @@ export async function PUT(
   }
 
   try {
-    const bundleConfigs = await prisma.productConfig.findMany({
+    const productConfigs = await prisma.productConfig.findMany({
       where: { isActive: true },
     });
 
@@ -56,11 +56,11 @@ export async function PUT(
 
     // Remove bundles
     for (const slug of removeBundles) {
-      const bundle = bundleConfigs.find((b) => b.slug === slug);
-      if (!bundle) continue;
+      const product = productConfigs.find((b) => b.slug === slug);
+      if (!product) continue;
 
       const existingItem = subscription.items.find(
-        (item) => item.productType === bundle.productType,
+        (item) => item.productType === product.productType,
       );
       if (existingItem) {
         itemUpdates.push({ id: existingItem.stripeItemId, deleted: true });
@@ -69,14 +69,14 @@ export async function PUT(
 
     // Add bundles
     for (const slug of addBundles) {
-      const bundle = bundleConfigs.find((b) => b.slug === slug);
-      if (!bundle) continue;
+      const product = productConfigs.find((b) => b.slug === slug);
+      if (!product) continue;
 
-      const priceId = bundle.annualPriceId ?? bundle.monthlyPriceId;
+      const priceId = product.annualPriceId ?? product.monthlyPriceId;
       if (!priceId) continue;
 
       const alreadyExists = subscription.items.some(
-        (item) => item.productType === bundle.productType,
+        (item) => item.productType === product.productType,
       );
       if (!alreadyExists) {
         itemUpdates.push({ price: priceId });
