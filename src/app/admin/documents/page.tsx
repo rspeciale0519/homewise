@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DocumentsAdminView } from "./documents-admin-view";
+import { OrganizeView } from "./organize-view";
 
 export const metadata: Metadata = { title: "Document Library — Admin" };
 
@@ -10,9 +10,10 @@ export default async function DocumentsAdminPage() {
         Document Library
       </h1>
       <p className="text-slate-500 text-sm mb-8">
-        Manage documents, categories, and URL slugs agents see in the library.
+        Organize what agents see. Drag to reorder within a category, or drag
+        across categories within a section.
       </p>
-      <DocumentsAdminView />
+      <OrganizeView />
     </div>
   );
 }
