@@ -72,14 +72,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const {
-    bundles,
-    addOns,
-    billingInterval,
-    skipMembership,
-    successUrl,
-    cancelUrl,
-  } = parsed.data;
+  const { bundles, addOns, billingInterval, successUrl, cancelUrl } = parsed.data;
 
   const resolvedSuccessUrl = resolveTrustedReturnUrl(
     successUrl,
@@ -108,21 +101,6 @@ export async function POST(request: NextRequest) {
   type LineItem = { price: string; quantity: number };
   const lineItems: LineItem[] = [];
 
-  if (!skipMembership) {
-    const membershipBundle = bundleConfigs.find(
-      (b) => b.productType === "membership",
-    );
-
-    if (!membershipBundle?.annualPriceId) {
-      return NextResponse.json(
-        { error: "Membership bundle is not configured" },
-        { status: 500 },
-      );
-    }
-
-    lineItems.push({ price: membershipBundle.annualPriceId, quantity: 1 });
-  }
-
   for (const slug of bundles) {
     const bundle = bundleConfigs.find((b) => b.slug === slug);
     if (!bundle) continue;
@@ -141,6 +119,13 @@ export async function POST(request: NextRequest) {
     const addOn = bundleConfigs.find((b) => b.slug === slug);
     if (!addOn?.monthlyPriceId) continue;
     lineItems.push({ price: addOn.monthlyPriceId, quantity: 1 });
+  }
+
+  if (lineItems.length === 0) {
+    return NextResponse.json(
+      { error: "No items selected. Pick at least one bundle or feature." },
+      { status: 400 },
+    );
   }
 
   try {

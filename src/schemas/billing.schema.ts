@@ -6,7 +6,6 @@ export const checkoutSessionSchema = z.object({
   bundles: z.array(z.string()).default([]),
   addOns: z.array(z.string()).default([]),
   billingInterval: z.enum(["monthly", "annual"]).default("annual"),
-  skipMembership: z.boolean().default(false),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
 });
