@@ -132,10 +132,11 @@ model UserProfile {
   lastName       String
   phone          String?
   avatarUrl      String?
-  role           String   @default("user")
-  preferredAgent String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  role                 String   @default("user")
+  preferredAgent       String?
+  defaultDashboardView String   @default("client")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   favorites          FavoriteProperty[]
   savedSearches      SavedSearch[]
