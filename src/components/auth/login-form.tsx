@@ -12,7 +12,9 @@ type Mode = "password" | "magic-link";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
+  const rawRedirectTo = searchParams.get("redirectTo");
+  const redirectTo = rawRedirectTo ?? "/dashboard";
+  const redirectToIsDefault = !rawRedirectTo || rawRedirectTo === "/dashboard";
   const { supabase } = useSupabase();
 
   const [mode, setMode] = useState<Mode>("password");
@@ -78,7 +80,24 @@ export function LoginForm() {
       return;
     }
 
-    router.push(redirectTo);
+    let destination = redirectTo;
+    if (redirectToIsDefault) {
+      try {
+        const res = await fetch("/api/me/dashboard-view", {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const json = (await res.json()) as { path?: string };
+          if (typeof json.path === "string" && json.path.startsWith("/")) {
+            destination = json.path;
+          }
+        }
+      } catch {
+        // Fall back to /dashboard on network error.
+      }
+    }
+
+    router.push(destination);
     router.refresh();
   };
 

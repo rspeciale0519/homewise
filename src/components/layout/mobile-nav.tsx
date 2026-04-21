@@ -9,6 +9,7 @@ import { NAV_ITEMS } from "@/data/navigation";
 import { PHONE, EMAIL } from "@/lib/constants";
 import { SocialLinks } from "@/components/shared/social-links";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { useDashboardHref } from "@/lib/use-dashboard-href";
 import { cn } from "@/lib/utils";
 
 interface MobileNavProps {
@@ -21,6 +22,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, supabase, loading } = useSupabase();
+  const dashboardHref = useDashboardHref(!!user);
 
   useEffect(() => {
     if (open) {
@@ -148,7 +150,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                     Hi, {user.user_metadata?.first_name || "there"}
                   </p>
                   <Link
-                    href="/dashboard"
+                    href={dashboardHref}
                     className="flex items-center justify-center w-full h-11 rounded-md bg-navy-600 text-white text-sm font-medium tracking-wide hover:bg-navy-700 transition-colors"
                   >
                     My Dashboard
