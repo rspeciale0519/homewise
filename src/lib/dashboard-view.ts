@@ -19,6 +19,7 @@ export function resolveDashboardPath(
   profile: { role?: string | null; defaultDashboardView?: string | null } | null,
 ): string {
   if (!profile) return DEFAULT_DASHBOARD_PATH;
+  if (profile.role === "agent") return DASHBOARD_VIEW_PATHS.agent;
   if (profile.role !== "admin") return DEFAULT_DASHBOARD_PATH;
   const view = isDashboardView(profile.defaultDashboardView)
     ? profile.defaultDashboardView
