@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { useDashboardHref } from "@/lib/use-dashboard-href";
 
-const MENU_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: "grid" },
+const STATIC_MENU_ITEMS = [
   { href: "/dashboard/favorites", label: "Favorites", icon: "heart" },
   { href: "/dashboard/saved-searches", label: "My Searches", icon: "search" },
   { href: "/dashboard/profile", label: "Profile", icon: "user" },
@@ -19,6 +19,7 @@ export function UserMenu() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const dashboardHref = useDashboardHref(!!user);
 
   useEffect(() => {
     if (!user) return;
@@ -68,7 +69,17 @@ export function UserMenu() {
             <p className="text-xs text-slate-400 truncate">{user.email}</p>
           </DropdownMenu.Label>
 
-          {MENU_ITEMS.map((item) => (
+          <DropdownMenu.Item asChild>
+            <Link
+              href={dashboardHref}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-navy-700 transition-colors outline-none data-[highlighted]:bg-slate-50 data-[highlighted]:text-navy-700"
+            >
+              <MenuIcon type="grid" />
+              Dashboard
+            </Link>
+          </DropdownMenu.Item>
+
+          {STATIC_MENU_ITEMS.map((item) => (
             <DropdownMenu.Item key={item.href} asChild>
               <Link
                 href={item.href}

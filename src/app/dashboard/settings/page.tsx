@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { isDashboardView } from "@/lib/dashboard-view";
 import { SettingsActions } from "./settings-actions";
+import { DashboardPreference } from "./dashboard-preference";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -8,6 +11,16 @@ export default async function SettingsPage() {
   if (!user) redirect("/login");
 
   const hasPasswordProvider = user.app_metadata?.providers?.includes("email") ?? false;
+
+  const profile = await prisma.userProfile.findUnique({
+    where: { id: user.id },
+    select: { role: true, defaultDashboardView: true },
+  });
+
+  const isAdmin = profile?.role === "admin";
+  const initialView = isDashboardView(profile?.defaultDashboardView)
+    ? profile.defaultDashboardView
+    : "client";
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
@@ -19,6 +32,19 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {isAdmin && (
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8">
+            <h2 className="text-sm font-semibold text-navy-700 uppercase tracking-wider mb-1">
+              Dashboard Preferences
+            </h2>
+            <p className="text-xs text-slate-500 mb-4">
+              Choose which dashboard loads when you sign in or click
+              &ldquo;Dashboard&rdquo;.
+            </p>
+            <DashboardPreference initialView={initialView} />
+          </section>
+        )}
+
         {/* Security */}
         <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8">
           <h2 className="text-sm font-semibold text-navy-700 uppercase tracking-wider mb-4">Security</h2>
