@@ -113,15 +113,6 @@ export function UserMenu() {
               </DropdownMenu.Label>
               <DropdownMenu.Item asChild>
                 <Link
-                  href="/dashboard"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-navy-700 transition-colors outline-none data-[highlighted]:bg-slate-50 data-[highlighted]:text-navy-700"
-                >
-                  <MenuIcon type="grid" />
-                  Buyer / Seller
-                </Link>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item asChild>
-                <Link
                   href="/dashboard/agent-hub"
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-navy-700 transition-colors outline-none data-[highlighted]:bg-slate-50 data-[highlighted]:text-navy-700"
                 >
