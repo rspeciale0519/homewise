@@ -82,9 +82,7 @@ export default async function DashboardOverview() {
       </div>
 
       {/* Mortgage calculator */}
-      <div className="max-w-md">
-        <MortgageCalculator />
-      </div>
+      <MortgageCalculator />
     </div>
   );
 }
