@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { NAV_ITEMS } from "@/data/navigation";
 import { PHONE, EMAIL } from "@/lib/constants";
@@ -20,7 +20,6 @@ interface MobileNavProps {
 export function MobileNav({ open, onClose }: MobileNavProps) {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const pathname = usePathname();
-  const router = useRouter();
   const { user, supabase, loading } = useSupabase();
   const dashboardHref = useDashboardHref(!!user);
 
@@ -159,8 +158,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                     onClick={async () => {
                       onClose();
                       await supabase.auth.signOut();
-                      router.push("/");
-                      router.refresh();
+                      window.location.href = "/";
                     }}
                     className="flex items-center justify-center w-full h-10 rounded-md border border-slate-200 text-sm font-medium text-slate-600 hover:bg-white hover:text-crimson-600 transition-colors"
                   >
