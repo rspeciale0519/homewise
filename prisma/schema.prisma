@@ -134,6 +134,7 @@ model UserProfile {
   avatarUrl      String?
   role                 String   @default("user")
   preferredAgent       String?
+  /// Deprecated 2026-04-21. Admins now always log in to /admin; column kept to avoid a migration. Safe to drop in a future cleanup.
   defaultDashboardView String   @default("client")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
