@@ -208,7 +208,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
         eyebrow="Keep Searching"
         title="Explore More Properties"
         subtitle="Browse our full inventory of Central Florida homes for sale."
-        primaryCta={{ label: "Back to Search", href: "/properties" }}
+        primaryCta={{ label: "Back to Search", fallbackHref: "/properties" }}
         secondaryCta={{ label: "Get Property Alerts", href: "/property-updates" }}
       />
     </>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,16 +13,10 @@ interface BackButtonProps {
   hideLabelOnMobile?: boolean;
 }
 
-export function BackButton({
-  fallbackHref,
-  label = "Back",
-  className,
-  iconClassName,
-  hideLabelOnMobile = false,
-}: BackButtonProps) {
+export function useBackHandler(fallbackHref: string) {
   const router = useRouter();
 
-  function handleClick() {
+  return useCallback(() => {
     if (typeof window === "undefined") {
       router.push(fallbackHref);
       return;
@@ -43,7 +38,17 @@ export function BackButton({
     } else {
       router.push(fallbackHref);
     }
-  }
+  }, [router, fallbackHref]);
+}
+
+export function BackButton({
+  fallbackHref,
+  label = "Back",
+  className,
+  iconClassName,
+  hideLabelOnMobile = false,
+}: BackButtonProps) {
+  const handleClick = useBackHandler(fallbackHref);
 
   return (
     <button
