@@ -23,6 +23,7 @@ import {
   categoryToItem,
   documentToItem,
 } from "@/lib/documents-organize/shapers";
+import { useOrganizeUrlState } from "@/lib/documents-organize/use-organize-url-state";
 import { DndContextProvider } from "@/components/admin/documents-organize/dnd-context";
 import { DragPreviewCard } from "@/components/admin/documents-organize/drag-preview-card";
 import { OrganizeToolbar } from "@/components/admin/documents-organize/organize-toolbar";
@@ -41,9 +42,8 @@ export function OrganizeView() {
 
   const [tree, setTree] = useState<OrganizeTree | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<DocumentSection>("office");
+  const { activeTab, setActiveTab, search, setSearch } = useOrganizeUrlState();
   const [preview, setPreview] = useState(false);
-  const [search, setSearch] = useState("");
 
   const [docDrawerOpen, setDocDrawerOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);

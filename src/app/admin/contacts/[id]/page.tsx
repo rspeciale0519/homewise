@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { BackButton } from "@/components/ui/back-button";
 import { ContactDetailView } from "./contact-detail-view";
 
 interface ContactDetailPageProps {
@@ -49,9 +49,7 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
   return (
     <div>
       <div className="mb-6">
-        <Link href="/admin/contacts" className="text-sm text-slate-500 hover:text-navy-700 transition-colors">
-          ← Back to Contacts
-        </Link>
+        <BackButton fallbackHref="/admin/contacts" label="Back to Contacts" />
       </div>
       <ContactDetailView
         contact={{

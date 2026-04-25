@@ -1,8 +1,8 @@
 "use client";
 
 import { forwardRef, useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/back-button";
 import { AnnotationPlacer } from "@/components/documents/annotation-placer";
 import { ContactPicker } from "@/components/documents/contact-picker";
 import type { ContactOption } from "@/components/documents/contact-picker";
@@ -91,15 +91,12 @@ export function ViewerToolbar({
       {/* Top row: nav + zoom + page */}
       <div className="px-4 py-2 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href="/dashboard/agent-hub/documents"
-            className="shrink-0 flex items-center gap-1.5 text-sm text-slate-500 hover:text-navy-700 transition-colors"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-            <span className="hidden sm:inline">Documents</span>
-          </Link>
+          <BackButton
+            fallbackHref="/dashboard/agent-hub/documents"
+            label="Documents"
+            hideLabelOnMobile
+            className="shrink-0"
+          />
           <div className="h-5 w-px bg-slate-200 shrink-0" />
           <h1 className="text-sm font-semibold text-navy-700 truncate">{documentName}</h1>
         </div>
