@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { requireAdmin } from "@/lib/admin";
+import { BackButton } from "@/components/ui/back-button";
 import { AgentBillingDetail } from "@/components/admin/billing/agent-billing-detail";
 
 export const metadata: Metadata = { title: "Agent Billing Detail — Admin" };
@@ -15,15 +15,11 @@ export default async function AgentBillingDetailPage({
 
   return (
     <div className="max-w-5xl">
-      <Link
-        href="/admin/billing/agents"
-        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-navy-700 transition-colors mb-6"
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-        </svg>
-        Back to Agent Billing
-      </Link>
+      <BackButton
+        fallbackHref="/admin/billing/agents"
+        label="Back to Agent Billing"
+        className="mb-6"
+      />
 
       <h1 className="font-serif text-2xl sm:text-3xl text-navy-700 mb-2">
         Agent Billing Detail
