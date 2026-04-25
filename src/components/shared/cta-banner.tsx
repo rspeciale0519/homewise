@@ -2,14 +2,25 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
+import { CtaBackButton } from "@/components/shared/cta-back-button";
+
+type PrimaryCta =
+  | { label: string; href: string }
+  | { label: string; fallbackHref: string };
 
 interface CtaBannerProps {
   eyebrow?: string;
   title: string;
   subtitle?: string;
-  primaryCta?: { label: string; href: string };
+  primaryCta?: PrimaryCta;
   secondaryCta?: { label: string; href: string };
   variant?: "navy" | "crimson" | "light";
+}
+
+function isBackCta(
+  cta: PrimaryCta,
+): cta is { label: string; fallbackHref: string } {
+  return "fallbackHref" in cta;
 }
 
 export function CtaBanner({
@@ -44,6 +55,9 @@ export function CtaBanner({
     light: "text-crimson-600",
   };
 
+  const primaryButtonVariant =
+    variant !== "light" ? "outline-white" : "primary";
+
   return (
     <section className={bgMap[variant]}>
       <Container className="py-16 md:py-20">
@@ -63,15 +77,15 @@ export function CtaBanner({
             )}
           </div>
           <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-            {variant !== "light" ? (
-              <Link href={primaryCta.href}>
-                <Button variant="outline-white" size="lg">
-                  {primaryCta.label}
-                </Button>
-              </Link>
+            {isBackCta(primaryCta) ? (
+              <CtaBackButton
+                fallbackHref={primaryCta.fallbackHref}
+                label={primaryCta.label}
+                variant={primaryButtonVariant}
+              />
             ) : (
               <Link href={primaryCta.href}>
-                <Button variant="primary" size="lg">
+                <Button variant={primaryButtonVariant} size="lg">
                   {primaryCta.label}
                 </Button>
               </Link>

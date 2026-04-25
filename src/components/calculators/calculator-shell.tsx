@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ChevronLeft } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
 
 interface CalculatorShellProps {
   title: string;
@@ -30,13 +29,12 @@ export function CalculatorShell({
     <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden">
       {/* Back link */}
       <div className="px-6 pt-4">
-        <Link
-          href="/mortgage-calculator"
-          className="inline-flex items-center gap-1 text-xs text-crimson-600 hover:text-crimson-700 transition-colors"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-          Back to Calculators
-        </Link>
+        <BackButton
+          fallbackHref="/mortgage-calculator"
+          label="Back to Calculators"
+          className="gap-1 text-xs text-crimson-600 hover:text-crimson-700"
+          iconClassName="w-3.5 h-3.5"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2">

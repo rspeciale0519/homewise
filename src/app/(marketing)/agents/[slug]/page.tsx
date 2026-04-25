@@ -12,6 +12,7 @@ import { AgentListingsWidget } from "@/components/agents/agent-listings-widget";
 import { JsonLdScript } from "@/components/shared/json-ld-script";
 import { agentPersonJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
 import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
+import { BackButton } from "@/components/ui/back-button";
 
 interface AgentProfileProps {
   params: Promise<{ slug: string }>;
@@ -275,15 +276,11 @@ export default async function AgentProfilePage({ params }: AgentProfileProps) {
               </div>
 
               {/* Back to directory */}
-              <Link
-                href="/agents"
-                className="flex items-center gap-2 text-sm text-slate-500 hover:text-navy-700 transition-colors"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-                </svg>
-                Back to Agent Directory
-              </Link>
+              <BackButton
+                fallbackHref="/agents"
+                label="Back to Agent Directory"
+                className="gap-2"
+              />
             </aside>
           </div>
           </AnimateOnScroll>

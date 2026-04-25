@@ -20,7 +20,8 @@ Before running the dev server, check if it's already running on a port. Either u
 
 ### Rule 4: Browser Testing
 
-Always use the Playwright MCP browser tools to test and check console errors.
+Always use the **chrome-devtools** MCP browser tools (`mcp__chrome-devtools__*`) for browser testing, console inspection, screenshots, navigation verification, and any other browser automation. **Never use Playwright** (`mcp__playwright__*`) unless the user explicitly asks for Playwright by name in the same conversation.
+
 Don't close the browser without explicit approval. Leave it open until you receive confirmation to close it.
 
 ### Rule 5: Temporary Documentation Location
