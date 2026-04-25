@@ -8,6 +8,7 @@ import { getYouTubeEmbedUrl } from "@/lib/training/youtube";
 import { MarkCompleteButton } from "@/components/training/mark-complete-button";
 import { AdminAuthoredHtml } from "@/components/training/admin-authored-html";
 import { resolveTrainingSlug } from "@/lib/slug/resolve";
+import { BackButton } from "@/components/ui/back-button";
 
 export const dynamic = "force-dynamic";
 
@@ -110,12 +111,12 @@ export default async function TrainingDetailPage({ params }: PageProps) {
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
-      <Link href="/dashboard/training" className="text-sm text-navy-600 hover:underline mb-4 inline-flex items-center gap-1">
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-        </svg>
-        Back to Training Hub
-      </Link>
+      <BackButton
+        fallbackHref="/dashboard/training"
+        label="Back to Training Hub"
+        className="mb-4 text-navy-600 hover:underline gap-1"
+        iconClassName="h-3.5 w-3.5"
+      />
 
       {courseContext && (
         <div className="mt-2 mb-4">
