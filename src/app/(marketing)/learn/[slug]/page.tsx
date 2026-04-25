@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { BackButton } from "@/components/ui/back-button";
 
 interface LessonPageProps {
   params: Promise<{ slug: string }>;
@@ -32,9 +32,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <Link href="/learn" className="text-sm text-slate-500 hover:text-navy-700 transition-colors">
-        ← Back to Learning Center
-      </Link>
+      <BackButton fallbackHref="/learn" label="Back to Learning Center" />
 
       <h1 className="font-serif text-3xl font-bold text-navy-700 mt-4 mb-2">{courseTitle}</h1>
       <p className="text-slate-500 mb-8">

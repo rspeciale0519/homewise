@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { BackButton } from "@/components/ui/back-button";
 import { CampaignDetailView } from "./campaign-detail-view";
 
 interface CampaignDetailPageProps {
@@ -57,9 +57,7 @@ export default async function CampaignDetailPage({ params }: CampaignDetailPageP
   return (
     <div>
       <div className="mb-6">
-        <Link href="/admin/campaigns" className="text-sm text-slate-500 hover:text-navy-700 transition-colors">
-          ← Back to Campaigns
-        </Link>
+        <BackButton fallbackHref="/admin/campaigns" label="Back to Campaigns" />
       </div>
       <CampaignDetailView campaign={serialized} />
     </div>

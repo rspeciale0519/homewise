@@ -9,6 +9,7 @@ import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { createMetadata } from "@/lib/metadata";
+import { BackButton } from "@/components/ui/back-button";
 
 interface AgentListingsPageProps {
   params: Promise<{ slug: string }>;
@@ -155,12 +156,13 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
           {listings.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-slate-500 text-lg">No active listings at this time.</p>
-              <Link
-                href={`/agents/${agent.slug}`}
-                className="inline-block mt-4 text-sm font-medium text-navy-600 hover:text-navy-800 transition-colors"
-              >
-                Back to {fullName}&apos;s profile
-              </Link>
+              <div className="mt-4 inline-flex">
+                <BackButton
+                  fallbackHref={`/agents/${agent.slug}`}
+                  label={`Back to ${fullName}'s profile`}
+                  className="text-sm font-medium text-navy-600 hover:text-navy-800"
+                />
+              </div>
             </div>
           ) : (
             <>

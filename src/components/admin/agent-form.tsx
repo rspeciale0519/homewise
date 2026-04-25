@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useBackHandler } from "@/components/ui/back-button";
 import { PhotoUpload } from "@/components/admin/photo-upload";
 
 interface AgentFormData {
@@ -67,6 +68,7 @@ function generateSlug(firstName: string, lastName: string): string {
 
 export function AgentForm({ mode, agentId, initialData }: AgentFormProps) {
   const router = useRouter();
+  const handleCancel = useBackHandler("/admin/agents");
   const [form, setForm] = useState<AgentFormData>({
     ...defaultData,
     ...initialData,
@@ -421,7 +423,7 @@ export function AgentForm({ mode, agentId, initialData }: AgentFormProps) {
             </button>
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={handleCancel}
               className="px-6 py-2.5 rounded-xl text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
             >
               Cancel
