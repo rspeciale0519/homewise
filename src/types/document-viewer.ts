@@ -2,8 +2,8 @@ export type AnnotationFontFamily =
   | "Helvetica"
   | "Times"
   | "Roboto"
-  | "Georgia"
-  | "Verdana";
+  | "SourceSerif"
+  | "SourceSans";
 
 export interface Annotation {
   id: string;

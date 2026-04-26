@@ -45,8 +45,8 @@ export const annotationFontFamilySchema = z.enum([
   "Helvetica",
   "Times",
   "Roboto",
-  "Georgia",
-  "Verdana",
+  "SourceSerif",
+  "SourceSans",
 ]);
 
 export const annotationSchema = z.object({

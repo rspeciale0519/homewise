@@ -1,0 +1,32 @@
+/*
+ * Annotation fonts. Loaded once for the document viewer's text annotations
+ * so the browser preview matches the embedded font in the exported PDF.
+ *
+ * The family names are namespaced ("X Annotation") so this CSS does not
+ * collide with any other Roboto/Source font that the rest of the app may
+ * load for unrelated reasons.
+ */
+
+@font-face {
+  font-family: "Roboto Annotation";
+  src: url("/fonts/annotations/Roboto-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Serif Annotation";
+  src: url("/fonts/annotations/SourceSerif-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Sans Annotation";
+  src: url("/fonts/annotations/SourceSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

@@ -4,8 +4,8 @@ export const ANNOTATION_FONT_FAMILIES: AnnotationFontFamily[] = [
   "Helvetica",
   "Times",
   "Roboto",
-  "Georgia",
-  "Verdana",
+  "SourceSerif",
+  "SourceSans",
 ];
 
 export const DEFAULT_ANNOTATION_FONT_FAMILY: AnnotationFontFamily = "Helvetica";
@@ -19,16 +19,16 @@ const FONT_FAMILY_CSS: Record<AnnotationFontFamily, string> = {
   Helvetica: "Helvetica, Arial, sans-serif",
   Times: "'Times New Roman', Times, serif",
   Roboto: "'Roboto Annotation', Helvetica, Arial, sans-serif",
-  Georgia: "'Georgia Annotation', Georgia, serif",
-  Verdana: "'Verdana Annotation', Verdana, sans-serif",
+  SourceSerif: "'Source Serif Annotation', Georgia, serif",
+  SourceSans: "'Source Sans Annotation', Helvetica, Arial, sans-serif",
 };
 
 const FONT_FAMILY_LABELS: Record<AnnotationFontFamily, string> = {
   Helvetica: "Helvetica",
   Times: "Times",
   Roboto: "Roboto",
-  Georgia: "Georgia",
-  Verdana: "Verdana",
+  SourceSerif: "Source Serif",
+  SourceSans: "Source Sans",
 };
 
 export function fontFamilyCss(

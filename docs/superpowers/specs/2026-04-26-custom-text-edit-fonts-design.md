@@ -18,15 +18,17 @@ Both font and size changes apply to the annotation currently being edited or sel
 
 ## 2. Font List
 
-| # | Name      | Source                         | License risk |
-|---|-----------|--------------------------------|--------------|
-| 1 | Helvetica | `pdf-lib` `StandardFonts`      | None (built-in to PDF spec) |
-| 2 | Times     | `pdf-lib` `StandardFonts`      | None (built-in to PDF spec) |
-| 3 | Roboto    | Embedded TTF (Apache-2.0)      | None |
-| 4 | Georgia   | Embedded TTF                   | Verify before ship |
-| 5 | Verdana   | Embedded TTF                   | Verify before ship; fallback to **DejaVu Sans** if redistribution rights are unclear |
+| # | Name         | Source                         | License |
+|---|--------------|--------------------------------|---------|
+| 1 | Helvetica    | `pdf-lib` `StandardFonts`      | Built-in to PDF spec |
+| 2 | Times        | `pdf-lib` `StandardFonts`      | Built-in to PDF spec |
+| 3 | Roboto       | Embedded TTF                   | Apache-2.0 |
+| 4 | Source Serif | Embedded TTF                   | SIL OFL 1.1 |
+| 5 | Source Sans  | Embedded TTF                   | SIL OFL 1.1 |
 
-Implementation must accept the user-facing label (`"Verdana"`) even if the underlying file is the fallback. Internally we store and ship one font key per row; the label is only swapped if licensing forces it. Font key set in code: `"Helvetica" | "Times" | "Roboto" | "Georgia" | "Verdana"`.
+Font key set in code: `"Helvetica" | "Times" | "Roboto" | "SourceSerif" | "SourceSans"`. User-facing labels: `"Source Serif"` and `"Source Sans"` (with spaces).
+
+Decision log: Georgia and Verdana were considered but dropped — they are part of Microsoft's Core Fonts for the Web set whose distribution program ended in 2002, leaving redistribution rights ambiguous for a production application. Source Serif (Adobe) and Source Sans (Adobe), both SIL OFL 1.1, provide equivalent serif/sans coverage with unambiguous licensing.
 
 ## 3. Data Model
 
