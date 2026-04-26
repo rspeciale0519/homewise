@@ -17,7 +17,7 @@ interface AnnotationPlacerProps {
   onPlaceAgentField: (key: AgentFieldKey) => void;
   onPlaceContactField: (key: ContactFieldKey) => void;
   onCancel: () => void;
-  defaultTab?: "text" | "agent" | "contact";
+  defaultTab?: "agent" | "contact";
 }
 
 const AGENT_FIELDS: { key: AgentFieldKey; label: string }[] = [
@@ -75,7 +75,7 @@ export function resolveContactField(
   }
 }
 
-type Tab = "text" | "agent" | "contact";
+type Tab = "agent" | "contact";
 
 export function AnnotationPlacer({
   agentInfo,
@@ -83,7 +83,7 @@ export function AnnotationPlacer({
   onPlaceAgentField,
   onPlaceContactField,
   onCancel,
-  defaultTab = "text",
+  defaultTab = "agent",
 }: AnnotationPlacerProps) {
   const [tab, setTab] = useState<Tab>(defaultTab);
 
@@ -91,7 +91,7 @@ export function AnnotationPlacer({
     <div className="absolute z-40 top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-dropdown border border-slate-100 p-3">
       {/* Tab bar */}
       <div className="flex gap-1 mb-3">
-        {(["text", "agent", "contact"] as Tab[]).map((t) => (
+        {(["agent", "contact"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -101,27 +101,17 @@ export function AnnotationPlacer({
                 : "text-slate-500 hover:text-navy-600 hover:bg-slate-50"
             }`}
           >
-            {t === "text" ? "Custom Text" : t === "agent" ? "My Info" : "Client"}
+            {t === "agent" ? "My Info" : "Client"}
           </button>
         ))}
+        <button
+          onClick={onCancel}
+          className="ml-auto px-2 py-1.5 text-xs text-slate-400 hover:text-navy-600 transition-colors"
+          aria-label="Close"
+        >
+          &times;
+        </button>
       </div>
-
-      {tab === "text" && (
-        <div className="space-y-2">
-          <p className="text-xs text-slate-500 px-1 py-2 leading-relaxed">
-            Click anywhere on the document to place a cursor and type your
-            text inline.
-          </p>
-          <div className="flex justify-end">
-            <button
-              onClick={onCancel}
-              className="px-3 py-1.5 text-xs text-slate-500 hover:text-navy-600"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
 
       {tab === "agent" && (
         <div className="space-y-1">
