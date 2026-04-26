@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { pdfToScreen, screenToPdf } from "@/lib/documents/coordinates";
+import { fontFamilyCss } from "@/lib/documents/fonts";
 import type {
   Annotation,
   AnnotationMode,
@@ -292,7 +293,7 @@ export function AnnotationOverlay({
           >
             <span style={{
               fontSize, color: ann.color, lineHeight: 1,
-              whiteSpace: "nowrap", fontFamily: "var(--font-dm-sans), sans-serif",
+              whiteSpace: "nowrap", fontFamily: fontFamilyCss(ann.fontFamily),
             }}>
               {ann.value}
             </span>
@@ -333,7 +334,7 @@ export function AnnotationOverlay({
             fontSize: draftFontSize,
             color: "#000000",
             lineHeight: 1.2,
-            fontFamily: "var(--font-dm-sans), sans-serif",
+            fontFamily: fontFamilyCss(undefined),
             zIndex: 60,
           }}
           placeholder="Type text..."

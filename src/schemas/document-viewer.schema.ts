@@ -41,6 +41,14 @@ export const deleteSignatureSchema = z.object({
   id: z.string().min(1),
 });
 
+export const annotationFontFamilySchema = z.enum([
+  "Helvetica",
+  "Times",
+  "Roboto",
+  "Georgia",
+  "Verdana",
+]);
+
 export const annotationSchema = z.object({
   id: z.string(),
   pageIndex: z.number().int().min(0),
@@ -49,6 +57,7 @@ export const annotationSchema = z.object({
   type: z.enum(["text", "signature"]),
   value: z.string(),
   fontSize: z.number().default(12),
+  fontFamily: annotationFontFamilySchema.optional(),
   color: z.string().default("#000000"),
   width: z.number().optional(),
   height: z.number().optional(),

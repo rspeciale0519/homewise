@@ -1,3 +1,10 @@
+export type AnnotationFontFamily =
+  | "Helvetica"
+  | "Times"
+  | "Roboto"
+  | "Georgia"
+  | "Verdana";
+
 export interface Annotation {
   id: string;
   pageIndex: number;
@@ -6,6 +13,7 @@ export interface Annotation {
   type: "text" | "signature";
   value: string;
   fontSize: number;
+  fontFamily?: AnnotationFontFamily;
   color: string;
   width?: number;
   height?: number;
