@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@/styles/annotation-fonts.css";
 import { SITE_NAME, DESCRIPTION, SITE_URL } from "@/lib/constants";
 import { SupabaseProvider } from "@/components/providers/supabase-provider";
 import { Geist } from "next/font/google";

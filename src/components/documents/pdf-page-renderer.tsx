@@ -7,6 +7,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { AnnotationOverlay } from "@/components/documents/annotation-overlay";
 import type {
   Annotation,
+  AnnotationFontFamily,
   AnnotationMode,
   PageDimensions,
   PdfDocumentHandle,
@@ -23,7 +24,16 @@ interface PdfPageRendererProps {
   activeMode: AnnotationMode;
   pageDims: Map<number, PageDimensions>;
   onPageDims: (pageIndex: number, dims: PageDimensions) => void;
+  defaultTextStyle: { fontFamily: AnnotationFontFamily; fontSize: number };
   onPlaceAnnotation: (pageIndex: number, pdfX: number, pdfY: number) => void;
+  onCreateTextAnnotation: (
+    pageIndex: number,
+    pdfX: number,
+    pdfY: number,
+    value: string,
+    style: { fontFamily: AnnotationFontFamily; fontSize: number }
+  ) => void;
+  onUpdateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   onDeleteAnnotation: (id: string) => void;
   onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
   onResizeAnnotation: (id: string, width: number, height: number) => void;
@@ -38,7 +48,10 @@ export function PdfPageRenderer({
   activeMode,
   pageDims,
   onPageDims,
+  defaultTextStyle,
   onPlaceAnnotation,
+  onCreateTextAnnotation,
+  onUpdateAnnotation,
   onDeleteAnnotation,
   onMoveAnnotation,
   onResizeAnnotation,
@@ -169,7 +182,10 @@ export function PdfPageRenderer({
                         dims={dims}
                         annotations={annotations}
                         activeMode={activeMode}
+                        defaultTextStyle={defaultTextStyle}
                         onPlaceAnnotation={onPlaceAnnotation}
+                        onCreateTextAnnotation={onCreateTextAnnotation}
+                        onUpdateAnnotation={onUpdateAnnotation}
                         onDeleteAnnotation={onDeleteAnnotation}
                         onMoveAnnotation={onMoveAnnotation}
                         onResizeAnnotation={onResizeAnnotation}

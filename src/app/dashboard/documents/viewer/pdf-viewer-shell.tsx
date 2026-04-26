@@ -12,9 +12,16 @@ import {
   resolveAgentField,
   resolveContactField,
 } from "@/components/documents/annotation-placer";
+import {
+  FALLBACK_TEXT_DEFAULTS,
+  readTextDefaults,
+  writeTextDefaults,
+  type TextDefaults,
+} from "@/lib/documents/text-defaults";
 import type { ContactOption } from "@/components/documents/contact-picker";
 import type {
   Annotation,
+  AnnotationFontFamily,
   AnnotationMode,
   AgentFieldKey,
   AgentInfo,
@@ -59,16 +66,33 @@ export function PdfViewerShell({
 
   // Annotation state
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const annotationsRef = useRef<Annotation[]>([]);
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
   const [activeMode, setActiveMode] = useState<AnnotationMode>("cursor");
   const [selectedContact, setSelectedContact] = useState<ContactOption | null>(null);
   const [pageDims, setPageDims] = useState<Map<number, PageDimensions>>(new Map());
 
-  // Pending placement state
+  // Pending placement state (used by signature/agent/contact picker flows)
   const [pendingPlacement, setPendingPlacement] = useState<{
     pageIndex: number;
     pdfX: number;
     pdfY: number;
   } | null>(null);
+
+  // Sticky font + size defaults for new text annotations
+  const [textDefaults, setTextDefaults] = useState<TextDefaults>(FALLBACK_TEXT_DEFAULTS);
+  useEffect(() => {
+    setTextDefaults(readTextDefaults());
+  }, []);
+
+  const persistTextDefaults = useCallback((next: TextDefaults) => {
+    setTextDefaults((prev) =>
+      prev.fontFamily === next.fontFamily && prev.fontSize === next.fontSize ? prev : next
+    );
+    writeTextDefaults(next);
+  }, []);
 
   const addAnnotation = useCallback(
     (annotation: Annotation) => setAnnotations((prev) => [...prev, annotation]),
@@ -229,9 +253,7 @@ export function PdfViewerShell({
 
   const handlePlaceAnnotation = useCallback(
     (pageIndex: number, pdfX: number, pdfY: number) => {
-      if (activeMode === "text") {
-        setPendingPlacement({ pageIndex, pdfX, pdfY });
-      } else if (activeMode === "signature") {
+      if (activeMode === "signature") {
         placeSignatureOnPage(pageIndex, pdfX, pdfY);
       } else if (activeMode === "agent-field" && pendingAgentField) {
         const value = resolveAgentField(pendingAgentField, agentInfo);
@@ -258,20 +280,47 @@ export function PdfViewerShell({
     [activeMode, placeSignatureOnPage, addAnnotation, agentInfo, selectedContact, pendingAgentField, pendingContactField]
   );
 
-  const handlePlaceText = useCallback(
-    (text: string) => {
-      if (!pendingPlacement) return;
+  const handleCreateTextAnnotation = useCallback(
+    (
+      pageIndex: number,
+      pdfX: number,
+      pdfY: number,
+      value: string,
+      style: { fontFamily: AnnotationFontFamily; fontSize: number }
+    ) => {
       addAnnotation({
-        id: genId(), pageIndex: pendingPlacement.pageIndex,
-        pdfX: pendingPlacement.pdfX, pdfY: pendingPlacement.pdfY,
-        type: "text", value: text, fontSize: 12, color: "#000000",
+        id: genId(), pageIndex, pdfX, pdfY,
+        type: "text", value,
+        fontSize: style.fontSize,
+        fontFamily: style.fontFamily,
+        color: "#000000",
       });
-      setPendingPlacement(null);
+      persistTextDefaults({ fontFamily: style.fontFamily, fontSize: style.fontSize });
       setActiveMode("cursor");
     },
-    [pendingPlacement, addAnnotation]
+    [addAnnotation, persistTextDefaults]
   );
 
+  const handleUpdateAnnotation = useCallback(
+    (id: string, patch: Partial<Annotation>) => {
+      const current = annotationsRef.current.find((a) => a.id === id);
+      setAnnotations((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, ...patch } : a))
+      );
+      if (
+        current &&
+        current.type === "text" &&
+        (patch.fontFamily !== undefined || patch.fontSize !== undefined)
+      ) {
+        persistTextDefaults({
+          fontFamily:
+            patch.fontFamily ?? current.fontFamily ?? FALLBACK_TEXT_DEFAULTS.fontFamily,
+          fontSize: patch.fontSize ?? current.fontSize,
+        });
+      }
+    },
+    [persistTextDefaults]
+  );
 
   const handleDeleteAnnotation = useCallback((id: string) => {
     setAnnotations((prev) => prev.filter((a) => a.id !== id));
@@ -404,8 +453,6 @@ export function PdfViewerShell({
         onSelectAgentField={handleSelectAgentField}
         onSelectContactField={handleSelectContactField}
         annotations={annotations}
-        pendingPlacement={pendingPlacement}
-        onPlaceText={handlePlaceText}
         onCancelPlacement={() => setPendingPlacement(null)}
         onDownload={handleDownload}
         onPrint={handlePrint}
@@ -488,7 +535,10 @@ export function PdfViewerShell({
           activeMode={activeMode}
           pageDims={pageDims}
           onPageDims={handlePageDims}
+          defaultTextStyle={textDefaults}
           onPlaceAnnotation={handlePlaceAnnotation}
+          onCreateTextAnnotation={handleCreateTextAnnotation}
+          onUpdateAnnotation={handleUpdateAnnotation}
           onDeleteAnnotation={handleDeleteAnnotation}
           onMoveAnnotation={handleMoveAnnotation}
           onResizeAnnotation={handleResizeAnnotation}

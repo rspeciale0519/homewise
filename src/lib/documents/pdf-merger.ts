@@ -2,12 +2,21 @@ import {
   PDFCheckBox,
   PDFDocument,
   PDFDropdown,
+  PDFFont,
   PDFOptionList,
   PDFRadioGroup,
   PDFTextField,
+  StandardFonts,
   rgb,
 } from "pdf-lib";
-import type { Annotation, FormValues } from "@/types/document-viewer";
+import fontkit from "@pdf-lib/fontkit";
+import { readFile } from "fs/promises";
+import path from "path";
+import type {
+  Annotation,
+  AnnotationFontFamily,
+  FormValues,
+} from "@/types/document-viewer";
 
 function hexToRgb(hex: string) {
   const h = hex.replace("#", "");
@@ -15,6 +24,37 @@ function hexToRgb(hex: string) {
   const g = parseInt(h.substring(2, 4), 16) / 255;
   const b = parseInt(h.substring(4, 6), 16) / 255;
   return rgb(r, g, b);
+}
+
+const EMBEDDED_FONT_FILES: Partial<Record<AnnotationFontFamily, string>> = {
+  Roboto: "Roboto-Regular.ttf",
+  SourceSerif: "SourceSerif-Regular.ttf",
+  SourceSans: "SourceSans-Regular.ttf",
+};
+
+async function loadFont(
+  pdfDoc: PDFDocument,
+  family: AnnotationFontFamily
+): Promise<PDFFont> {
+  if (family === "Helvetica") {
+    return pdfDoc.embedStandardFont(StandardFonts.Helvetica);
+  }
+  if (family === "Times") {
+    return pdfDoc.embedStandardFont(StandardFonts.TimesRoman);
+  }
+  const filename = EMBEDDED_FONT_FILES[family];
+  if (!filename) {
+    return pdfDoc.embedStandardFont(StandardFonts.Helvetica);
+  }
+  const fontPath = path.join(
+    process.cwd(),
+    "public",
+    "fonts",
+    "annotations",
+    filename
+  );
+  const bytes = await readFile(fontPath);
+  return pdfDoc.embedFont(bytes, { subset: true });
 }
 
 function applyFormValues(pdfDoc: PDFDocument, formValues: FormValues) {
@@ -57,22 +97,31 @@ export async function mergePdfWithAnnotations(
   flatten?: boolean
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBuffer);
+  pdfDoc.registerFontkit(fontkit);
 
   if (formValues && Object.keys(formValues).length > 0) {
     applyFormValues(pdfDoc, formValues);
   }
 
   const pages = pdfDoc.getPages();
+  const fontCache = new Map<AnnotationFontFamily, PDFFont>();
 
   for (const annotation of annotations) {
     const page = pages[annotation.pageIndex];
     if (!page) continue;
 
     if (annotation.type === "text") {
+      const family: AnnotationFontFamily = annotation.fontFamily ?? "Helvetica";
+      let font = fontCache.get(family);
+      if (!font) {
+        font = await loadFont(pdfDoc, family);
+        fontCache.set(family, font);
+      }
       page.drawText(annotation.value, {
         x: annotation.pdfX,
         y: annotation.pdfY,
         size: annotation.fontSize,
+        font,
         color: hexToRgb(annotation.color),
       });
     } else if (annotation.type === "signature") {
