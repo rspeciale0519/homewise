@@ -3,9 +3,15 @@
 import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { pdfToScreen, screenToPdf } from "@/lib/documents/coordinates";
-import { fontFamilyCss } from "@/lib/documents/fonts";
+import {
+  DEFAULT_ANNOTATION_FONT_FAMILY,
+  DEFAULT_ANNOTATION_FONT_SIZE,
+  fontFamilyCss,
+} from "@/lib/documents/fonts";
+import { AnnotationToolbox } from "@/components/documents/annotation-toolbox";
 import type {
   Annotation,
+  AnnotationFontFamily,
   AnnotationMode,
   PageDimensions,
 } from "@/types/document-viewer";
@@ -17,29 +23,49 @@ const HANDLE_CURSORS: Record<ResizeHandle, string> = {
   se: "nwse-resize", s: "ns-resize", sw: "nesw-resize", w: "ew-resize",
 };
 
+interface Draft {
+  mode: "create" | "edit";
+  annId?: string;
+  pdfX: number;
+  pdfY: number;
+  value: string;
+  fontFamily: AnnotationFontFamily;
+  fontSize: number;
+}
+
 interface AnnotationOverlayProps {
   pageIndex: number;
   dims: PageDimensions;
   annotations: Annotation[];
   activeMode: AnnotationMode;
+  defaultTextStyle: { fontFamily: AnnotationFontFamily; fontSize: number };
   onPlaceAnnotation: (pageIndex: number, pdfX: number, pdfY: number) => void;
-  onCreateTextAnnotation: (pageIndex: number, pdfX: number, pdfY: number, value: string) => void;
+  onCreateTextAnnotation: (
+    pageIndex: number,
+    pdfX: number,
+    pdfY: number,
+    value: string,
+    style: { fontFamily: AnnotationFontFamily; fontSize: number }
+  ) => void;
+  onUpdateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   onDeleteAnnotation: (id: string) => void;
   onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
   onResizeAnnotation: (id: string, width: number, height: number) => void;
 }
 
-const DEFAULT_TEXT_FONT_SIZE = 12;
+function estimateTextWidth(value: string, fontSize: number) {
+  return Math.max(120, value.length * fontSize * 0.55);
+}
 
 export function AnnotationOverlay({
-  pageIndex, dims, annotations, activeMode,
-  onPlaceAnnotation, onCreateTextAnnotation,
+  pageIndex, dims, annotations, activeMode, defaultTextStyle,
+  onPlaceAnnotation, onCreateTextAnnotation, onUpdateAnnotation,
   onDeleteAnnotation, onMoveAnnotation, onResizeAnnotation,
 }: AnnotationOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
 
-  const [draft, setDraft] = useState<{ pdfX: number; pdfY: number; value: string } | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const dragStartRef = useRef<{
@@ -80,7 +106,13 @@ export function AnnotationOverlay({
     const { x, y } = getOverlayRelativePos(e.clientX, e.clientY);
     const { pdfX, pdfY } = screenToPdf(x, y, dims);
     if (activeMode === "text") {
-      setDraft({ pdfX, pdfY, value: "" });
+      setDraft({
+        mode: "create",
+        pdfX, pdfY,
+        value: "",
+        fontFamily: defaultTextStyle.fontFamily,
+        fontSize: defaultTextStyle.fontSize,
+      });
     } else {
       onPlaceAnnotation(pageIndex, pdfX, pdfY);
     }
@@ -89,13 +121,39 @@ export function AnnotationOverlay({
   const commitDraft = () => {
     if (!draft) return;
     const trimmed = draft.value.trim();
-    if (trimmed) {
-      onCreateTextAnnotation(pageIndex, draft.pdfX, draft.pdfY, trimmed);
+    if (draft.mode === "edit" && draft.annId) {
+      if (trimmed) {
+        onUpdateAnnotation(draft.annId, {
+          value: trimmed,
+          fontFamily: draft.fontFamily,
+          fontSize: draft.fontSize,
+        });
+      } else {
+        onDeleteAnnotation(draft.annId);
+      }
+    } else if (trimmed) {
+      onCreateTextAnnotation(pageIndex, draft.pdfX, draft.pdfY, trimmed, {
+        fontFamily: draft.fontFamily,
+        fontSize: draft.fontSize,
+      });
     }
     setDraft(null);
   };
 
   const cancelDraft = () => setDraft(null);
+
+  const beginEdit = (ann: Annotation) => {
+    setDraft({
+      mode: "edit",
+      annId: ann.id,
+      pdfX: ann.pdfX,
+      pdfY: ann.pdfY,
+      value: ann.value,
+      fontFamily: ann.fontFamily ?? DEFAULT_ANNOTATION_FONT_FAMILY,
+      fontSize: ann.fontSize,
+    });
+    setSelectedId(null);
+  };
 
   const handleAnnotationMouseDown = useCallback(
     (annId: string, ann: Annotation, e: React.MouseEvent) => {
@@ -232,8 +290,41 @@ export function AnnotationOverlay({
   const cursorClass = activeMode === "cursor" ? "cursor-default"
     : activeMode === "signature" ? "cursor-crosshair" : "cursor-text";
 
-  const draftFontSize = DEFAULT_TEXT_FONT_SIZE * dims.scale;
   const draftScreen = draft ? pdfToScreen(draft.pdfX, draft.pdfY, dims) : null;
+  const draftScaledFontSize = draft ? draft.fontSize * dims.scale : 0;
+
+  const selectedTextAnn =
+    activeMode === "cursor" && selectedId
+      ? pageAnnotations.find((a) => a.id === selectedId && a.type === "text")
+      : undefined;
+
+  let toolboxAnchor: { left: number; top: number } | null = null;
+  let toolboxWidth = 0;
+  let toolboxFontFamily: AnnotationFontFamily = DEFAULT_ANNOTATION_FONT_FAMILY;
+  let toolboxFontSize = DEFAULT_ANNOTATION_FONT_SIZE;
+  let toolboxHandler: ((next: { fontFamily?: AnnotationFontFamily; fontSize?: number }) => void) | null = null;
+  let toolboxClose: (() => void) | null = null;
+
+  if (draft && draftScreen) {
+    toolboxAnchor = {
+      left: draftScreen.screenX,
+      top: draftScreen.screenY - draftScaledFontSize - 2,
+    };
+    toolboxWidth = estimateTextWidth(draft.value, draftScaledFontSize);
+    toolboxFontFamily = draft.fontFamily;
+    toolboxFontSize = draft.fontSize;
+    toolboxHandler = (next) => setDraft((d) => (d ? { ...d, ...next } : d));
+    toolboxClose = cancelDraft;
+  } else if (selectedTextAnn) {
+    const { screenX, screenY } = pdfToScreen(selectedTextAnn.pdfX, selectedTextAnn.pdfY, dims);
+    const scaledFs = selectedTextAnn.fontSize * dims.scale;
+    toolboxAnchor = { left: screenX, top: screenY - scaledFs };
+    toolboxWidth = estimateTextWidth(selectedTextAnn.value, scaledFs);
+    toolboxFontFamily = selectedTextAnn.fontFamily ?? DEFAULT_ANNOTATION_FONT_FAMILY;
+    toolboxFontSize = selectedTextAnn.fontSize;
+    toolboxHandler = (next) => onUpdateAnnotation(selectedTextAnn.id, next);
+    toolboxClose = () => setSelectedId(null);
+  }
 
   return (
     <div ref={overlayRef} className={`absolute inset-0 ${cursorClass}`} onClick={handleClick}>
@@ -242,6 +333,7 @@ export function AnnotationOverlay({
         const isDragging = draggingId === ann.id;
         const isResizing = resizingId === ann.id;
         const isSelected = selectedId === ann.id && activeMode === "cursor";
+        const isEditing = draft?.mode === "edit" && draft.annId === ann.id;
 
         if (ann.type === "signature" && ann.width && ann.height) {
           const baseW = ann.width;
@@ -279,6 +371,11 @@ export function AnnotationOverlay({
           );
         }
 
+        if (isEditing) {
+          // Hidden while the inline editor is active
+          return null;
+        }
+
         const fontSize = ann.fontSize * dims.scale;
         return (
           <div
@@ -287,9 +384,14 @@ export function AnnotationOverlay({
             style={{
               left: screenX, top: screenY - fontSize,
               cursor: activeMode === "cursor" ? "grab" : undefined,
+              outline: isSelected ? "2px solid #3b82f6" : undefined,
+              outlineOffset: isSelected ? 2 : undefined,
+              borderRadius: isSelected ? 2 : undefined,
+              zIndex: isSelected ? 50 : undefined,
             }}
             onMouseDown={(e) => handleAnnotationMouseDown(ann.id, ann, e)}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); setSelectedId(ann.id); }}
+            onDoubleClick={(e) => { e.stopPropagation(); beginEdit(ann); }}
           >
             <span style={{
               fontSize, color: ann.color, lineHeight: 1,
@@ -297,13 +399,25 @@ export function AnnotationOverlay({
             }}>
               {ann.value}
             </span>
-            <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onDeleteAnnotation(ann.id); }}
-              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-crimson-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-            >
-              &times;
-            </button>
+            {isSelected && (
+              <button
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onDeleteAnnotation(ann.id); }}
+                className="absolute h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold z-20 hover:bg-red-600 transition-colors"
+                style={{ top: -10, right: -10, boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}
+              >
+                &times;
+              </button>
+            )}
+            {!isSelected && (
+              <button
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onDeleteAnnotation(ann.id); }}
+                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-crimson-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+              >
+                &times;
+              </button>
+            )}
           </div>
         );
       })}
@@ -329,15 +443,26 @@ export function AnnotationOverlay({
           className="absolute bg-white/95 outline-none border border-blue-400 rounded-sm px-1 shadow-sm"
           style={{
             left: draftScreen.screenX,
-            top: draftScreen.screenY - draftFontSize - 2,
+            top: draftScreen.screenY - draftScaledFontSize - 2,
             minWidth: 120,
-            fontSize: draftFontSize,
+            fontSize: draftScaledFontSize,
             color: "#000000",
             lineHeight: 1.2,
-            fontFamily: fontFamilyCss(undefined),
+            fontFamily: fontFamilyCss(draft.fontFamily),
             zIndex: 60,
           }}
           placeholder="Type text..."
+        />
+      )}
+
+      {toolboxAnchor && toolboxHandler && (
+        <AnnotationToolbox
+          fontFamily={toolboxFontFamily}
+          fontSize={toolboxFontSize}
+          anchor={toolboxAnchor}
+          targetWidth={toolboxWidth}
+          onChange={toolboxHandler}
+          onClose={toolboxClose ?? undefined}
         />
       )}
     </div>

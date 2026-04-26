@@ -12,9 +12,14 @@ import {
   resolveAgentField,
   resolveContactField,
 } from "@/components/documents/annotation-placer";
+import {
+  DEFAULT_ANNOTATION_FONT_FAMILY,
+  DEFAULT_ANNOTATION_FONT_SIZE,
+} from "@/lib/documents/fonts";
 import type { ContactOption } from "@/components/documents/contact-picker";
 import type {
   Annotation,
+  AnnotationFontFamily,
   AnnotationMode,
   AgentFieldKey,
   AgentInfo,
@@ -257,16 +262,33 @@ export function PdfViewerShell({
   );
 
   const handleCreateTextAnnotation = useCallback(
-    (pageIndex: number, pdfX: number, pdfY: number, value: string) => {
+    (
+      pageIndex: number,
+      pdfX: number,
+      pdfY: number,
+      value: string,
+      style: { fontFamily: AnnotationFontFamily; fontSize: number }
+    ) => {
       addAnnotation({
         id: genId(), pageIndex, pdfX, pdfY,
-        type: "text", value, fontSize: 12, color: "#000000",
+        type: "text", value,
+        fontSize: style.fontSize,
+        fontFamily: style.fontFamily,
+        color: "#000000",
       });
       setActiveMode("cursor");
     },
     [addAnnotation]
   );
 
+  const handleUpdateAnnotation = useCallback(
+    (id: string, patch: Partial<Annotation>) => {
+      setAnnotations((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, ...patch } : a))
+      );
+    },
+    []
+  );
 
   const handleDeleteAnnotation = useCallback((id: string) => {
     setAnnotations((prev) => prev.filter((a) => a.id !== id));
@@ -481,8 +503,13 @@ export function PdfViewerShell({
           activeMode={activeMode}
           pageDims={pageDims}
           onPageDims={handlePageDims}
+          defaultTextStyle={{
+            fontFamily: DEFAULT_ANNOTATION_FONT_FAMILY,
+            fontSize: DEFAULT_ANNOTATION_FONT_SIZE,
+          }}
           onPlaceAnnotation={handlePlaceAnnotation}
           onCreateTextAnnotation={handleCreateTextAnnotation}
+          onUpdateAnnotation={handleUpdateAnnotation}
           onDeleteAnnotation={handleDeleteAnnotation}
           onMoveAnnotation={handleMoveAnnotation}
           onResizeAnnotation={handleResizeAnnotation}
