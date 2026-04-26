@@ -134,7 +134,7 @@ function FontDropdown({
         aria-expanded={open}
         aria-controls={listboxId}
         aria-label="Font family"
-        onMouseDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
         onClick={() => {
           setActiveIndex(Math.max(0, ANNOTATION_FONT_FAMILIES.indexOf(family)));
           setOpen((o) => !o);
@@ -261,7 +261,7 @@ function SizeCombo({
       <button
         ref={triggerRef}
         type="button"
-        onMouseDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -290,7 +290,6 @@ function SizeCombo({
                   if (preset !== size) onSet(preset);
                   setDraft(String(preset));
                   setOpen(false);
-                  inputRef.current?.focus();
                 }}
                 className={
                   "px-3 py-1.5 text-sm text-center cursor-pointer transition-colors " +
