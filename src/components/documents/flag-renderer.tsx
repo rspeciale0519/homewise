@@ -17,6 +17,9 @@ import type {
 
 const NOTCH_WIDTH = 8;
 const BODY_RADIUS = 3;
+const ROTATE_HANDLE_OFFSET_PX = 24;
+
+export type FlagCorner = "nw" | "ne" | "se" | "sw";
 
 interface FlagRendererProps {
   flag: Annotation;
@@ -25,6 +28,11 @@ interface FlagRendererProps {
   onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onDoubleClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onResizeHandlePointerDown?: (
+    corner: FlagCorner,
+    e: React.PointerEvent<HTMLDivElement>
+  ) => void;
+  onRotateHandlePointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
 }
 
 function isFlagColor(value: string): value is FlagColor {
@@ -38,6 +46,8 @@ export function FlagRenderer({
   onPointerDown,
   onClick,
   onDoubleClick,
+  onResizeHandlePointerDown,
+  onRotateHandlePointerDown,
 }: FlagRendererProps) {
   if (flag.type !== "flag") return null;
 
@@ -97,7 +107,7 @@ export function FlagRenderer({
         width={totalW}
         height={bodyH}
         viewBox={`0 0 ${totalW} ${bodyH}`}
-        style={{ display: "block", overflow: "visible" }}
+        style={{ display: "block", overflow: "visible", pointerEvents: "none" }}
       >
         <path
           d={bodyPath}
@@ -123,6 +133,100 @@ export function FlagRenderer({
           {flag.value}
         </text>
       </svg>
+
+      {selected && onResizeHandlePointerDown && onRotateHandlePointerDown && (
+        <SelectionHandles
+          width={totalW}
+          height={bodyH}
+          rotation={rotation}
+          onResizeHandlePointerDown={onResizeHandlePointerDown}
+          onRotateHandlePointerDown={onRotateHandlePointerDown}
+        />
+      )}
     </div>
+  );
+}
+
+function SelectionHandles({
+  width,
+  height: _height,
+  rotation,
+  onResizeHandlePointerDown,
+  onRotateHandlePointerDown,
+}: {
+  width: number;
+  height: number;
+  rotation: number;
+  onResizeHandlePointerDown: (
+    corner: FlagCorner,
+    e: React.PointerEvent<HTMLDivElement>
+  ) => void;
+  onRotateHandlePointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+}) {
+  const HANDLE = 10;
+  const ROTATE = 14;
+  const half = HANDLE / 2;
+
+  const corners: { key: FlagCorner; style: React.CSSProperties }[] = [
+    { key: "nw", style: { top: -half, left: -half, cursor: "nwse-resize" } },
+    { key: "ne", style: { top: -half, right: -half, cursor: "nesw-resize" } },
+    { key: "se", style: { bottom: -half, right: -half, cursor: "nwse-resize" } },
+    { key: "sw", style: { bottom: -half, left: -half, cursor: "nesw-resize" } },
+  ];
+
+  return (
+    <>
+      {corners.map(({ key, style }) => (
+        <div
+          key={key}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onResizeHandlePointerDown(key, e);
+          }}
+          style={{
+            position: "absolute",
+            width: HANDLE,
+            height: HANDLE,
+            backgroundColor: "white",
+            border: "1px solid #1f3f99",
+            boxShadow: "0 1px 2px rgba(15, 23, 42, 0.18)",
+            ...style,
+          }}
+        />
+      ))}
+
+      {/* Connector line + rotate handle (above top-center) */}
+      <div
+        style={{
+          position: "absolute",
+          top: -ROTATE_HANDLE_OFFSET_PX,
+          left: width / 2 - 0.5,
+          width: 1,
+          height: ROTATE_HANDLE_OFFSET_PX - ROTATE / 2,
+          backgroundColor: "#cbd5e1",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          onRotateHandlePointerDown(e);
+        }}
+        style={{
+          position: "absolute",
+          top: -ROTATE_HANDLE_OFFSET_PX - ROTATE / 2,
+          left: width / 2 - ROTATE / 2,
+          width: ROTATE,
+          height: ROTATE,
+          borderRadius: "50%",
+          backgroundColor: "white",
+          border: "1px solid #1f3f99",
+          boxShadow: "0 1px 3px rgba(15, 23, 42, 0.2)",
+          cursor: "grab",
+          // Visual hint that the handle works regardless of current rotation
+          transform: `rotate(${-rotation}deg)`,
+        }}
+      />
+    </>
   );
 }

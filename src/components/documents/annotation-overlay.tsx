@@ -10,11 +10,15 @@ import {
 } from "@/lib/documents/fonts";
 import {
   FLAG_BASE_HEIGHT,
+  FLAG_DEFAULT_ROTATION,
   FLAG_DEFAULT_SCALE,
   FLAG_DRAG_THRESHOLD_PX,
+  FLAG_ROTATION_SNAP_DEGREES,
+  clampFlagScale,
+  normalizeFlagRotation,
 } from "@/lib/documents/flag-colors";
 import { AnnotationToolbox } from "@/components/documents/annotation-toolbox";
-import { FlagRenderer } from "@/components/documents/flag-renderer";
+import { FlagRenderer, type FlagCorner } from "@/components/documents/flag-renderer";
 import { FlagSelectionToolbox } from "@/components/documents/flag-selection-toolbox";
 import type {
   Annotation,
@@ -98,6 +102,11 @@ export function AnnotationOverlay({
   // Live drag preview offset for flag annotations (in PDF coordinates)
   const [flagDragPreview, setFlagDragPreview] = useState<{
     id: string; pdfX: number; pdfY: number;
+  } | null>(null);
+
+  // Live preview for flag resize / rotate
+  const [flagTransformPreview, setFlagTransformPreview] = useState<{
+    id: string; scale?: number; rotation?: number;
   } | null>(null);
 
   // Prevent stray click events from deselecting after drag/resize
@@ -326,6 +335,94 @@ export function AnnotationOverlay({
     return () => document.removeEventListener("keydown", onKey);
   }, [selectedFlag, onDeleteAnnotation]);
 
+  const tipViewportCoords = (ann: Annotation) => {
+    const tip = pdfToScreen(ann.pdfX, ann.pdfY, dims);
+    const rect = overlayRef.current?.getBoundingClientRect();
+    return {
+      x: tip.screenX + (rect?.left ?? 0),
+      y: tip.screenY + (rect?.top ?? 0),
+    };
+  };
+
+  const handleFlagResizePointerDown = (
+    ann: Annotation,
+    _corner: FlagCorner,
+    e: React.PointerEvent
+  ) => {
+    e.preventDefault();
+    const tip = tipViewportCoords(ann);
+    const startDist = Math.hypot(e.clientX - tip.x, e.clientY - tip.y);
+    const startScale = ann.scale ?? FLAG_DEFAULT_SCALE;
+    if (startDist < 1) return;
+
+    const onMove = (me: PointerEvent) => {
+      const dist = Math.hypot(me.clientX - tip.x, me.clientY - tip.y);
+      const ratio = dist / startDist;
+      const next = clampFlagScale(startScale * ratio);
+      setFlagTransformPreview({ id: ann.id, scale: next });
+    };
+
+    const onUp = (me: PointerEvent) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      const dist = Math.hypot(me.clientX - tip.x, me.clientY - tip.y);
+      const ratio = dist / startDist;
+      const finalScale = clampFlagScale(startScale * ratio);
+      if (Math.abs(finalScale - startScale) > 0.001) {
+        onUpdateAnnotation(ann.id, { scale: finalScale });
+        justInteractedRef.current = true;
+      }
+      setFlagTransformPreview(null);
+    };
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
+  const handleFlagRotatePointerDown = (ann: Annotation, e: React.PointerEvent) => {
+    e.preventDefault();
+    const tip = tipViewportCoords(ann);
+    const startRotation = ann.rotation ?? FLAG_DEFAULT_ROTATION;
+    const startAngleDeg =
+      (Math.atan2(e.clientY - tip.y, e.clientX - tip.x) * 180) / Math.PI;
+
+    const computeRotation = (clientX: number, clientY: number) => {
+      const angleDeg =
+        (Math.atan2(clientY - tip.y, clientX - tip.x) * 180) / Math.PI;
+      const delta = angleDeg - startAngleDeg;
+      let next = normalizeFlagRotation(startRotation + delta);
+      // Snap to nearest cardinal within ±FLAG_ROTATION_SNAP_DEGREES
+      for (const cardinal of [0, 90, 180, 270]) {
+        const diff = Math.abs(next - cardinal);
+        const wrap = Math.min(diff, 360 - diff);
+        if (wrap <= FLAG_ROTATION_SNAP_DEGREES) {
+          next = cardinal;
+          break;
+        }
+      }
+      return next;
+    };
+
+    const onMove = (me: PointerEvent) => {
+      const next = computeRotation(me.clientX, me.clientY);
+      setFlagTransformPreview({ id: ann.id, rotation: next });
+    };
+
+    const onUp = (me: PointerEvent) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      const finalRotation = computeRotation(me.clientX, me.clientY);
+      if (Math.abs(finalRotation - startRotation) > 0.001) {
+        onUpdateAnnotation(ann.id, { rotation: finalRotation });
+        justInteractedRef.current = true;
+      }
+      setFlagTransformPreview(null);
+    };
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
   const handleFlagPointerDown = (ann: Annotation, e: React.PointerEvent) => {
     const startMouseX = e.clientX;
     const startMouseY = e.clientY;
@@ -424,10 +521,17 @@ export function AnnotationOverlay({
         const isEditing = draft?.mode === "edit" && draft.annId === ann.id;
 
         if (ann.type === "flag") {
-          const previewFlag =
-            flagDragPreview && flagDragPreview.id === ann.id
-              ? { ...ann, pdfX: flagDragPreview.pdfX, pdfY: flagDragPreview.pdfY }
-              : ann;
+          let previewFlag: Annotation = ann;
+          if (flagDragPreview && flagDragPreview.id === ann.id) {
+            previewFlag = { ...previewFlag, pdfX: flagDragPreview.pdfX, pdfY: flagDragPreview.pdfY };
+          }
+          if (flagTransformPreview && flagTransformPreview.id === ann.id) {
+            previewFlag = {
+              ...previewFlag,
+              scale: flagTransformPreview.scale ?? previewFlag.scale,
+              rotation: flagTransformPreview.rotation ?? previewFlag.rotation,
+            };
+          }
           return (
             <FlagRenderer
               key={ann.id}
@@ -445,6 +549,12 @@ export function AnnotationOverlay({
                 if (activeMode !== "cursor") return;
                 e.stopPropagation();
               }}
+              onResizeHandlePointerDown={(corner, ev) =>
+                handleFlagResizePointerDown(ann, corner, ev)
+              }
+              onRotateHandlePointerDown={(ev) =>
+                handleFlagRotatePointerDown(ann, ev)
+              }
             />
           );
         }
