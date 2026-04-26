@@ -32,8 +32,6 @@ interface ViewerToolbarProps {
   onSelectAgentField: (key: AgentFieldKey) => void;
   onSelectContactField: (key: ContactFieldKey) => void;
   annotations: Annotation[];
-  pendingPlacement: { pageIndex: number; pdfX: number; pdfY: number } | null;
-  onPlaceText: (text: string) => void;
   onCancelPlacement: () => void;
   onDownload: () => void;
   onPrint: () => void;
@@ -65,8 +63,6 @@ export function ViewerToolbar({
   onSelectAgentField,
   onSelectContactField,
   annotations,
-  pendingPlacement,
-  onPlaceText,
   onCancelPlacement,
   onDownload,
   onPrint,
@@ -188,12 +184,6 @@ export function ViewerToolbar({
               <AnnotationPlacer
                 agentInfo={agentInfo}
                 selectedContact={selectedContact}
-                onPlaceText={(text) => {
-                  if (pendingPlacement) {
-                    onPlaceText(text);
-                    setShowPlacer(false);
-                  }
-                }}
                 onPlaceAgentField={(key) => {
                   onSelectAgentField(key);
                   setShowPlacer(false);

@@ -22,18 +22,23 @@ interface AnnotationOverlayProps {
   annotations: Annotation[];
   activeMode: AnnotationMode;
   onPlaceAnnotation: (pageIndex: number, pdfX: number, pdfY: number) => void;
+  onCreateTextAnnotation: (pageIndex: number, pdfX: number, pdfY: number, value: string) => void;
   onDeleteAnnotation: (id: string) => void;
   onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
   onResizeAnnotation: (id: string, width: number, height: number) => void;
 }
 
+const DEFAULT_TEXT_FONT_SIZE = 12;
+
 export function AnnotationOverlay({
   pageIndex, dims, annotations, activeMode,
-  onPlaceAnnotation, onDeleteAnnotation, onMoveAnnotation, onResizeAnnotation,
+  onPlaceAnnotation, onCreateTextAnnotation,
+  onDeleteAnnotation, onMoveAnnotation, onResizeAnnotation,
 }: AnnotationOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
 
+  const [draft, setDraft] = useState<{ pdfX: number; pdfY: number; value: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const dragStartRef = useRef<{
@@ -61,23 +66,35 @@ export function AnnotationOverlay({
     }, []
   );
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (justInteractedRef.current) {
-        justInteractedRef.current = false;
-        return;
-      }
-      if (activeMode !== "cursor") {
-        if (draggingId) return;
-        const { x, y } = getOverlayRelativePos(e.clientX, e.clientY);
-        const { pdfX, pdfY } = screenToPdf(x, y, dims);
-        onPlaceAnnotation(pageIndex, pdfX, pdfY);
-      } else {
-        setSelectedId(null);
-      }
-    },
-    [activeMode, dims, pageIndex, onPlaceAnnotation, draggingId, getOverlayRelativePos]
-  );
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (justInteractedRef.current) {
+      justInteractedRef.current = false;
+      return;
+    }
+    if (activeMode === "cursor") {
+      setSelectedId(null);
+      return;
+    }
+    if (draggingId) return;
+    const { x, y } = getOverlayRelativePos(e.clientX, e.clientY);
+    const { pdfX, pdfY } = screenToPdf(x, y, dims);
+    if (activeMode === "text") {
+      setDraft({ pdfX, pdfY, value: "" });
+    } else {
+      onPlaceAnnotation(pageIndex, pdfX, pdfY);
+    }
+  };
+
+  const commitDraft = () => {
+    if (!draft) return;
+    const trimmed = draft.value.trim();
+    if (trimmed) {
+      onCreateTextAnnotation(pageIndex, draft.pdfX, draft.pdfY, trimmed);
+    }
+    setDraft(null);
+  };
+
+  const cancelDraft = () => setDraft(null);
 
   const handleAnnotationMouseDown = useCallback(
     (annId: string, ann: Annotation, e: React.MouseEvent) => {
@@ -214,6 +231,9 @@ export function AnnotationOverlay({
   const cursorClass = activeMode === "cursor" ? "cursor-default"
     : activeMode === "signature" ? "cursor-crosshair" : "cursor-text";
 
+  const draftFontSize = DEFAULT_TEXT_FONT_SIZE * dims.scale;
+  const draftScreen = draft ? pdfToScreen(draft.pdfX, draft.pdfY, dims) : null;
+
   return (
     <div ref={overlayRef} className={`absolute inset-0 ${cursorClass}`} onClick={handleClick}>
       {pageAnnotations.map((ann) => {
@@ -286,6 +306,39 @@ export function AnnotationOverlay({
           </div>
         );
       })}
+
+      {draft && draftScreen && (
+        <input
+          type="text"
+          autoFocus
+          value={draft.value}
+          onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commitDraft();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              cancelDraft();
+            }
+          }}
+          onBlur={commitDraft}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="absolute bg-white/95 outline-none border border-blue-400 rounded-sm px-1 shadow-sm"
+          style={{
+            left: draftScreen.screenX,
+            top: draftScreen.screenY - draftFontSize - 2,
+            minWidth: 120,
+            fontSize: draftFontSize,
+            color: "#000000",
+            lineHeight: 1.2,
+            fontFamily: "var(--font-dm-sans), sans-serif",
+            zIndex: 60,
+          }}
+          placeholder="Type text..."
+        />
+      )}
     </div>
   );
 }

@@ -63,7 +63,7 @@ export function PdfViewerShell({
   const [selectedContact, setSelectedContact] = useState<ContactOption | null>(null);
   const [pageDims, setPageDims] = useState<Map<number, PageDimensions>>(new Map());
 
-  // Pending placement state
+  // Pending placement state (used by signature/agent/contact picker flows)
   const [pendingPlacement, setPendingPlacement] = useState<{
     pageIndex: number;
     pdfX: number;
@@ -229,9 +229,7 @@ export function PdfViewerShell({
 
   const handlePlaceAnnotation = useCallback(
     (pageIndex: number, pdfX: number, pdfY: number) => {
-      if (activeMode === "text") {
-        setPendingPlacement({ pageIndex, pdfX, pdfY });
-      } else if (activeMode === "signature") {
+      if (activeMode === "signature") {
         placeSignatureOnPage(pageIndex, pdfX, pdfY);
       } else if (activeMode === "agent-field" && pendingAgentField) {
         const value = resolveAgentField(pendingAgentField, agentInfo);
@@ -258,18 +256,15 @@ export function PdfViewerShell({
     [activeMode, placeSignatureOnPage, addAnnotation, agentInfo, selectedContact, pendingAgentField, pendingContactField]
   );
 
-  const handlePlaceText = useCallback(
-    (text: string) => {
-      if (!pendingPlacement) return;
+  const handleCreateTextAnnotation = useCallback(
+    (pageIndex: number, pdfX: number, pdfY: number, value: string) => {
       addAnnotation({
-        id: genId(), pageIndex: pendingPlacement.pageIndex,
-        pdfX: pendingPlacement.pdfX, pdfY: pendingPlacement.pdfY,
-        type: "text", value: text, fontSize: 12, color: "#000000",
+        id: genId(), pageIndex, pdfX, pdfY,
+        type: "text", value, fontSize: 12, color: "#000000",
       });
-      setPendingPlacement(null);
       setActiveMode("cursor");
     },
-    [pendingPlacement, addAnnotation]
+    [addAnnotation]
   );
 
 
@@ -404,8 +399,6 @@ export function PdfViewerShell({
         onSelectAgentField={handleSelectAgentField}
         onSelectContactField={handleSelectContactField}
         annotations={annotations}
-        pendingPlacement={pendingPlacement}
-        onPlaceText={handlePlaceText}
         onCancelPlacement={() => setPendingPlacement(null)}
         onDownload={handleDownload}
         onPrint={handlePrint}
@@ -489,6 +482,7 @@ export function PdfViewerShell({
           pageDims={pageDims}
           onPageDims={handlePageDims}
           onPlaceAnnotation={handlePlaceAnnotation}
+          onCreateTextAnnotation={handleCreateTextAnnotation}
           onDeleteAnnotation={handleDeleteAnnotation}
           onMoveAnnotation={handleMoveAnnotation}
           onResizeAnnotation={handleResizeAnnotation}

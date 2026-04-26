@@ -14,7 +14,6 @@ interface ContactData {
 interface AnnotationPlacerProps {
   agentInfo: AgentInfo;
   selectedContact: ContactData | null;
-  onPlaceText: (text: string) => void;
   onPlaceAgentField: (key: AgentFieldKey) => void;
   onPlaceContactField: (key: ContactFieldKey) => void;
   onCancel: () => void;
@@ -81,14 +80,12 @@ type Tab = "text" | "agent" | "contact";
 export function AnnotationPlacer({
   agentInfo,
   selectedContact,
-  onPlaceText,
   onPlaceAgentField,
   onPlaceContactField,
   onCancel,
   defaultTab = "text",
 }: AnnotationPlacerProps) {
   const [tab, setTab] = useState<Tab>(defaultTab);
-  const [freeText, setFreeText] = useState("");
 
   return (
     <div className="absolute z-40 top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-dropdown border border-slate-100 p-3">
@@ -104,46 +101,23 @@ export function AnnotationPlacer({
                 : "text-slate-500 hover:text-navy-600 hover:bg-slate-50"
             }`}
           >
-            {t === "text" ? "Free Text" : t === "agent" ? "My Info" : "Client"}
+            {t === "text" ? "Custom Text" : t === "agent" ? "My Info" : "Client"}
           </button>
         ))}
       </div>
 
       {tab === "text" && (
         <div className="space-y-2">
-          <input
-            type="text"
-            value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && freeText.trim()) {
-                onPlaceText(freeText.trim());
-                setFreeText("");
-              }
-              if (e.key === "Escape") onCancel();
-            }}
-            placeholder="Type text to place..."
-            className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent"
-            autoFocus
-          />
-          <div className="flex justify-end gap-1">
+          <p className="text-xs text-slate-500 px-1 py-2 leading-relaxed">
+            Click anywhere on the document to place a cursor and type your
+            text inline.
+          </p>
+          <div className="flex justify-end">
             <button
               onClick={onCancel}
               className="px-3 py-1.5 text-xs text-slate-500 hover:text-navy-600"
             >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                if (freeText.trim()) {
-                  onPlaceText(freeText.trim());
-                  setFreeText("");
-                }
-              }}
-              disabled={!freeText.trim()}
-              className="px-3 py-1.5 text-xs font-medium bg-navy-600 text-white rounded-lg disabled:opacity-40"
-            >
-              Place
+              Close
             </button>
           </div>
         </div>

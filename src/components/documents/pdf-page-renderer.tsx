@@ -24,6 +24,7 @@ interface PdfPageRendererProps {
   pageDims: Map<number, PageDimensions>;
   onPageDims: (pageIndex: number, dims: PageDimensions) => void;
   onPlaceAnnotation: (pageIndex: number, pdfX: number, pdfY: number) => void;
+  onCreateTextAnnotation: (pageIndex: number, pdfX: number, pdfY: number, value: string) => void;
   onDeleteAnnotation: (id: string) => void;
   onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
   onResizeAnnotation: (id: string, width: number, height: number) => void;
@@ -39,6 +40,7 @@ export function PdfPageRenderer({
   pageDims,
   onPageDims,
   onPlaceAnnotation,
+  onCreateTextAnnotation,
   onDeleteAnnotation,
   onMoveAnnotation,
   onResizeAnnotation,
@@ -170,6 +172,7 @@ export function PdfPageRenderer({
                         annotations={annotations}
                         activeMode={activeMode}
                         onPlaceAnnotation={onPlaceAnnotation}
+                        onCreateTextAnnotation={onCreateTextAnnotation}
                         onDeleteAnnotation={onDeleteAnnotation}
                         onMoveAnnotation={onMoveAnnotation}
                         onResizeAnnotation={onResizeAnnotation}
