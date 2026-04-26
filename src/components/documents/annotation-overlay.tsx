@@ -11,6 +11,7 @@ import {
 import {
   FLAG_BASE_HEIGHT,
   FLAG_DEFAULT_SCALE,
+  FLAG_DRAG_THRESHOLD_PX,
 } from "@/lib/documents/flag-colors";
 import { AnnotationToolbox } from "@/components/documents/annotation-toolbox";
 import { FlagRenderer } from "@/components/documents/flag-renderer";
@@ -92,6 +93,11 @@ export function AnnotationOverlay({
   const resizeStartRef = useRef<{
     annId: string; startW: number; startH: number;
     mouseX: number; mouseY: number; handle: ResizeHandle;
+  } | null>(null);
+
+  // Live drag preview offset for flag annotations (in PDF coordinates)
+  const [flagDragPreview, setFlagDragPreview] = useState<{
+    id: string; pdfX: number; pdfY: number;
   } | null>(null);
 
   // Prevent stray click events from deselecting after drag/resize
@@ -320,6 +326,53 @@ export function AnnotationOverlay({
     return () => document.removeEventListener("keydown", onKey);
   }, [selectedFlag, onDeleteAnnotation]);
 
+  const handleFlagPointerDown = (ann: Annotation, e: React.PointerEvent) => {
+    const startMouseX = e.clientX;
+    const startMouseY = e.clientY;
+    const startPdfX = ann.pdfX;
+    const startPdfY = ann.pdfY;
+    const sx = dims.pdfWidth / dims.renderWidth;
+    const sy = dims.pdfHeight / dims.renderHeight;
+    let dragStarted = false;
+
+    const onMove = (me: PointerEvent) => {
+      const dx = me.clientX - startMouseX;
+      const dy = me.clientY - startMouseY;
+      if (!dragStarted) {
+        if (Math.abs(dx) < FLAG_DRAG_THRESHOLD_PX && Math.abs(dy) < FLAG_DRAG_THRESHOLD_PX) return;
+        dragStarted = true;
+      }
+      setFlagDragPreview({
+        id: ann.id,
+        pdfX: startPdfX + dx * sx,
+        pdfY: startPdfY - dy * sy,
+      });
+    };
+
+    const onUp = (me: PointerEvent) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      const dx = me.clientX - startMouseX;
+      const dy = me.clientY - startMouseY;
+      const moved =
+        Math.abs(dx) >= FLAG_DRAG_THRESHOLD_PX || Math.abs(dy) >= FLAG_DRAG_THRESHOLD_PX;
+      if (moved) {
+        const finalPdfX = startPdfX + dx * sx;
+        const finalPdfY = startPdfY - dy * sy;
+        onMoveAnnotation(ann.id, finalPdfX, finalPdfY);
+        justInteractedRef.current = true;
+        setSelectedId(ann.id);
+      } else {
+        // Below threshold = treat as a click (select if not already selected).
+        setSelectedId(ann.id);
+      }
+      setFlagDragPreview(null);
+    };
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
   const cursorClass = activeMode === "cursor" ? "cursor-default"
     : activeMode === "signature" ? "cursor-crosshair"
     : activeMode === "flag" ? "cursor-crosshair"
@@ -371,16 +424,26 @@ export function AnnotationOverlay({
         const isEditing = draft?.mode === "edit" && draft.annId === ann.id;
 
         if (ann.type === "flag") {
+          const previewFlag =
+            flagDragPreview && flagDragPreview.id === ann.id
+              ? { ...ann, pdfX: flagDragPreview.pdfX, pdfY: flagDragPreview.pdfY }
+              : ann;
           return (
             <FlagRenderer
               key={ann.id}
-              flag={ann}
+              flag={previewFlag}
               dims={dims}
               selected={isSelected}
+              onPointerDown={(e) => {
+                if (activeMode !== "cursor") return;
+                if (e.button !== 0) return;
+                e.stopPropagation();
+                e.preventDefault();
+                handleFlagPointerDown(ann, e);
+              }}
               onClick={(e) => {
                 if (activeMode !== "cursor") return;
                 e.stopPropagation();
-                setSelectedId(ann.id);
               }}
             />
           );
@@ -518,7 +581,11 @@ export function AnnotationOverlay({
       )}
 
       {selectedFlag && (() => {
-        const { screenX, screenY } = pdfToScreen(selectedFlag.pdfX, selectedFlag.pdfY, dims);
+        const usePreview =
+          flagDragPreview && flagDragPreview.id === selectedFlag.id;
+        const liveX = usePreview ? flagDragPreview.pdfX : selectedFlag.pdfX;
+        const liveY = usePreview ? flagDragPreview.pdfY : selectedFlag.pdfY;
+        const { screenX, screenY } = pdfToScreen(liveX, liveY, dims);
         const flagH = FLAG_BASE_HEIGHT * (selectedFlag.scale ?? FLAG_DEFAULT_SCALE) * dims.scale;
         return (
           <FlagSelectionToolbox
