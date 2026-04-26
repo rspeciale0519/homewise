@@ -296,7 +296,8 @@ export function PdfViewerShell({
         color: "#000000",
       });
       persistTextDefaults({ fontFamily: style.fontFamily, fontSize: style.fontSize });
-      setActiveMode("cursor");
+      // Stay in text mode so the user can keep placing more annotations.
+      // They exit by clicking Place text again or switching to Select.
     },
     [addAnnotation, persistTextDefaults]
   );
