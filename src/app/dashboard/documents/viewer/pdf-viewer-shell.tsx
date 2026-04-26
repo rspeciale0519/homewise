@@ -13,9 +13,11 @@ import {
   resolveContactField,
 } from "@/components/documents/annotation-placer";
 import {
-  DEFAULT_ANNOTATION_FONT_FAMILY,
-  DEFAULT_ANNOTATION_FONT_SIZE,
-} from "@/lib/documents/fonts";
+  FALLBACK_TEXT_DEFAULTS,
+  readTextDefaults,
+  writeTextDefaults,
+  type TextDefaults,
+} from "@/lib/documents/text-defaults";
 import type { ContactOption } from "@/components/documents/contact-picker";
 import type {
   Annotation,
@@ -64,6 +66,10 @@ export function PdfViewerShell({
 
   // Annotation state
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const annotationsRef = useRef<Annotation[]>([]);
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
   const [activeMode, setActiveMode] = useState<AnnotationMode>("cursor");
   const [selectedContact, setSelectedContact] = useState<ContactOption | null>(null);
   const [pageDims, setPageDims] = useState<Map<number, PageDimensions>>(new Map());
@@ -74,6 +80,19 @@ export function PdfViewerShell({
     pdfX: number;
     pdfY: number;
   } | null>(null);
+
+  // Sticky font + size defaults for new text annotations
+  const [textDefaults, setTextDefaults] = useState<TextDefaults>(FALLBACK_TEXT_DEFAULTS);
+  useEffect(() => {
+    setTextDefaults(readTextDefaults());
+  }, []);
+
+  const persistTextDefaults = useCallback((next: TextDefaults) => {
+    setTextDefaults((prev) =>
+      prev.fontFamily === next.fontFamily && prev.fontSize === next.fontSize ? prev : next
+    );
+    writeTextDefaults(next);
+  }, []);
 
   const addAnnotation = useCallback(
     (annotation: Annotation) => setAnnotations((prev) => [...prev, annotation]),
@@ -276,18 +295,31 @@ export function PdfViewerShell({
         fontFamily: style.fontFamily,
         color: "#000000",
       });
+      persistTextDefaults({ fontFamily: style.fontFamily, fontSize: style.fontSize });
       setActiveMode("cursor");
     },
-    [addAnnotation]
+    [addAnnotation, persistTextDefaults]
   );
 
   const handleUpdateAnnotation = useCallback(
     (id: string, patch: Partial<Annotation>) => {
+      const current = annotationsRef.current.find((a) => a.id === id);
       setAnnotations((prev) =>
         prev.map((a) => (a.id === id ? { ...a, ...patch } : a))
       );
+      if (
+        current &&
+        current.type === "text" &&
+        (patch.fontFamily !== undefined || patch.fontSize !== undefined)
+      ) {
+        persistTextDefaults({
+          fontFamily:
+            patch.fontFamily ?? current.fontFamily ?? FALLBACK_TEXT_DEFAULTS.fontFamily,
+          fontSize: patch.fontSize ?? current.fontSize,
+        });
+      }
     },
-    []
+    [persistTextDefaults]
   );
 
   const handleDeleteAnnotation = useCallback((id: string) => {
@@ -503,10 +535,7 @@ export function PdfViewerShell({
           activeMode={activeMode}
           pageDims={pageDims}
           onPageDims={handlePageDims}
-          defaultTextStyle={{
-            fontFamily: DEFAULT_ANNOTATION_FONT_FAMILY,
-            fontSize: DEFAULT_ANNOTATION_FONT_SIZE,
-          }}
+          defaultTextStyle={textDefaults}
           onPlaceAnnotation={handlePlaceAnnotation}
           onCreateTextAnnotation={handleCreateTextAnnotation}
           onUpdateAnnotation={handleUpdateAnnotation}
