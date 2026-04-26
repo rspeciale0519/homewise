@@ -9,6 +9,7 @@ import {
   fontFamilyCss,
 } from "@/lib/documents/fonts";
 import { AnnotationToolbox } from "@/components/documents/annotation-toolbox";
+import { FlagRenderer } from "@/components/documents/flag-renderer";
 import type {
   Annotation,
   AnnotationFontFamily,
@@ -47,6 +48,11 @@ interface AnnotationOverlayProps {
     value: string,
     style: { fontFamily: AnnotationFontFamily; fontSize: number }
   ) => void;
+  onCreateFlagAnnotation: (
+    pageIndex: number,
+    pdfX: number,
+    pdfY: number
+  ) => void;
   onUpdateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   onDeleteAnnotation: (id: string) => void;
   onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
@@ -59,7 +65,8 @@ function estimateTextWidth(value: string, fontSize: number) {
 
 export function AnnotationOverlay({
   pageIndex, dims, annotations, activeMode, defaultTextStyle,
-  onPlaceAnnotation, onCreateTextAnnotation, onUpdateAnnotation,
+  onPlaceAnnotation, onCreateTextAnnotation, onCreateFlagAnnotation,
+  onUpdateAnnotation,
   onDeleteAnnotation, onMoveAnnotation, onResizeAnnotation,
 }: AnnotationOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -113,6 +120,8 @@ export function AnnotationOverlay({
         fontFamily: defaultTextStyle.fontFamily,
         fontSize: defaultTextStyle.fontSize,
       });
+    } else if (activeMode === "flag") {
+      onCreateFlagAnnotation(pageIndex, pdfX, pdfY);
     } else {
       onPlaceAnnotation(pageIndex, pdfX, pdfY);
     }
@@ -288,7 +297,9 @@ export function AnnotationOverlay({
   );
 
   const cursorClass = activeMode === "cursor" ? "cursor-default"
-    : activeMode === "signature" ? "cursor-crosshair" : "cursor-text";
+    : activeMode === "signature" ? "cursor-crosshair"
+    : activeMode === "flag" ? "cursor-crosshair"
+    : "cursor-text";
 
   const draftScreen = draft ? pdfToScreen(draft.pdfX, draft.pdfY, dims) : null;
   const draftScaledFontSize = draft ? draft.fontSize * dims.scale : 0;
@@ -334,6 +345,22 @@ export function AnnotationOverlay({
         const isResizing = resizingId === ann.id;
         const isSelected = selectedId === ann.id && activeMode === "cursor";
         const isEditing = draft?.mode === "edit" && draft.annId === ann.id;
+
+        if (ann.type === "flag") {
+          return (
+            <FlagRenderer
+              key={ann.id}
+              flag={ann}
+              dims={dims}
+              selected={isSelected}
+              onClick={(e) => {
+                if (activeMode !== "cursor") return;
+                e.stopPropagation();
+                setSelectedId(ann.id);
+              }}
+            />
+          );
+        }
 
         if (ann.type === "signature" && ann.width && ann.height) {
           const baseW = ann.width;

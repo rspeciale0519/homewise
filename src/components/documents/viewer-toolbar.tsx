@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { AnnotationPlacer } from "@/components/documents/annotation-placer";
@@ -12,8 +12,14 @@ import type {
   AgentFieldKey,
   AgentInfo,
   ContactFieldKey,
+  FlagColor,
 } from "@/types/document-viewer";
 import { SignaturePicker } from "@/components/documents/signature-picker";
+import {
+  FLAG_COLORS,
+  flagColorHex,
+  flagColorLabel,
+} from "@/lib/documents/flag-colors";
 import { cn } from "@/lib/utils";
 
 interface ViewerToolbarProps {
@@ -26,6 +32,8 @@ interface ViewerToolbarProps {
   onZoomFit: () => void;
   activeMode: AnnotationMode;
   onSetMode: (mode: AnnotationMode) => void;
+  flagDefaultColor: FlagColor;
+  onSetFlagDefaultColor: (color: FlagColor) => void;
   agentInfo: AgentInfo;
   selectedContact: ContactOption | null;
   onSelectContact: (contact: ContactOption | null) => void;
@@ -57,6 +65,8 @@ export function ViewerToolbar({
   onZoomFit,
   activeMode,
   onSetMode,
+  flagDefaultColor,
+  onSetFlagDefaultColor,
   agentInfo,
   selectedContact,
   onSelectContact,
@@ -174,6 +184,26 @@ export function ViewerToolbar({
             </svg>
           </ToolButton>
 
+          <ToolButton
+            active={activeMode === "flag"}
+            onClick={() => {
+              onSetMode(activeMode === "flag" ? "cursor" : "flag");
+              setShowPlacer(false);
+            }}
+            title="Place sign-here flag"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
+            </svg>
+          </ToolButton>
+
+          {activeMode === "flag" && (
+            <FlagDefaultColorPicker
+              color={flagDefaultColor}
+              onChange={onSetFlagDefaultColor}
+            />
+          )}
+
           <div className="relative">
             <ToolButton
               active={activeMode === "agent-field" || activeMode === "contact-field"}
@@ -289,6 +319,78 @@ export function ViewerToolbar({
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FlagDefaultColorPicker({
+  color,
+  onChange,
+}: {
+  color: FlagColor;
+  onChange: (color: FlagColor) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((s) => !s)}
+        title={`Flag color: ${flagColorLabel(color)}`}
+        aria-label={`Flag color: ${flagColorLabel(color)}`}
+        className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-50 transition-colors"
+      >
+        <span
+          className="block h-4 w-4 rounded-full ring-1 ring-slate-200 shadow-sm"
+          style={{ backgroundColor: flagColorHex(color) }}
+        />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          className="absolute left-0 top-9 z-40 bg-white border border-slate-100 shadow-dropdown rounded-xl p-2 flex items-center gap-1.5"
+        >
+          {FLAG_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="option"
+              aria-selected={c === color}
+              onClick={() => {
+                onChange(c);
+                setOpen(false);
+              }}
+              title={flagColorLabel(c)}
+              className={cn(
+                "h-6 w-6 rounded-full transition-transform hover:scale-110",
+                c === color
+                  ? "ring-2 ring-navy-600 ring-offset-2"
+                  : "ring-1 ring-slate-200"
+              )}
+              style={{ backgroundColor: flagColorHex(c) }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

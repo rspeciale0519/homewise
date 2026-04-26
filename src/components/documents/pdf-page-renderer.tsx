@@ -33,6 +33,11 @@ interface PdfPageRendererProps {
     value: string,
     style: { fontFamily: AnnotationFontFamily; fontSize: number }
   ) => void;
+  onCreateFlagAnnotation: (
+    pageIndex: number,
+    pdfX: number,
+    pdfY: number
+  ) => void;
   onUpdateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   onDeleteAnnotation: (id: string) => void;
   onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
@@ -51,6 +56,7 @@ export function PdfPageRenderer({
   defaultTextStyle,
   onPlaceAnnotation,
   onCreateTextAnnotation,
+  onCreateFlagAnnotation,
   onUpdateAnnotation,
   onDeleteAnnotation,
   onMoveAnnotation,
@@ -185,6 +191,7 @@ export function PdfPageRenderer({
                         defaultTextStyle={defaultTextStyle}
                         onPlaceAnnotation={onPlaceAnnotation}
                         onCreateTextAnnotation={onCreateTextAnnotation}
+                        onCreateFlagAnnotation={onCreateFlagAnnotation}
                         onUpdateAnnotation={onUpdateAnnotation}
                         onDeleteAnnotation={onDeleteAnnotation}
                         onMoveAnnotation={onMoveAnnotation}
