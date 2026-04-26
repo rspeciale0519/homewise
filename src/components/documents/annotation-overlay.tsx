@@ -329,11 +329,26 @@ export function AnnotationOverlay({
         e.preventDefault();
         onDeleteAnnotation(selectedFlag.id);
         setSelectedId(null);
+        return;
+      }
+      const arrow =
+        e.key === "ArrowLeft" ? { dx: -1, dy: 0 } :
+        e.key === "ArrowRight" ? { dx: 1, dy: 0 } :
+        e.key === "ArrowUp" ? { dx: 0, dy: 1 } :
+        e.key === "ArrowDown" ? { dx: 0, dy: -1 } : null;
+      if (arrow) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        onMoveAnnotation(
+          selectedFlag.id,
+          selectedFlag.pdfX + arrow.dx * step,
+          selectedFlag.pdfY + arrow.dy * step
+        );
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [selectedFlag, onDeleteAnnotation]);
+  }, [selectedFlag, onDeleteAnnotation, onMoveAnnotation]);
 
   const tipViewportCoords = (ann: Annotation) => {
     const tip = pdfToScreen(ann.pdfX, ann.pdfY, dims);
