@@ -12,13 +12,32 @@ import {
   resolveAgentField,
   resolveContactField,
 } from "@/components/documents/annotation-placer";
+import {
+  FALLBACK_TEXT_DEFAULTS,
+  readTextDefaults,
+  writeTextDefaults,
+  type TextDefaults,
+} from "@/lib/documents/text-defaults";
+import {
+  readFlagDefaultColor,
+  writeFlagDefaultColor,
+} from "@/lib/documents/flag-defaults";
+import {
+  DEFAULT_FLAG_COLOR,
+  DEFAULT_FLAG_LABEL,
+  FLAG_DEFAULT_ROTATION,
+  FLAG_DEFAULT_SCALE,
+  FLAG_TIP_OFFSET,
+} from "@/lib/documents/flag-colors";
 import type { ContactOption } from "@/components/documents/contact-picker";
 import type {
   Annotation,
+  AnnotationFontFamily,
   AnnotationMode,
   AgentFieldKey,
   AgentInfo,
   ContactFieldKey,
+  FlagColor,
   FormValues,
   PageDimensions,
   PdfDocumentHandle,
@@ -59,16 +78,44 @@ export function PdfViewerShell({
 
   // Annotation state
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const annotationsRef = useRef<Annotation[]>([]);
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
   const [activeMode, setActiveMode] = useState<AnnotationMode>("cursor");
   const [selectedContact, setSelectedContact] = useState<ContactOption | null>(null);
   const [pageDims, setPageDims] = useState<Map<number, PageDimensions>>(new Map());
 
-  // Pending placement state
+  // Pending placement state (used by signature/agent/contact picker flows)
   const [pendingPlacement, setPendingPlacement] = useState<{
     pageIndex: number;
     pdfX: number;
     pdfY: number;
   } | null>(null);
+
+  // Sticky font + size defaults for new text annotations
+  const [textDefaults, setTextDefaults] = useState<TextDefaults>(FALLBACK_TEXT_DEFAULTS);
+  useEffect(() => {
+    setTextDefaults(readTextDefaults());
+  }, []);
+
+  const persistTextDefaults = useCallback((next: TextDefaults) => {
+    setTextDefaults((prev) =>
+      prev.fontFamily === next.fontFamily && prev.fontSize === next.fontSize ? prev : next
+    );
+    writeTextDefaults(next);
+  }, []);
+
+  // Sticky default color for new flags
+  const [flagDefaultColor, setFlagDefaultColor] = useState<FlagColor>(DEFAULT_FLAG_COLOR);
+  useEffect(() => {
+    setFlagDefaultColor(readFlagDefaultColor());
+  }, []);
+
+  const handleSetFlagDefaultColor = useCallback((color: FlagColor) => {
+    setFlagDefaultColor(color);
+    writeFlagDefaultColor(color);
+  }, []);
 
   const addAnnotation = useCallback(
     (annotation: Annotation) => setAnnotations((prev) => [...prev, annotation]),
@@ -229,9 +276,7 @@ export function PdfViewerShell({
 
   const handlePlaceAnnotation = useCallback(
     (pageIndex: number, pdfX: number, pdfY: number) => {
-      if (activeMode === "text") {
-        setPendingPlacement({ pageIndex, pdfX, pdfY });
-      } else if (activeMode === "signature") {
+      if (activeMode === "signature") {
         placeSignatureOnPage(pageIndex, pdfX, pdfY);
       } else if (activeMode === "agent-field" && pendingAgentField) {
         const value = resolveAgentField(pendingAgentField, agentInfo);
@@ -258,20 +303,69 @@ export function PdfViewerShell({
     [activeMode, placeSignatureOnPage, addAnnotation, agentInfo, selectedContact, pendingAgentField, pendingContactField]
   );
 
-  const handlePlaceText = useCallback(
-    (text: string) => {
-      if (!pendingPlacement) return;
+  const handleCreateTextAnnotation = useCallback(
+    (
+      pageIndex: number,
+      pdfX: number,
+      pdfY: number,
+      value: string,
+      style: { fontFamily: AnnotationFontFamily; fontSize: number }
+    ) => {
       addAnnotation({
-        id: genId(), pageIndex: pendingPlacement.pageIndex,
-        pdfX: pendingPlacement.pdfX, pdfY: pendingPlacement.pdfY,
-        type: "text", value: text, fontSize: 12, color: "#000000",
+        id: genId(), pageIndex, pdfX, pdfY,
+        type: "text", value,
+        fontSize: style.fontSize,
+        fontFamily: style.fontFamily,
+        color: "#000000",
       });
-      setPendingPlacement(null);
-      setActiveMode("cursor");
+      persistTextDefaults({ fontFamily: style.fontFamily, fontSize: style.fontSize });
+      // Stay in text mode so the user can keep placing more annotations.
+      // They exit by clicking Place text again or switching to Select.
     },
-    [pendingPlacement, addAnnotation]
+    [addAnnotation, persistTextDefaults]
   );
 
+  const handleCreateFlagAnnotation = useCallback(
+    (pageIndex: number, pdfX: number, pdfY: number) => {
+      // The annotation's pdfX/pdfY stores the body center; on placement we
+      // shift the body center to the LEFT by FLAG_TIP_OFFSET so the notch
+      // tip lands under the user's click (the spot they want to point at).
+      addAnnotation({
+        id: genId(), pageIndex,
+        pdfX: pdfX - FLAG_TIP_OFFSET * FLAG_DEFAULT_SCALE,
+        pdfY,
+        type: "flag",
+        value: DEFAULT_FLAG_LABEL,
+        fontSize: 11,
+        color: flagDefaultColor,
+        rotation: FLAG_DEFAULT_ROTATION,
+        scale: FLAG_DEFAULT_SCALE,
+      });
+      // Sticky mode: stay in flag mode so the user can place more.
+    },
+    [addAnnotation, flagDefaultColor]
+  );
+
+  const handleUpdateAnnotation = useCallback(
+    (id: string, patch: Partial<Annotation>) => {
+      const current = annotationsRef.current.find((a) => a.id === id);
+      setAnnotations((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, ...patch } : a))
+      );
+      if (
+        current &&
+        current.type === "text" &&
+        (patch.fontFamily !== undefined || patch.fontSize !== undefined)
+      ) {
+        persistTextDefaults({
+          fontFamily:
+            patch.fontFamily ?? current.fontFamily ?? FALLBACK_TEXT_DEFAULTS.fontFamily,
+          fontSize: patch.fontSize ?? current.fontSize,
+        });
+      }
+    },
+    [persistTextDefaults]
+  );
 
   const handleDeleteAnnotation = useCallback((id: string) => {
     setAnnotations((prev) => prev.filter((a) => a.id !== id));
@@ -398,14 +492,14 @@ export function PdfViewerShell({
         onZoomFit={handleZoomFit}
         activeMode={activeMode}
         onSetMode={handleSetMode}
+        flagDefaultColor={flagDefaultColor}
+        onSetFlagDefaultColor={handleSetFlagDefaultColor}
         agentInfo={agentInfo}
         selectedContact={selectedContact}
         onSelectContact={setSelectedContact}
         onSelectAgentField={handleSelectAgentField}
         onSelectContactField={handleSelectContactField}
         annotations={annotations}
-        pendingPlacement={pendingPlacement}
-        onPlaceText={handlePlaceText}
         onCancelPlacement={() => setPendingPlacement(null)}
         onDownload={handleDownload}
         onPrint={handlePrint}
@@ -488,7 +582,11 @@ export function PdfViewerShell({
           activeMode={activeMode}
           pageDims={pageDims}
           onPageDims={handlePageDims}
+          defaultTextStyle={textDefaults}
           onPlaceAnnotation={handlePlaceAnnotation}
+          onCreateTextAnnotation={handleCreateTextAnnotation}
+          onCreateFlagAnnotation={handleCreateFlagAnnotation}
+          onUpdateAnnotation={handleUpdateAnnotation}
           onDeleteAnnotation={handleDeleteAnnotation}
           onMoveAnnotation={handleMoveAnnotation}
           onResizeAnnotation={handleResizeAnnotation}

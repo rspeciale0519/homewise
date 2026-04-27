@@ -1,20 +1,39 @@
+export type AnnotationFontFamily =
+  | "Helvetica"
+  | "Times"
+  | "Roboto"
+  | "SourceSerif"
+  | "SourceSans";
+
+export type FlagColor =
+  | "yellow"
+  | "blue"
+  | "green"
+  | "red"
+  | "purple"
+  | "orange";
+
 export interface Annotation {
   id: string;
   pageIndex: number;
   pdfX: number;
   pdfY: number;
-  type: "text" | "signature";
+  type: "text" | "signature" | "flag";
   value: string;
   fontSize: number;
+  fontFamily?: AnnotationFontFamily;
   color: string;
   width?: number;
   height?: number;
+  rotation?: number;
+  scale?: number;
 }
 
 export type AnnotationMode =
   | "cursor"
   | "text"
   | "signature"
+  | "flag"
   | "agent-field"
   | "contact-field";
 
