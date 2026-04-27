@@ -199,29 +199,51 @@ export function FlagSelectionToolbox({
           )}
         </div>
       ) : (
-        <select
-          value={isPreset ? currentLabel : "__custom__"}
-          onMouseDown={stopPropagation}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === "__custom__") {
-              beginCustom();
-            } else {
-              onChangeLabel(v);
-            }
-          }}
-          aria-label="Flag label"
-          className="h-7 px-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md focus:outline-none focus:border-navy-600"
-        >
-          {FLAG_LABEL_PRESETS.map((preset) => (
-            <option key={preset} value={preset}>
-              {preset}
+        <div className="flex items-center gap-1">
+          <select
+            value={isPreset ? currentLabel : "__custom__"}
+            onMouseDown={stopPropagation}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "__custom__") {
+                beginCustom();
+              } else {
+                onChangeLabel(v);
+              }
+            }}
+            aria-label="Flag label"
+            className="h-7 px-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md focus:outline-none focus:border-navy-600"
+          >
+            {FLAG_LABEL_PRESETS.map((preset) => (
+              <option key={preset} value={preset}>
+                {preset}
+              </option>
+            ))}
+            <option value="__custom__">
+              {isPreset ? "Custom…" : `Custom: ${currentLabel}`}
             </option>
-          ))}
-          <option value="__custom__">
-            {isPreset ? "Custom…" : `Custom: ${currentLabel}`}
-          </option>
-        </select>
+          </select>
+          {!isPreset && (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                beginCustom();
+              }}
+              title="Edit custom label"
+              aria-label="Edit custom label"
+              className="h-7 w-7 flex items-center justify-center rounded-md text-slate-500 hover:text-navy-700 hover:bg-slate-50 transition-colors"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+              </svg>
+            </button>
+          )}
+        </div>
       )}
 
       <div className="h-5 w-px bg-slate-200" />
