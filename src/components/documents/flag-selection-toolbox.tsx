@@ -98,6 +98,7 @@ export function FlagSelectionToolbox({
       ref={ref}
       onMouseDown={stopPropagation}
       onPointerDown={stopPropagation}
+      onClick={stopPropagation}
       className="absolute z-[60] bg-white border border-slate-100 rounded-xl shadow-dropdown p-2 flex items-center gap-2"
       style={{
         left: anchor.left + offset.dx,
