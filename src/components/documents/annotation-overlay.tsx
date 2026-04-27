@@ -142,6 +142,10 @@ export function AnnotationOverlay({
         fontSize: defaultTextStyle.fontSize,
       });
     } else if (activeMode === "flag") {
+      // Empty-space click in flag mode: deselect any selected flag, then
+      // place a new one. Clicks on a flag itself stop propagation before
+      // reaching here (see FlagRenderer onClick / onPointerDown handlers).
+      setSelectedId(null);
       onCreateFlagAnnotation(pageIndex, pdfX, pdfY);
     } else {
       onPlaceAnnotation(pageIndex, pdfX, pdfY);
@@ -315,7 +319,7 @@ export function AnnotationOverlay({
   );
 
   const selectedFlag =
-    activeMode === "cursor" && selectedId
+    selectedId && (activeMode === "cursor" || activeMode === "flag")
       ? pageAnnotations.find((a) => a.id === selectedId && a.type === "flag")
       : undefined;
 
@@ -532,7 +536,10 @@ export function AnnotationOverlay({
         const { screenX, screenY } = pdfToScreen(ann.pdfX, ann.pdfY, dims);
         const isDragging = draggingId === ann.id;
         const isResizing = resizingId === ann.id;
-        const isSelected = selectedId === ann.id && activeMode === "cursor";
+        const flagInteractive =
+          ann.type === "flag" && (activeMode === "cursor" || activeMode === "flag");
+        const isSelected =
+          selectedId === ann.id && (activeMode === "cursor" || flagInteractive);
         const isEditing = draft?.mode === "edit" && draft.annId === ann.id;
 
         if (ann.type === "flag") {
@@ -547,6 +554,11 @@ export function AnnotationOverlay({
               rotation: flagTransformPreview.rotation ?? previewFlag.rotation,
             };
           }
+          // Flags participate in selection in BOTH cursor mode and flag mode.
+          // In flag mode, clicking an existing flag selects/manipulates it
+          // instead of placing a new one (the click stops propagation here).
+          const interactive =
+            activeMode === "cursor" || activeMode === "flag";
           return (
             <FlagRenderer
               key={ann.id}
@@ -554,14 +566,14 @@ export function AnnotationOverlay({
               dims={dims}
               selected={isSelected}
               onPointerDown={(e) => {
-                if (activeMode !== "cursor") return;
+                if (!interactive) return;
                 if (e.button !== 0) return;
                 e.stopPropagation();
                 e.preventDefault();
                 handleFlagPointerDown(ann, e);
               }}
               onClick={(e) => {
-                if (activeMode !== "cursor") return;
+                if (!interactive) return;
                 e.stopPropagation();
               }}
               onResizeHandlePointerDown={(corner, ev) =>

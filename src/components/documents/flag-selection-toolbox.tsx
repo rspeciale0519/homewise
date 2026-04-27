@@ -40,19 +40,11 @@ export function FlagSelectionToolbox({
   const isPreset = PRESET_SET.has(currentLabel);
 
   useEffect(() => {
-    const onDocPointerDown = (e: PointerEvent) => {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) onClose();
-    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    document.addEventListener("pointerdown", onDocPointerDown);
     document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDocPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   const stopPropagation = (e: React.MouseEvent | React.PointerEvent) => {
