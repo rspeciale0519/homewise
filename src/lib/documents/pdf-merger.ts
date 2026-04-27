@@ -4,19 +4,39 @@ import {
   PDFDropdown,
   PDFFont,
   PDFOptionList,
+  PDFPage,
   PDFRadioGroup,
   PDFTextField,
   StandardFonts,
+  degrees,
   rgb,
 } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "fs/promises";
 import path from "path";
+import {
+  FLAG_BASE_HEIGHT,
+  FLAG_BASE_WIDTH,
+  FLAG_BODY_RADIUS,
+  FLAG_DEFAULT_ROTATION,
+  FLAG_DEFAULT_SCALE,
+  FLAG_NOTCH_WIDTH,
+  flagColorHex,
+} from "@/lib/documents/flag-colors";
 import type {
   Annotation,
   AnnotationFontFamily,
+  FlagColor,
   FormValues,
 } from "@/types/document-viewer";
+
+const FLAG_KNOWN_COLORS = new Set<string>([
+  "yellow", "blue", "green", "red", "purple", "orange",
+]);
+
+function isFlagColor(value: string): value is FlagColor {
+  return FLAG_KNOWN_COLORS.has(value);
+}
 
 function hexToRgb(hex: string) {
   const h = hex.replace("#", "");
@@ -105,6 +125,7 @@ export async function mergePdfWithAnnotations(
 
   const pages = pdfDoc.getPages();
   const fontCache = new Map<AnnotationFontFamily, PDFFont>();
+  let flagFont: PDFFont | null = null;
 
   for (const annotation of annotations) {
     const page = pages[annotation.pageIndex];
@@ -141,6 +162,11 @@ export async function mergePdfWithAnnotations(
         width,
         height,
       });
+    } else if (annotation.type === "flag") {
+      if (!flagFont) {
+        flagFont = await pdfDoc.embedStandardFont(StandardFonts.HelveticaBold);
+      }
+      drawFlag(page, annotation, flagFont);
     }
   }
 
@@ -153,4 +179,65 @@ export async function mergePdfWithAnnotations(
   }
 
   return pdfDoc.save();
+}
+
+function drawFlag(page: PDFPage, ann: Annotation, font: PDFFont) {
+  const scale = ann.scale ?? FLAG_DEFAULT_SCALE;
+  const rotationBrowser = ann.rotation ?? FLAG_DEFAULT_ROTATION;
+  const colorKey: FlagColor = isFlagColor(ann.color) ? ann.color : "yellow";
+
+  const baseW = FLAG_BASE_WIDTH * scale;
+  const baseH = FLAG_BASE_HEIGHT * scale;
+  const notchW = FLAG_NOTCH_WIDTH * scale;
+  const r = FLAG_BODY_RADIUS * scale;
+  const labelSize = 11 * scale;
+
+  // ann.pdfX/pdfY is the body's geometric center. The path is drawn with
+  // body center at SVG (0, 0) so rotation around the body center is just
+  // pdf-lib's built-in rotate-around-(x,y) when (x, y) = body center.
+  // Body spans x in [-baseW/2, baseW/2]; notch from x=baseW/2 to baseW/2+notchW.
+  const flagPath =
+    `M ${-baseW / 2 + r} ${-baseH / 2} ` +
+    `L ${baseW / 2} ${-baseH / 2} ` +
+    `L ${baseW / 2 + notchW} 0 ` +
+    `L ${baseW / 2} ${baseH / 2} ` +
+    `L ${-baseW / 2 + r} ${baseH / 2} ` +
+    `Q ${-baseW / 2} ${baseH / 2} ${-baseW / 2} ${baseH / 2 - r} ` +
+    `L ${-baseW / 2} ${-baseH / 2 + r} ` +
+    `Q ${-baseW / 2} ${-baseH / 2} ${-baseW / 2 + r} ${-baseH / 2} ` +
+    `Z`;
+
+  // PDF rotation is CCW positive; CSS browser rotation is CW positive.
+  const pdfRotation = -rotationBrowser;
+
+  page.drawSvgPath(flagPath, {
+    x: ann.pdfX,
+    y: ann.pdfY,
+    rotate: degrees(pdfRotation),
+    color: hexToRgb(flagColorHex(colorKey)),
+  });
+
+  // Label: centered at the body center, which is (ann.pdfX, ann.pdfY).
+  const labelText = ann.value.toUpperCase();
+  const textWidth = font.widthOfTextAtSize(labelText, labelSize);
+  const textHeight = font.heightAtSize(labelSize);
+
+  const angleRad = (pdfRotation * Math.PI) / 180;
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+
+  // Bottom-left of text such that its center lands at (pdfX, pdfY).
+  const offX = -textWidth / 2;
+  const offY = -textHeight / 3;
+  const blX = ann.pdfX + offX * cos - offY * sin;
+  const blY = ann.pdfY + offX * sin + offY * cos;
+
+  page.drawText(labelText, {
+    x: blX,
+    y: blY,
+    size: labelSize,
+    font,
+    color: rgb(1, 1, 1),
+    rotate: degrees(pdfRotation),
+  });
 }

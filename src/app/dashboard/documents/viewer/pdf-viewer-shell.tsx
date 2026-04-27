@@ -18,6 +18,17 @@ import {
   writeTextDefaults,
   type TextDefaults,
 } from "@/lib/documents/text-defaults";
+import {
+  readFlagDefaultColor,
+  writeFlagDefaultColor,
+} from "@/lib/documents/flag-defaults";
+import {
+  DEFAULT_FLAG_COLOR,
+  DEFAULT_FLAG_LABEL,
+  FLAG_DEFAULT_ROTATION,
+  FLAG_DEFAULT_SCALE,
+  FLAG_TIP_OFFSET,
+} from "@/lib/documents/flag-colors";
 import type { ContactOption } from "@/components/documents/contact-picker";
 import type {
   Annotation,
@@ -26,6 +37,7 @@ import type {
   AgentFieldKey,
   AgentInfo,
   ContactFieldKey,
+  FlagColor,
   FormValues,
   PageDimensions,
   PdfDocumentHandle,
@@ -92,6 +104,17 @@ export function PdfViewerShell({
       prev.fontFamily === next.fontFamily && prev.fontSize === next.fontSize ? prev : next
     );
     writeTextDefaults(next);
+  }, []);
+
+  // Sticky default color for new flags
+  const [flagDefaultColor, setFlagDefaultColor] = useState<FlagColor>(DEFAULT_FLAG_COLOR);
+  useEffect(() => {
+    setFlagDefaultColor(readFlagDefaultColor());
+  }, []);
+
+  const handleSetFlagDefaultColor = useCallback((color: FlagColor) => {
+    setFlagDefaultColor(color);
+    writeFlagDefaultColor(color);
   }, []);
 
   const addAnnotation = useCallback(
@@ -302,6 +325,27 @@ export function PdfViewerShell({
     [addAnnotation, persistTextDefaults]
   );
 
+  const handleCreateFlagAnnotation = useCallback(
+    (pageIndex: number, pdfX: number, pdfY: number) => {
+      // The annotation's pdfX/pdfY stores the body center; on placement we
+      // shift the body center to the LEFT by FLAG_TIP_OFFSET so the notch
+      // tip lands under the user's click (the spot they want to point at).
+      addAnnotation({
+        id: genId(), pageIndex,
+        pdfX: pdfX - FLAG_TIP_OFFSET * FLAG_DEFAULT_SCALE,
+        pdfY,
+        type: "flag",
+        value: DEFAULT_FLAG_LABEL,
+        fontSize: 11,
+        color: flagDefaultColor,
+        rotation: FLAG_DEFAULT_ROTATION,
+        scale: FLAG_DEFAULT_SCALE,
+      });
+      // Sticky mode: stay in flag mode so the user can place more.
+    },
+    [addAnnotation, flagDefaultColor]
+  );
+
   const handleUpdateAnnotation = useCallback(
     (id: string, patch: Partial<Annotation>) => {
       const current = annotationsRef.current.find((a) => a.id === id);
@@ -448,6 +492,8 @@ export function PdfViewerShell({
         onZoomFit={handleZoomFit}
         activeMode={activeMode}
         onSetMode={handleSetMode}
+        flagDefaultColor={flagDefaultColor}
+        onSetFlagDefaultColor={handleSetFlagDefaultColor}
         agentInfo={agentInfo}
         selectedContact={selectedContact}
         onSelectContact={setSelectedContact}
@@ -539,6 +585,7 @@ export function PdfViewerShell({
           defaultTextStyle={textDefaults}
           onPlaceAnnotation={handlePlaceAnnotation}
           onCreateTextAnnotation={handleCreateTextAnnotation}
+          onCreateFlagAnnotation={handleCreateFlagAnnotation}
           onUpdateAnnotation={handleUpdateAnnotation}
           onDeleteAnnotation={handleDeleteAnnotation}
           onMoveAnnotation={handleMoveAnnotation}

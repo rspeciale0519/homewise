@@ -49,18 +49,29 @@ export const annotationFontFamilySchema = z.enum([
   "SourceSans",
 ]);
 
+export const flagColorSchema = z.enum([
+  "yellow",
+  "blue",
+  "green",
+  "red",
+  "purple",
+  "orange",
+]);
+
 export const annotationSchema = z.object({
   id: z.string(),
   pageIndex: z.number().int().min(0),
   pdfX: z.number(),
   pdfY: z.number(),
-  type: z.enum(["text", "signature"]),
+  type: z.enum(["text", "signature", "flag"]),
   value: z.string(),
   fontSize: z.number().default(12),
   fontFamily: annotationFontFamilySchema.optional(),
   color: z.string().default("#000000"),
   width: z.number().optional(),
   height: z.number().optional(),
+  rotation: z.number().min(0).lt(360).optional(),
+  scale: z.number().min(0.5).max(2.5).optional(),
 });
 
 export const formValueSchema = z.union([

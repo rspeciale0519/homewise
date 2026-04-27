@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { pdfToScreen, screenToPdf } from "@/lib/documents/coordinates";
 import {
@@ -8,11 +8,23 @@ import {
   DEFAULT_ANNOTATION_FONT_SIZE,
   fontFamilyCss,
 } from "@/lib/documents/fonts";
+import {
+  FLAG_BASE_HEIGHT,
+  FLAG_DEFAULT_ROTATION,
+  FLAG_DEFAULT_SCALE,
+  FLAG_DRAG_THRESHOLD_PX,
+  FLAG_ROTATION_SNAP_DEGREES,
+  clampFlagScale,
+  normalizeFlagRotation,
+} from "@/lib/documents/flag-colors";
 import { AnnotationToolbox } from "@/components/documents/annotation-toolbox";
+import { FlagRenderer, type FlagCorner } from "@/components/documents/flag-renderer";
+import { FlagSelectionToolbox } from "@/components/documents/flag-selection-toolbox";
 import type {
   Annotation,
   AnnotationFontFamily,
   AnnotationMode,
+  FlagColor,
   PageDimensions,
 } from "@/types/document-viewer";
 
@@ -47,6 +59,11 @@ interface AnnotationOverlayProps {
     value: string,
     style: { fontFamily: AnnotationFontFamily; fontSize: number }
   ) => void;
+  onCreateFlagAnnotation: (
+    pageIndex: number,
+    pdfX: number,
+    pdfY: number
+  ) => void;
   onUpdateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   onDeleteAnnotation: (id: string) => void;
   onMoveAnnotation: (id: string, pdfX: number, pdfY: number) => void;
@@ -59,7 +76,8 @@ function estimateTextWidth(value: string, fontSize: number) {
 
 export function AnnotationOverlay({
   pageIndex, dims, annotations, activeMode, defaultTextStyle,
-  onPlaceAnnotation, onCreateTextAnnotation, onUpdateAnnotation,
+  onPlaceAnnotation, onCreateTextAnnotation, onCreateFlagAnnotation,
+  onUpdateAnnotation,
   onDeleteAnnotation, onMoveAnnotation, onResizeAnnotation,
 }: AnnotationOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -79,6 +97,16 @@ export function AnnotationOverlay({
   const resizeStartRef = useRef<{
     annId: string; startW: number; startH: number;
     mouseX: number; mouseY: number; handle: ResizeHandle;
+  } | null>(null);
+
+  // Live drag preview offset for flag annotations (in PDF coordinates)
+  const [flagDragPreview, setFlagDragPreview] = useState<{
+    id: string; pdfX: number; pdfY: number;
+  } | null>(null);
+
+  // Live preview for flag resize / rotate
+  const [flagTransformPreview, setFlagTransformPreview] = useState<{
+    id: string; scale?: number; rotation?: number;
   } | null>(null);
 
   // Prevent stray click events from deselecting after drag/resize
@@ -113,6 +141,12 @@ export function AnnotationOverlay({
         fontFamily: defaultTextStyle.fontFamily,
         fontSize: defaultTextStyle.fontSize,
       });
+    } else if (activeMode === "flag") {
+      // Empty-space click in flag mode: deselect any selected flag, then
+      // place a new one. Clicks on a flag itself stop propagation before
+      // reaching here (see FlagRenderer onClick / onPointerDown handlers).
+      setSelectedId(null);
+      onCreateFlagAnnotation(pageIndex, pdfX, pdfY);
     } else {
       onPlaceAnnotation(pageIndex, pdfX, pdfY);
     }
@@ -155,62 +189,59 @@ export function AnnotationOverlay({
     setSelectedId(null);
   };
 
-  const handleAnnotationMouseDown = useCallback(
-    (annId: string, ann: Annotation, e: React.MouseEvent) => {
-      if (activeMode !== "cursor") return;
-      e.stopPropagation();
-      e.preventDefault();
-      setSelectedId(annId);
-      setDraggingId(annId);
+  const handleAnnotationMouseDown = (annId: string, ann: Annotation, e: React.MouseEvent) => {
+    if (activeMode !== "cursor") return;
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedId(annId);
+    setDraggingId(annId);
 
-      const el = (e.currentTarget as HTMLElement);
-      dragElRef.current = el;
-      el.style.transition = "none";
-      el.style.opacity = "0.8";
-      el.style.zIndex = "50";
-      el.style.cursor = "grabbing";
+    const el = (e.currentTarget as HTMLElement);
+    dragElRef.current = el;
+    el.style.transition = "none";
+    el.style.opacity = "0.8";
+    el.style.zIndex = "50";
+    el.style.cursor = "grabbing";
 
-      dragStartRef.current = {
-        annId, startPdfX: ann.pdfX, startPdfY: ann.pdfY,
-        mouseX: e.clientX, mouseY: e.clientY,
-      };
+    dragStartRef.current = {
+      annId, startPdfX: ann.pdfX, startPdfY: ann.pdfY,
+      mouseX: e.clientX, mouseY: e.clientY,
+    };
 
-      const onMove = (me: MouseEvent) => {
-        const start = dragStartRef.current;
-        if (!start || !dragElRef.current) return;
-        const dx = me.clientX - start.mouseX;
-        const dy = me.clientY - start.mouseY;
-        dragElRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
-      };
-      const onUp = (me: MouseEvent) => {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-        const start = dragStartRef.current;
-        if (dragElRef.current) {
-          dragElRef.current.style.transform = "";
-          dragElRef.current.style.transition = "";
-          dragElRef.current.style.opacity = "";
-          dragElRef.current.style.zIndex = "";
-          dragElRef.current.style.cursor = "";
-        }
-        dragElRef.current = null;
-        if (!start) return;
-        const dx = me.clientX - start.mouseX;
-        const dy = me.clientY - start.mouseY;
-        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-          const sx = dims.pdfWidth / dims.renderWidth;
-          const sy = dims.pdfHeight / dims.renderHeight;
-          onMoveAnnotation(start.annId, start.startPdfX + dx * sx, start.startPdfY - dy * sy);
-          justInteractedRef.current = true;
-        }
-        setDraggingId(null);
-        dragStartRef.current = null;
-      };
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-    },
-    [activeMode, dims, onMoveAnnotation]
-  );
+    const onMove = (me: MouseEvent) => {
+      const start = dragStartRef.current;
+      if (!start || !dragElRef.current) return;
+      const dx = me.clientX - start.mouseX;
+      const dy = me.clientY - start.mouseY;
+      dragElRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
+    };
+    const onUp = (me: MouseEvent) => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      const start = dragStartRef.current;
+      if (dragElRef.current) {
+        dragElRef.current.style.transform = "";
+        dragElRef.current.style.transition = "";
+        dragElRef.current.style.opacity = "";
+        dragElRef.current.style.zIndex = "";
+        dragElRef.current.style.cursor = "";
+      }
+      dragElRef.current = null;
+      if (!start) return;
+      const dx = me.clientX - start.mouseX;
+      const dy = me.clientY - start.mouseY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        const sx = dims.pdfWidth / dims.renderWidth;
+        const sy = dims.pdfHeight / dims.renderHeight;
+        onMoveAnnotation(start.annId, start.startPdfX + dx * sx, start.startPdfY - dy * sy);
+        justInteractedRef.current = true;
+      }
+      setDraggingId(null);
+      dragStartRef.current = null;
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
 
   const handleResizeMouseDown = useCallback(
     (annId: string, ann: Annotation, handle: ResizeHandle, e: React.MouseEvent) => {
@@ -287,8 +318,181 @@ export function AnnotationOverlay({
     [dims, onResizeAnnotation]
   );
 
+  const selectedFlag =
+    selectedId && (activeMode === "cursor" || activeMode === "flag")
+      ? pageAnnotations.find((a) => a.id === selectedId && a.type === "flag")
+      : undefined;
+
+  useEffect(() => {
+    if (!selectedFlag) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        onDeleteAnnotation(selectedFlag.id);
+        setSelectedId(null);
+        return;
+      }
+      const arrow =
+        e.key === "ArrowLeft" ? { dx: -1, dy: 0 } :
+        e.key === "ArrowRight" ? { dx: 1, dy: 0 } :
+        e.key === "ArrowUp" ? { dx: 0, dy: 1 } :
+        e.key === "ArrowDown" ? { dx: 0, dy: -1 } : null;
+      if (arrow) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        onMoveAnnotation(
+          selectedFlag.id,
+          selectedFlag.pdfX + arrow.dx * step,
+          selectedFlag.pdfY + arrow.dy * step
+        );
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [selectedFlag, onDeleteAnnotation, onMoveAnnotation]);
+
+  const bodyCenterViewportCoords = (ann: Annotation) => {
+    const center = pdfToScreen(ann.pdfX, ann.pdfY, dims);
+    const rect = overlayRef.current?.getBoundingClientRect();
+    return {
+      x: center.screenX + (rect?.left ?? 0),
+      y: center.screenY + (rect?.top ?? 0),
+    };
+  };
+
+  const handleFlagResizePointerDown = (
+    ann: Annotation,
+    _corner: FlagCorner,
+    e: React.PointerEvent
+  ) => {
+    e.preventDefault();
+    const pivot = bodyCenterViewportCoords(ann);
+    const startDist = Math.hypot(e.clientX - pivot.x, e.clientY - pivot.y);
+    const startScale = ann.scale ?? FLAG_DEFAULT_SCALE;
+    if (startDist < 1) return;
+
+    const onMove = (me: PointerEvent) => {
+      const dist = Math.hypot(me.clientX - pivot.x, me.clientY - pivot.y);
+      const ratio = dist / startDist;
+      const next = clampFlagScale(startScale * ratio);
+      setFlagTransformPreview({ id: ann.id, scale: next });
+    };
+
+    const onUp = (me: PointerEvent) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      const dist = Math.hypot(me.clientX - pivot.x, me.clientY - pivot.y);
+      const ratio = dist / startDist;
+      const finalScale = clampFlagScale(startScale * ratio);
+      if (Math.abs(finalScale - startScale) > 0.001) {
+        onUpdateAnnotation(ann.id, { scale: finalScale });
+        justInteractedRef.current = true;
+      }
+      setFlagTransformPreview(null);
+    };
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
+  const handleFlagRotatePointerDown = (ann: Annotation, e: React.PointerEvent) => {
+    e.preventDefault();
+    const pivot = bodyCenterViewportCoords(ann);
+    const startRotation = ann.rotation ?? FLAG_DEFAULT_ROTATION;
+    const startAngleDeg =
+      (Math.atan2(e.clientY - pivot.y, e.clientX - pivot.x) * 180) / Math.PI;
+
+    const computeRotation = (clientX: number, clientY: number) => {
+      const angleDeg =
+        (Math.atan2(clientY - pivot.y, clientX - pivot.x) * 180) / Math.PI;
+      const delta = angleDeg - startAngleDeg;
+      let next = normalizeFlagRotation(startRotation + delta);
+      // Snap to nearest cardinal within ±FLAG_ROTATION_SNAP_DEGREES
+      for (const cardinal of [0, 90, 180, 270]) {
+        const diff = Math.abs(next - cardinal);
+        const wrap = Math.min(diff, 360 - diff);
+        if (wrap <= FLAG_ROTATION_SNAP_DEGREES) {
+          next = cardinal;
+          break;
+        }
+      }
+      return next;
+    };
+
+    const onMove = (me: PointerEvent) => {
+      const next = computeRotation(me.clientX, me.clientY);
+      setFlagTransformPreview({ id: ann.id, rotation: next });
+    };
+
+    const onUp = (me: PointerEvent) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      const finalRotation = computeRotation(me.clientX, me.clientY);
+      if (Math.abs(finalRotation - startRotation) > 0.001) {
+        onUpdateAnnotation(ann.id, { rotation: finalRotation });
+        justInteractedRef.current = true;
+      }
+      setFlagTransformPreview(null);
+    };
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
+  const handleFlagPointerDown = (ann: Annotation, e: React.PointerEvent) => {
+    const startMouseX = e.clientX;
+    const startMouseY = e.clientY;
+    const startPdfX = ann.pdfX;
+    const startPdfY = ann.pdfY;
+    const sx = dims.pdfWidth / dims.renderWidth;
+    const sy = dims.pdfHeight / dims.renderHeight;
+    let dragStarted = false;
+
+    const onMove = (me: PointerEvent) => {
+      const dx = me.clientX - startMouseX;
+      const dy = me.clientY - startMouseY;
+      if (!dragStarted) {
+        if (Math.abs(dx) < FLAG_DRAG_THRESHOLD_PX && Math.abs(dy) < FLAG_DRAG_THRESHOLD_PX) return;
+        dragStarted = true;
+      }
+      setFlagDragPreview({
+        id: ann.id,
+        pdfX: startPdfX + dx * sx,
+        pdfY: startPdfY - dy * sy,
+      });
+    };
+
+    const onUp = (me: PointerEvent) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      const dx = me.clientX - startMouseX;
+      const dy = me.clientY - startMouseY;
+      const moved =
+        Math.abs(dx) >= FLAG_DRAG_THRESHOLD_PX || Math.abs(dy) >= FLAG_DRAG_THRESHOLD_PX;
+      if (moved) {
+        const finalPdfX = startPdfX + dx * sx;
+        const finalPdfY = startPdfY - dy * sy;
+        onMoveAnnotation(ann.id, finalPdfX, finalPdfY);
+        justInteractedRef.current = true;
+        setSelectedId(ann.id);
+      } else {
+        // Below threshold = treat as a click (select if not already selected).
+        setSelectedId(ann.id);
+      }
+      setFlagDragPreview(null);
+    };
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
   const cursorClass = activeMode === "cursor" ? "cursor-default"
-    : activeMode === "signature" ? "cursor-crosshair" : "cursor-text";
+    : activeMode === "signature" ? "cursor-crosshair"
+    : activeMode === "flag" ? "cursor-crosshair"
+    : "cursor-text";
 
   const draftScreen = draft ? pdfToScreen(draft.pdfX, draft.pdfY, dims) : null;
   const draftScaledFontSize = draft ? draft.fontSize * dims.scale : 0;
@@ -332,8 +536,55 @@ export function AnnotationOverlay({
         const { screenX, screenY } = pdfToScreen(ann.pdfX, ann.pdfY, dims);
         const isDragging = draggingId === ann.id;
         const isResizing = resizingId === ann.id;
-        const isSelected = selectedId === ann.id && activeMode === "cursor";
+        const flagInteractive =
+          ann.type === "flag" && (activeMode === "cursor" || activeMode === "flag");
+        const isSelected =
+          selectedId === ann.id && (activeMode === "cursor" || flagInteractive);
         const isEditing = draft?.mode === "edit" && draft.annId === ann.id;
+
+        if (ann.type === "flag") {
+          let previewFlag: Annotation = ann;
+          if (flagDragPreview && flagDragPreview.id === ann.id) {
+            previewFlag = { ...previewFlag, pdfX: flagDragPreview.pdfX, pdfY: flagDragPreview.pdfY };
+          }
+          if (flagTransformPreview && flagTransformPreview.id === ann.id) {
+            previewFlag = {
+              ...previewFlag,
+              scale: flagTransformPreview.scale ?? previewFlag.scale,
+              rotation: flagTransformPreview.rotation ?? previewFlag.rotation,
+            };
+          }
+          // Flags participate in selection in BOTH cursor mode and flag mode.
+          // In flag mode, clicking an existing flag selects/manipulates it
+          // instead of placing a new one (the click stops propagation here).
+          const interactive =
+            activeMode === "cursor" || activeMode === "flag";
+          return (
+            <FlagRenderer
+              key={ann.id}
+              flag={previewFlag}
+              dims={dims}
+              selected={isSelected}
+              onPointerDown={(e) => {
+                if (!interactive) return;
+                if (e.button !== 0) return;
+                e.stopPropagation();
+                e.preventDefault();
+                handleFlagPointerDown(ann, e);
+              }}
+              onClick={(e) => {
+                if (!interactive) return;
+                e.stopPropagation();
+              }}
+              onResizeHandlePointerDown={(corner, ev) =>
+                handleFlagResizePointerDown(ann, corner, ev)
+              }
+              onRotateHandlePointerDown={(ev) =>
+                handleFlagRotatePointerDown(ann, ev)
+              }
+            />
+          );
+        }
 
         if (ann.type === "signature" && ann.width && ann.height) {
           const baseW = ann.width;
@@ -465,6 +716,35 @@ export function AnnotationOverlay({
           onClose={toolboxClose ?? undefined}
         />
       )}
+
+      {selectedFlag && (() => {
+        const usePreview =
+          flagDragPreview && flagDragPreview.id === selectedFlag.id;
+        const liveX = usePreview ? flagDragPreview.pdfX : selectedFlag.pdfX;
+        const liveY = usePreview ? flagDragPreview.pdfY : selectedFlag.pdfY;
+        const { screenX, screenY } = pdfToScreen(liveX, liveY, dims);
+        const flagH = FLAG_BASE_HEIGHT * (selectedFlag.scale ?? FLAG_DEFAULT_SCALE) * dims.scale;
+        // Stack vertically above the rotate handle:
+        //   flag top → 24px connector → 14px rotate handle → 10px gap → toolbox bottom
+        // Toolbox is ~44px tall; account for that with a top offset of 92.
+        return (
+          <FlagSelectionToolbox
+            key={selectedFlag.id}
+            flag={selectedFlag}
+            anchor={{
+              left: screenX,
+              top: screenY - flagH / 2 - 92,
+            }}
+            onChangeColor={(c: FlagColor) => onUpdateAnnotation(selectedFlag.id, { color: c })}
+            onChangeLabel={(label) => onUpdateAnnotation(selectedFlag.id, { value: label })}
+            onDelete={() => {
+              onDeleteAnnotation(selectedFlag.id);
+              setSelectedId(null);
+            }}
+            onClose={() => setSelectedId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
