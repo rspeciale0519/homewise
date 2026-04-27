@@ -53,6 +53,15 @@ export const DEFAULT_FLAG_LABEL: FlagLabelPreset = "Sign";
 
 export const FLAG_BASE_WIDTH = 96;
 export const FLAG_BASE_HEIGHT = 24;
+export const FLAG_NOTCH_WIDTH = 8;
+export const FLAG_BODY_RADIUS = 3;
+
+// Distance from the body center to the notch tip in PDF units, at scale 1.
+// Used at placement time to put the notch tip under the user's click while
+// storing the body center as the annotation anchor (so rotation pivots
+// around the body center).
+export const FLAG_TIP_OFFSET = FLAG_BASE_WIDTH / 2 + FLAG_NOTCH_WIDTH;
+
 export const FLAG_MIN_SCALE = 0.5;
 export const FLAG_MAX_SCALE = 2.5;
 export const FLAG_DEFAULT_SCALE = 1;

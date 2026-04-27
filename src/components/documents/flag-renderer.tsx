@@ -4,8 +4,10 @@ import { pdfToScreen } from "@/lib/documents/coordinates";
 import {
   FLAG_BASE_HEIGHT,
   FLAG_BASE_WIDTH,
+  FLAG_BODY_RADIUS,
   FLAG_DEFAULT_ROTATION,
   FLAG_DEFAULT_SCALE,
+  FLAG_NOTCH_WIDTH,
   flagColorHex,
   flagColorLabel,
 } from "@/lib/documents/flag-colors";
@@ -15,8 +17,6 @@ import type {
   PageDimensions,
 } from "@/types/document-viewer";
 
-const NOTCH_WIDTH = 8;
-const BODY_RADIUS = 3;
 const ROTATE_HANDLE_OFFSET_PX = 24;
 
 export type FlagCorner = "nw" | "ne" | "se" | "sw";
@@ -58,21 +58,23 @@ export function FlagRenderer({
   const renderScale = scale * dims.scale;
   const bodyW = FLAG_BASE_WIDTH * renderScale;
   const bodyH = FLAG_BASE_HEIGHT * renderScale;
-  const notchW = NOTCH_WIDTH * renderScale;
+  const notchW = FLAG_NOTCH_WIDTH * renderScale;
   const totalW = bodyW + notchW;
 
   const { screenX, screenY } = pdfToScreen(flag.pdfX, flag.pdfY, dims);
 
-  // Notch tip is at the right-middle of the SVG. Position the SVG so the
-  // notch tip lands at (screenX, screenY); rotate around that tip.
-  const left = screenX - totalW;
+  // (screenX, screenY) is the body center. The container is bodyW + notchW
+  // wide; the body occupies [0, bodyW] and the notch [bodyW, totalW] in the
+  // container's local coords. Position the container so the body center
+  // lands at (screenX, screenY), and rotate around that body center.
+  const left = screenX - bodyW / 2;
   const top = screenY - bodyH / 2;
 
   const labelFontSize = 11 * renderScale;
   const fillHex = flagColorHex(color);
 
   // Body path: rounded-rect on the left, flat right edge that meets the notch.
-  const r = BODY_RADIUS * renderScale;
+  const r = FLAG_BODY_RADIUS * renderScale;
   const bodyPath =
     `M ${r} 0 ` +
     `L ${bodyW} 0 ` +
@@ -92,7 +94,7 @@ export function FlagRenderer({
         width: totalW,
         height: bodyH,
         transform: `rotate(${rotation}deg)`,
-        transformOrigin: "100% 50%",
+        transformOrigin: `${bodyW / 2}px ${bodyH / 2}px`,
         cursor: onPointerDown ? "grab" : undefined,
         zIndex: selected ? 50 : undefined,
         userSelect: "none",
@@ -137,6 +139,7 @@ export function FlagRenderer({
       {selected && onResizeHandlePointerDown && onRotateHandlePointerDown && (
         <SelectionHandles
           width={totalW}
+          bodyWidth={bodyW}
           height={bodyH}
           rotation={rotation}
           onResizeHandlePointerDown={onResizeHandlePointerDown}
@@ -148,13 +151,15 @@ export function FlagRenderer({
 }
 
 function SelectionHandles({
-  width,
+  width: _width,
+  bodyWidth,
   height: _height,
   rotation,
   onResizeHandlePointerDown,
   onRotateHandlePointerDown,
 }: {
   width: number;
+  bodyWidth: number;
   height: number;
   rotation: number;
   onResizeHandlePointerDown: (
@@ -195,12 +200,12 @@ function SelectionHandles({
         />
       ))}
 
-      {/* Connector line + rotate handle (above top-center) */}
+      {/* Connector line + rotate handle (above body's top-center) */}
       <div
         style={{
           position: "absolute",
           top: -ROTATE_HANDLE_OFFSET_PX,
-          left: width / 2 - 0.5,
+          left: bodyWidth / 2 - 0.5,
           width: 1,
           height: ROTATE_HANDLE_OFFSET_PX - ROTATE / 2,
           backgroundColor: "#cbd5e1",
@@ -215,7 +220,7 @@ function SelectionHandles({
         style={{
           position: "absolute",
           top: -ROTATE_HANDLE_OFFSET_PX - ROTATE / 2,
-          left: width / 2 - ROTATE / 2,
+          left: bodyWidth / 2 - ROTATE / 2,
           width: ROTATE,
           height: ROTATE,
           borderRadius: "50%",

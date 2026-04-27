@@ -354,12 +354,12 @@ export function AnnotationOverlay({
     return () => document.removeEventListener("keydown", onKey);
   }, [selectedFlag, onDeleteAnnotation, onMoveAnnotation]);
 
-  const tipViewportCoords = (ann: Annotation) => {
-    const tip = pdfToScreen(ann.pdfX, ann.pdfY, dims);
+  const bodyCenterViewportCoords = (ann: Annotation) => {
+    const center = pdfToScreen(ann.pdfX, ann.pdfY, dims);
     const rect = overlayRef.current?.getBoundingClientRect();
     return {
-      x: tip.screenX + (rect?.left ?? 0),
-      y: tip.screenY + (rect?.top ?? 0),
+      x: center.screenX + (rect?.left ?? 0),
+      y: center.screenY + (rect?.top ?? 0),
     };
   };
 
@@ -369,13 +369,13 @@ export function AnnotationOverlay({
     e: React.PointerEvent
   ) => {
     e.preventDefault();
-    const tip = tipViewportCoords(ann);
-    const startDist = Math.hypot(e.clientX - tip.x, e.clientY - tip.y);
+    const pivot = bodyCenterViewportCoords(ann);
+    const startDist = Math.hypot(e.clientX - pivot.x, e.clientY - pivot.y);
     const startScale = ann.scale ?? FLAG_DEFAULT_SCALE;
     if (startDist < 1) return;
 
     const onMove = (me: PointerEvent) => {
-      const dist = Math.hypot(me.clientX - tip.x, me.clientY - tip.y);
+      const dist = Math.hypot(me.clientX - pivot.x, me.clientY - pivot.y);
       const ratio = dist / startDist;
       const next = clampFlagScale(startScale * ratio);
       setFlagTransformPreview({ id: ann.id, scale: next });
@@ -384,7 +384,7 @@ export function AnnotationOverlay({
     const onUp = (me: PointerEvent) => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
-      const dist = Math.hypot(me.clientX - tip.x, me.clientY - tip.y);
+      const dist = Math.hypot(me.clientX - pivot.x, me.clientY - pivot.y);
       const ratio = dist / startDist;
       const finalScale = clampFlagScale(startScale * ratio);
       if (Math.abs(finalScale - startScale) > 0.001) {
@@ -400,14 +400,14 @@ export function AnnotationOverlay({
 
   const handleFlagRotatePointerDown = (ann: Annotation, e: React.PointerEvent) => {
     e.preventDefault();
-    const tip = tipViewportCoords(ann);
+    const pivot = bodyCenterViewportCoords(ann);
     const startRotation = ann.rotation ?? FLAG_DEFAULT_ROTATION;
     const startAngleDeg =
-      (Math.atan2(e.clientY - tip.y, e.clientX - tip.x) * 180) / Math.PI;
+      (Math.atan2(e.clientY - pivot.y, e.clientX - pivot.x) * 180) / Math.PI;
 
     const computeRotation = (clientX: number, clientY: number) => {
       const angleDeg =
-        (Math.atan2(clientY - tip.y, clientX - tip.x) * 180) / Math.PI;
+        (Math.atan2(clientY - pivot.y, clientX - pivot.x) * 180) / Math.PI;
       const delta = angleDeg - startAngleDeg;
       let next = normalizeFlagRotation(startRotation + delta);
       // Snap to nearest cardinal within ±FLAG_ROTATION_SNAP_DEGREES
@@ -732,7 +732,7 @@ export function AnnotationOverlay({
             key={selectedFlag.id}
             flag={selectedFlag}
             anchor={{
-              left: screenX - 60,
+              left: screenX,
               top: screenY - flagH / 2 - 92,
             }}
             onChangeColor={(c: FlagColor) => onUpdateAnnotation(selectedFlag.id, { color: c })}

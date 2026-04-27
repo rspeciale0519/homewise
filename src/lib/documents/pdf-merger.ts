@@ -17,8 +17,10 @@ import path from "path";
 import {
   FLAG_BASE_HEIGHT,
   FLAG_BASE_WIDTH,
+  FLAG_BODY_RADIUS,
   FLAG_DEFAULT_ROTATION,
   FLAG_DEFAULT_SCALE,
+  FLAG_NOTCH_WIDTH,
   flagColorHex,
 } from "@/lib/documents/flag-colors";
 import type {
@@ -179,9 +181,6 @@ export async function mergePdfWithAnnotations(
   return pdfDoc.save();
 }
 
-const FLAG_NOTCH_WIDTH = 8;
-const FLAG_BODY_RADIUS = 3;
-
 function drawFlag(page: PDFPage, ann: Annotation, font: PDFFont) {
   const scale = ann.scale ?? FLAG_DEFAULT_SCALE;
   const rotationBrowser = ann.rotation ?? FLAG_DEFAULT_ROTATION;
@@ -190,20 +189,22 @@ function drawFlag(page: PDFPage, ann: Annotation, font: PDFFont) {
   const baseW = FLAG_BASE_WIDTH * scale;
   const baseH = FLAG_BASE_HEIGHT * scale;
   const notchW = FLAG_NOTCH_WIDTH * scale;
-  const totalW = baseW + notchW;
   const r = FLAG_BODY_RADIUS * scale;
   const labelSize = 11 * scale;
 
-  // Path with notch tip at SVG (0, 0). SVG y is down; pdf-lib flips.
+  // ann.pdfX/pdfY is the body's geometric center. The path is drawn with
+  // body center at SVG (0, 0) so rotation around the body center is just
+  // pdf-lib's built-in rotate-around-(x,y) when (x, y) = body center.
+  // Body spans x in [-baseW/2, baseW/2]; notch from x=baseW/2 to baseW/2+notchW.
   const flagPath =
-    `M ${-totalW + r} ${-baseH / 2} ` +
-    `L ${-notchW} ${-baseH / 2} ` +
-    `L 0 0 ` +
-    `L ${-notchW} ${baseH / 2} ` +
-    `L ${-totalW + r} ${baseH / 2} ` +
-    `Q ${-totalW} ${baseH / 2} ${-totalW} ${baseH / 2 - r} ` +
-    `L ${-totalW} ${-baseH / 2 + r} ` +
-    `Q ${-totalW} ${-baseH / 2} ${-totalW + r} ${-baseH / 2} ` +
+    `M ${-baseW / 2 + r} ${-baseH / 2} ` +
+    `L ${baseW / 2} ${-baseH / 2} ` +
+    `L ${baseW / 2 + notchW} 0 ` +
+    `L ${baseW / 2} ${baseH / 2} ` +
+    `L ${-baseW / 2 + r} ${baseH / 2} ` +
+    `Q ${-baseW / 2} ${baseH / 2} ${-baseW / 2} ${baseH / 2 - r} ` +
+    `L ${-baseW / 2} ${-baseH / 2 + r} ` +
+    `Q ${-baseW / 2} ${-baseH / 2} ${-baseW / 2 + r} ${-baseH / 2} ` +
     `Z`;
 
   // PDF rotation is CCW positive; CSS browser rotation is CW positive.
@@ -216,33 +217,20 @@ function drawFlag(page: PDFPage, ann: Annotation, font: PDFFont) {
     color: hexToRgb(flagColorHex(colorKey)),
   });
 
-  // Label: centered in the body region.
-  // Body center in unrotated SVG-local coords: x = -baseW/2 - notchW, y = 0.
-  // After rotation by `pdfRotation` (CCW positive in PDF):
-  //   Note: the path X axis is positive going right, the path Y axis (in SVG) is positive going DOWN.
-  //   pdf-lib flips Y for path drawing, but for our manual math we use PDF coords.
-  //   Treat the local frame as: x-right, y-up. Body center is at (-baseW/2 - notchW, 0).
+  // Label: centered at the body center, which is (ann.pdfX, ann.pdfY).
   const labelText = ann.value.toUpperCase();
   const textWidth = font.widthOfTextAtSize(labelText, labelSize);
   const textHeight = font.heightAtSize(labelSize);
-
-  const localCx = -baseW / 2 - notchW;
-  const localCy = 0;
 
   const angleRad = (pdfRotation * Math.PI) / 180;
   const cos = Math.cos(angleRad);
   const sin = Math.sin(angleRad);
 
-  // Center of the body in PDF coords (after rotation around the notch tip):
-  const centerX = ann.pdfX + localCx * cos - localCy * sin;
-  const centerY = ann.pdfY + localCx * sin + localCy * cos;
-
-  // Bottom-left of text such that its center lands at (centerX, centerY) in the rotated frame:
-  // unrotated offset from text center to bottom-left = (-textWidth/2, -textHeight/3)
+  // Bottom-left of text such that its center lands at (pdfX, pdfY).
   const offX = -textWidth / 2;
   const offY = -textHeight / 3;
-  const blX = centerX + offX * cos - offY * sin;
-  const blY = centerY + offX * sin + offY * cos;
+  const blX = ann.pdfX + offX * cos - offY * sin;
+  const blY = ann.pdfY + offX * sin + offY * cos;
 
   page.drawText(labelText, {
     x: blX,

@@ -27,6 +27,7 @@ import {
   DEFAULT_FLAG_LABEL,
   FLAG_DEFAULT_ROTATION,
   FLAG_DEFAULT_SCALE,
+  FLAG_TIP_OFFSET,
 } from "@/lib/documents/flag-colors";
 import type { ContactOption } from "@/components/documents/contact-picker";
 import type {
@@ -326,8 +327,13 @@ export function PdfViewerShell({
 
   const handleCreateFlagAnnotation = useCallback(
     (pageIndex: number, pdfX: number, pdfY: number) => {
+      // The annotation's pdfX/pdfY stores the body center; on placement we
+      // shift the body center to the LEFT by FLAG_TIP_OFFSET so the notch
+      // tip lands under the user's click (the spot they want to point at).
       addAnnotation({
-        id: genId(), pageIndex, pdfX, pdfY,
+        id: genId(), pageIndex,
+        pdfX: pdfX - FLAG_TIP_OFFSET * FLAG_DEFAULT_SCALE,
+        pdfY,
         type: "flag",
         value: DEFAULT_FLAG_LABEL,
         fontSize: 11,
