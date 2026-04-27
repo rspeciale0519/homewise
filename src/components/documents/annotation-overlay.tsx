@@ -724,12 +724,15 @@ export function AnnotationOverlay({
         const liveY = usePreview ? flagDragPreview.pdfY : selectedFlag.pdfY;
         const { screenX, screenY } = pdfToScreen(liveX, liveY, dims);
         const flagH = FLAG_BASE_HEIGHT * (selectedFlag.scale ?? FLAG_DEFAULT_SCALE) * dims.scale;
+        // Stack vertically above the rotate handle:
+        //   flag top → 24px connector → 14px rotate handle → 10px gap → toolbox bottom
+        // Toolbox is ~44px tall; account for that with a top offset of 92.
         return (
           <FlagSelectionToolbox
             flag={selectedFlag}
             anchor={{
               left: screenX - 60,
-              top: screenY - flagH / 2 - 48,
+              top: screenY - flagH / 2 - 92,
             }}
             onChangeColor={(c: FlagColor) => onUpdateAnnotation(selectedFlag.id, { color: c })}
             onChangeLabel={(label) => onUpdateAnnotation(selectedFlag.id, { value: label })}
