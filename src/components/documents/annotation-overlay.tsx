@@ -729,6 +729,7 @@ export function AnnotationOverlay({
         // Toolbox is ~44px tall; account for that with a top offset of 92.
         return (
           <FlagSelectionToolbox
+            key={selectedFlag.id}
             flag={selectedFlag}
             anchor={{
               left: screenX - 60,

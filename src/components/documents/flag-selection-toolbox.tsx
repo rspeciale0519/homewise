@@ -34,6 +34,28 @@ export function FlagSelectionToolbox({
   const [customMode, setCustomMode] = useState(false);
   const [customDraft, setCustomDraft] = useState("");
   const [customError, setCustomError] = useState<string | null>(null);
+  const [offset, setOffset] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+
+  const handleGripPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startDx = offset.dx;
+    const startDy = offset.dy;
+    const onMove = (me: PointerEvent) => {
+      setOffset({
+        dx: startDx + (me.clientX - startX),
+        dy: startDy + (me.clientY - startY),
+      });
+    };
+    const onUp = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
 
   const currentColor: FlagColor = isFlagColor(flag.color) ? flag.color : "yellow";
   const currentLabel = flag.value;
@@ -78,13 +100,32 @@ export function FlagSelectionToolbox({
       onPointerDown={stopPropagation}
       className="absolute z-[60] bg-white border border-slate-100 rounded-xl shadow-dropdown p-2 flex items-center gap-2"
       style={{
-        left: anchor.left,
-        top: anchor.top,
+        left: anchor.left + offset.dx,
+        top: anchor.top + offset.dy,
         transform: "translateX(-50%)",
       }}
       role="toolbar"
       aria-label="Flag controls"
     >
+      <button
+        type="button"
+        onPointerDown={handleGripPointerDown}
+        title="Drag to move toolbar"
+        aria-label="Drag toolbar"
+        className="h-7 w-3 -ml-0.5 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-grab active:cursor-grabbing"
+      >
+        <svg className="h-3.5 w-3.5" viewBox="0 0 8 16" fill="currentColor" aria-hidden="true">
+          <circle cx="2" cy="3" r="1" />
+          <circle cx="6" cy="3" r="1" />
+          <circle cx="2" cy="8" r="1" />
+          <circle cx="6" cy="8" r="1" />
+          <circle cx="2" cy="13" r="1" />
+          <circle cx="6" cy="13" r="1" />
+        </svg>
+      </button>
+
+      <div className="h-5 w-px bg-slate-200" />
+
       <div className="flex items-center gap-1" role="listbox" aria-label="Flag color">
         {FLAG_COLORS.map((c) => (
           <button
