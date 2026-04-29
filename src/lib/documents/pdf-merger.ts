@@ -218,11 +218,17 @@ function drawFlag(page: PDFPage, ann: Annotation, font: PDFFont) {
   });
 
   // Label: centered at the body center, which is (ann.pdfX, ann.pdfY).
+  // When the flag's browser rotation is between 90° and 270°, the body is
+  // upside down; rotate the label an additional 180° around the body center
+  // so it stays readable in the exported PDF.
   const labelText = ann.value.toUpperCase();
   const textWidth = font.widthOfTextAtSize(labelText, labelSize);
   const textHeight = font.heightAtSize(labelSize);
 
-  const angleRad = (pdfRotation * Math.PI) / 180;
+  const flipText = rotationBrowser > 90 && rotationBrowser < 270;
+  const effectiveRotation = pdfRotation + (flipText ? 180 : 0);
+
+  const angleRad = (effectiveRotation * Math.PI) / 180;
   const cos = Math.cos(angleRad);
   const sin = Math.sin(angleRad);
 
@@ -238,6 +244,6 @@ function drawFlag(page: PDFPage, ann: Annotation, font: PDFFont) {
     size: labelSize,
     font,
     color: rgb(1, 1, 1),
-    rotate: degrees(pdfRotation),
+    rotate: degrees(effectiveRotation),
   });
 }

@@ -134,6 +134,10 @@ export function AnnotationOverlay({
     const { x, y } = getOverlayRelativePos(e.clientX, e.clientY);
     const { pdfX, pdfY } = screenToPdf(x, y, dims);
     if (activeMode === "text") {
+      // Empty-space click in text mode: deselect any previously selected text
+      // and start a new draft. Clicks on an existing text annotation stop
+      // propagation before reaching here (the text's own onClick handler).
+      setSelectedId(null);
       setDraft({
         mode: "create",
         pdfX, pdfY,
@@ -190,7 +194,13 @@ export function AnnotationOverlay({
   };
 
   const handleAnnotationMouseDown = (annId: string, ann: Annotation, e: React.MouseEvent) => {
-    if (activeMode !== "cursor") return;
+    // Allow drag-to-move in cursor mode for any annotation, and in text mode
+    // for text annotations (so the user can reposition a text box right after
+    // placing it without leaving the Place text tool — same pattern as flags).
+    const allowed =
+      activeMode === "cursor" ||
+      (activeMode === "text" && ann.type === "text");
+    if (!allowed) return;
     e.stopPropagation();
     e.preventDefault();
     setSelectedId(annId);
@@ -498,7 +508,7 @@ export function AnnotationOverlay({
   const draftScaledFontSize = draft ? draft.fontSize * dims.scale : 0;
 
   const selectedTextAnn =
-    activeMode === "cursor" && selectedId
+    selectedId && (activeMode === "cursor" || activeMode === "text")
       ? pageAnnotations.find((a) => a.id === selectedId && a.type === "text")
       : undefined;
 
@@ -538,8 +548,11 @@ export function AnnotationOverlay({
         const isResizing = resizingId === ann.id;
         const flagInteractive =
           ann.type === "flag" && (activeMode === "cursor" || activeMode === "flag");
+        const textInteractive =
+          ann.type === "text" && (activeMode === "cursor" || activeMode === "text");
         const isSelected =
-          selectedId === ann.id && (activeMode === "cursor" || flagInteractive);
+          selectedId === ann.id &&
+          (activeMode === "cursor" || flagInteractive || textInteractive);
         const isEditing = draft?.mode === "edit" && draft.annId === ann.id;
 
         if (ann.type === "flag") {

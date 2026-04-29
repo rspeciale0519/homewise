@@ -125,6 +125,11 @@ export function FlagRenderer({
           fontWeight={700}
           textAnchor="middle"
           dominantBaseline="central"
+          transform={
+            rotation > 90 && rotation < 270
+              ? `rotate(180 ${bodyW / 2} ${bodyH / 2})`
+              : undefined
+          }
           style={{
             fontFamily: "Helvetica, Arial, sans-serif",
             letterSpacing: "0.04em",
