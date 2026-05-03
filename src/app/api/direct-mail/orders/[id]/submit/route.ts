@@ -23,6 +23,7 @@ import {
 } from "@/lib/direct-mail/storage";
 import { filterCsvColumns } from "@/lib/direct-mail/csv-validator";
 import { OrderSummaryPdf } from "@/lib/direct-mail/order-summary-pdf";
+import { buildOrderBundle } from "@/lib/direct-mail/bundle";
 import type { ReturnAddress } from "@/lib/direct-mail/schemas";
 import type { ListFile } from "@/lib/direct-mail/types";
 
@@ -144,6 +145,24 @@ export async function POST(
     mimeType: "application/pdf",
     ext: "pdf",
   });
+
+  // Build the "Download all order files" ZIP bundle that YLS can grab in
+  // one click. Failures here don't block submit — the order can still go
+  // out via individual links, and admin retry will rebuild on demand.
+  try {
+    await buildOrderBundle({
+      orderId: order.id,
+      summaryPdfKey: summaryKey,
+      artworkFiles: parsed.data.artworkFiles,
+      listFiles: finalLists.map((l) => ({
+        name: l.name,
+        fileKey: l.fileKey,
+        fileName: l.fileName,
+      })),
+    });
+  } catch (e) {
+    console.error("[direct-mail] bundle build failed", e);
+  }
 
   const updated = await prisma.mailOrder.update({
     where: { id: order.id },

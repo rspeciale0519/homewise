@@ -51,6 +51,7 @@ export interface OrderEmailInput {
   specialInstructions: string | null;
   signedUrls: {
     summary: string;
+    bundle: string | null;
   };
   artworkLinks: ArtworkLink[];
   listLinks: ListLink[];
@@ -136,6 +137,15 @@ function buildOrderHtml(input: OrderEmailInput): string {
     </div>
     <div style="padding:20px 24px;font-size:14px;line-height:1.55">
       <p style="margin:0 0 14px"><strong>New direct-mail order from a HomeWise agent.</strong> Reply to this email to send proofs and invoice — the agent is on reply-to and CC.</p>
+
+      ${
+        input.signedUrls.bundle
+          ? `<div style="margin:14px 0;padding:14px 16px;background:#fffbea;border:1px solid #fde68a;border-radius:8px">
+              <a href="${input.signedUrls.bundle}" style="display:inline-block;background:#DB2526;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px">📦 Download all order files (ZIP)</a>
+              <div style="margin-top:6px;font-size:12px;color:#92400e">Includes the order summary PDF, every artwork file, and every mailing list. Or grab them individually below.</div>
+            </div>`
+          : ""
+      }
 
       <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Agent</h3>
       <div>${escapeHtml(input.agent.name)} · ${escapeHtml(input.agent.brokerage)}</div>

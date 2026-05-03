@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { SITE_NAME } from "@/lib/constants";
 import { getSignedUrl } from "./storage";
+import { bundleKeyFor, buildOrderBundle } from "./bundle";
 import { sendDispatchFailureAlert, sendOrderToYls } from "./email";
 import type { ArtworkLink, ListLink } from "./email";
 import type { MailClass, ProductType, Workflow } from "./constants";
@@ -76,7 +77,12 @@ export async function dispatchMailOrderOnce(
     };
   }
 
-  let signed: { summary: string; artworkLinks: ArtworkLink[]; listLinks: ListLink[] };
+  let signed: {
+    summary: string;
+    bundle: string | null;
+    artworkLinks: ArtworkLink[];
+    listLinks: ListLink[];
+  };
   try {
     const summary = await getSignedUrl(order.summaryPdfKey, SIGNED_URL_TTL_SECONDS);
     const artworkLinks: ArtworkLink[] = await Promise.all(
@@ -98,7 +104,34 @@ export async function dispatchMailOrderOnce(
         columnsExcluded: l.excludedColumns,
       })),
     );
-    signed = { summary, artworkLinks, listLinks };
+
+    // The "Download all" ZIP is built at submit time, but if it doesn't
+    // exist yet (older orders, or build failed) reconstruct it on demand
+    // so the email always carries a working bundle link.
+    let bundle: string | null;
+    const bundleKey = bundleKeyFor(orderId);
+    try {
+      bundle = await getSignedUrl(bundleKey, SIGNED_URL_TTL_SECONDS);
+    } catch {
+      try {
+        await buildOrderBundle({
+          orderId,
+          summaryPdfKey: order.summaryPdfKey,
+          artworkFiles,
+          listFiles: listFiles.map((l) => ({
+            name: l.name,
+            fileKey: l.fileKey,
+            fileName: l.fileName,
+          })),
+        });
+        bundle = await getSignedUrl(bundleKey, SIGNED_URL_TTL_SECONDS);
+      } catch (rebuildErr) {
+        console.error("[direct-mail] bundle rebuild failed", rebuildErr);
+        bundle = null;
+      }
+    }
+
+    signed = { summary, bundle, artworkLinks, listLinks };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Failed to sign URLs";
     await prisma.mailOrder.update({
@@ -139,7 +172,7 @@ export async function dispatchMailOrderOnce(
     quantity: order.quantity,
     returnAddress: order.returnAddress as unknown as ReturnAddress,
     specialInstructions: order.specialInstructions,
-    signedUrls: { summary: signed.summary },
+    signedUrls: { summary: signed.summary, bundle: signed.bundle },
     artworkLinks: signed.artworkLinks,
     listLinks: signed.listLinks,
   });
