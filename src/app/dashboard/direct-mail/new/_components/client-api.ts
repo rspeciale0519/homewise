@@ -46,43 +46,86 @@ export function uploadArtworkWithProgress(
   file: File,
   onProgress: (pct: number) => void,
 ): { promise: Promise<ArtworkUploadOutcome>; abort: () => void } {
-  const xhr = new XMLHttpRequest();
-  const promise = new Promise<ArtworkUploadOutcome>((resolve, reject) => {
-    xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
-      }
-    });
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(JSON.parse(xhr.responseText) as ArtworkUploadOutcome);
-        } catch {
-          reject(new Error("Server returned a non-JSON response."));
-        }
-      } else {
-        let msg = `HTTP ${xhr.status}`;
-        try {
-          const body = JSON.parse(xhr.responseText) as { error?: string };
-          if (body.error) msg = body.error;
-        } catch {
-          /* fall through */
-        }
-        reject(new Error(msg));
-      }
-    });
-    xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
-    xhr.addEventListener("abort", () => reject(new Error("Upload aborted.")));
-
-    xhr.open(
-      "POST",
-      `/api/direct-mail/upload/artwork?orderId=${encodeURIComponent(orderId)}&artworkId=${encodeURIComponent(artworkId)}`,
+  let activeXhr: XMLHttpRequest | null = null;
+  const promise = (async (): Promise<ArtworkUploadOutcome> => {
+    const sign = await fetchJson<{ fileKey: string; signedUrl: string; token: string }>(
+      "/api/direct-mail/upload/artwork/sign",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          artworkId,
+          fileName: file.name,
+          mimeType: file.type,
+          byteSize: file.size,
+        }),
+      },
     );
-    const fd = new FormData();
-    fd.append("file", file);
-    xhr.send(fd);
-  });
-  return { promise, abort: () => xhr.abort() };
+
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      activeXhr = xhr;
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+          onProgress(Math.round((e.loaded / e.total) * 95));
+        }
+      });
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(parseXhrError(xhr) ?? `Storage upload failed (HTTP ${xhr.status}).`));
+      });
+      xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
+      xhr.addEventListener("abort", () => reject(new Error("Upload aborted.")));
+      xhr.open("PUT", sign.signedUrl);
+      if (file.type) xhr.setRequestHeader("Content-Type", file.type);
+      xhr.send(file);
+    });
+
+    onProgress(97);
+    const finalized = await fetchJson<ArtworkUploadOutcome>(
+      "/api/direct-mail/upload/artwork/finalize",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          artworkId,
+          fileKey: sign.fileKey,
+          fileName: file.name,
+          byteSize: file.size,
+          mimeType: file.type,
+        }),
+      },
+    );
+    onProgress(100);
+    return { ...finalized, artworkId };
+  })();
+  return { promise, abort: () => activeXhr?.abort() };
+}
+
+async function fetchJson<T>(url: string, init: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) msg = body.error;
+    } catch {
+      /* fall through */
+    }
+    throw new Error(msg);
+  }
+  return (await res.json()) as T;
+}
+
+function parseXhrError(xhr: XMLHttpRequest): string | null {
+  try {
+    const body = JSON.parse(xhr.responseText) as { error?: string; message?: string };
+    return body.error ?? body.message ?? null;
+  } catch {
+    return xhr.responseText?.slice(0, 200) || null;
+  }
 }
 
 export async function uploadList(orderId: string, file: File): Promise<ListUploadResult> {

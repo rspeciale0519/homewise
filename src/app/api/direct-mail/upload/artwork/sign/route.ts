@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { nanoid } from "nanoid";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -8,12 +8,20 @@ import {
   MAX_ARTWORK_FILES_PER_ORDER,
 } from "@/lib/direct-mail/constants";
 import {
+  artworkFileKeyFor,
+  createSignedUploadUrl,
   extFromFileName,
   extFromMime,
-  uploadArtworkFile,
 } from "@/lib/direct-mail/storage";
-import { inspectArtwork } from "@/lib/direct-mail/artwork-validator";
 import type { ArtworkFile } from "@/lib/direct-mail/types";
+
+const requestSchema = z.object({
+  orderId: z.string().min(1),
+  artworkId: z.string().min(1).max(64),
+  fileName: z.string().min(1).max(300),
+  mimeType: z.string().min(1).max(200),
+  byteSize: z.number().int().nonnegative(),
+});
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -28,14 +36,37 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const url = new URL(req.url);
-  const orderId = url.searchParams.get("orderId") ?? "";
-  const artworkId = url.searchParams.get("artworkId") || nanoid(12);
-  if (!orderId) return NextResponse.json({ error: "orderId required" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const parsed = requestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+  const { orderId, artworkId, fileName, mimeType, byteSize } = parsed.data;
+
+  if (!ACCEPTED_ARTWORK_MIME.includes(mimeType as (typeof ACCEPTED_ARTWORK_MIME)[number])) {
+    return NextResponse.json(
+      { error: `Unsupported file type: ${mimeType}. Use PDF, PNG, JPG, or Word.` },
+      { status: 415 },
+    );
+  }
+  if (byteSize > MAX_ARTWORK_BYTES) {
+    return NextResponse.json(
+      { error: `File too large (${Math.round(byteSize / 1024 / 1024)} MB). Max 50 MB.` },
+      { status: 413 },
+    );
+  }
 
   const order = await prisma.mailOrder.findUnique({
     where: { id: orderId },
-    select: { id: true, userId: true, status: true, productSize: true, artworkFiles: true },
+    select: { id: true, userId: true, status: true, artworkFiles: true },
   });
   if (!order || order.userId !== profile.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -55,48 +86,20 @@ export async function POST(req: Request) {
     );
   }
 
-  let formData: FormData;
+  const ext = extFromFileName(fileName) || extFromMime(mimeType);
+  const fileKey = artworkFileKeyFor(orderId, artworkId, ext);
+
+  let signed: { signedUrl: string; token: string };
   try {
-    formData = await req.formData();
-  } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+    signed = await createSignedUploadUrl(fileKey);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "unknown";
+    return NextResponse.json({ error: `Storage error: ${msg}` }, { status: 502 });
   }
-
-  const file = formData.get("file");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Missing file" }, { status: 400 });
-  }
-
-  if (!ACCEPTED_ARTWORK_MIME.includes(file.type as (typeof ACCEPTED_ARTWORK_MIME)[number])) {
-    return NextResponse.json(
-      { error: `Unsupported file type: ${file.type || "unknown"}. Use PDF, PNG, JPG, or Word (.doc / .docx).` },
-      { status: 415 },
-    );
-  }
-  if (file.size > MAX_ARTWORK_BYTES) {
-    return NextResponse.json(
-      { error: `File too large (${Math.round(file.size / 1024 / 1024)} MB). Max 50 MB.` },
-      { status: 413 },
-    );
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const ext = extFromFileName(file.name) || extFromMime(file.type);
-
-  const inspection = await inspectArtwork(buffer, file.type, order.productSize);
-
-  const fileKey = await uploadArtworkFile(orderId, artworkId, {
-    buffer,
-    mimeType: file.type,
-    ext,
-  });
 
   return NextResponse.json({
-    artworkId,
     fileKey,
-    fileName: file.name,
-    byteSize: file.size,
-    mimeType: file.type,
-    warnings: inspection.warnings,
+    signedUrl: signed.signedUrl,
+    token: signed.token,
   });
 }

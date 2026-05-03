@@ -189,7 +189,7 @@ export function Wizard({
         pendingFilesRef.current.set(id, f);
         return {
           id,
-          name: "",
+          name: defaultNameFromFilename(f.name),
           status: "pending",
           localFile: { fileName: f.name, byteSize: f.size, mimeType: f.type },
           upload: null,
@@ -393,6 +393,12 @@ export function Wizard({
       )}
     </WizardShell>
   );
+}
+
+function defaultNameFromFilename(fileName: string): string {
+  const idx = fileName.lastIndexOf(".");
+  const base = idx > 0 ? fileName.slice(0, idx) : fileName;
+  return base.trim();
 }
 
 export function rowsToArtworkFiles(rows: ArtworkRow[]): ArtworkFile[] {

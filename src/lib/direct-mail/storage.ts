@@ -105,6 +105,37 @@ async function uploadAt(
   return key;
 }
 
+export async function createSignedUploadUrl(
+  key: string,
+): Promise<{ signedUrl: string; token: string }> {
+  await ensureBucket();
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(STORAGE_BUCKET)
+    .createSignedUploadUrl(key, { upsert: true });
+  if (error || !data) {
+    throw new Error(`Failed to create signed upload URL: ${error?.message ?? "unknown"}`);
+  }
+  return { signedUrl: data.signedUrl, token: data.token };
+}
+
+export async function downloadObject(key: string): Promise<{ buffer: Buffer; mimeType: string }> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage.from(STORAGE_BUCKET).download(key);
+  if (error || !data) {
+    throw new Error(`Failed to download ${key}: ${error?.message ?? "unknown"}`);
+  }
+  const arr = await data.arrayBuffer();
+  return { buffer: Buffer.from(arr), mimeType: data.type || "application/octet-stream" };
+}
+
+export async function deleteObjects(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  const admin = createAdminClient();
+  const { error } = await admin.storage.from(STORAGE_BUCKET).remove(keys);
+  if (error) throw new Error(`Failed to delete objects: ${error.message}`);
+}
+
 export async function getSignedUrl(key: string, expiresInSeconds = 60 * 60): Promise<string> {
   const admin = createAdminClient();
   const { data, error } = await admin.storage
