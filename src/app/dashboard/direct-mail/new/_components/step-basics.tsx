@@ -19,7 +19,7 @@ export function StepBasics({
   const w = draft.workflow;
 
   return (
-    <div className="space-y-6 max-w-xl">
+    <div className="space-y-6">
       <div>
         <h2 className="font-serif text-xl font-semibold text-navy-700 mb-1">Order basics</h2>
         <p className="text-sm text-slate-500">

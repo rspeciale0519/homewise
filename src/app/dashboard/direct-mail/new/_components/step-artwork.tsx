@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { MAX_ARTWORK_FILES_PER_ORDER } from "@/lib/direct-mail/constants";
 import type { ArtworkRow, DraftState } from "@/lib/direct-mail/types";
 
@@ -13,6 +14,7 @@ export function StepArtwork({
   onRename,
   onAddRow,
   onRemoveRow,
+  onBatchUpload,
   errors,
 }: {
   draft: DraftState;
@@ -21,14 +23,40 @@ export function StepArtwork({
   onRename: (artworkId: string, name: string) => void;
   onAddRow: () => void;
   onRemoveRow: (artworkId: string) => void;
+  onBatchUpload: (
+    files: File[],
+  ) => Promise<{ uploaded: number; skipped: number; error: string | null }>;
   errors: Partial<Record<string, string>>;
 }) {
   const rows = draft.artworkRows;
   const canAdd = rows.length < MAX_ARTWORK_FILES_PER_ORDER;
   const canRemoveAny = rows.length > 1;
+  const remainingSlots = MAX_ARTWORK_FILES_PER_ORDER - rows.length;
+  const emptyRowSlots = rows.filter(
+    (r) => !r.upload && r.name.trim().length === 0,
+  ).length;
+  const batchCapacity = remainingSlots + emptyRowSlots;
+
+  const [batching, setBatching] = useState(false);
+  const [batchStatus, setBatchStatus] = useState<string | null>(null);
+
+  async function handleBatchInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (picked.length === 0) return;
+    setBatching(true);
+    setBatchStatus(`Uploading ${picked.length} file${picked.length === 1 ? "" : "s"}…`);
+    const result = await onBatchUpload(picked);
+    setBatching(false);
+    const parts: string[] = [];
+    if (result.uploaded > 0) parts.push(`${result.uploaded} uploaded`);
+    if (result.skipped > 0) parts.push(`${result.skipped} skipped (over the ${MAX_ARTWORK_FILES_PER_ORDER}-file cap)`);
+    if (result.error) parts.push(`error: ${result.error}`);
+    setBatchStatus(parts.length > 0 ? parts.join(" · ") : null);
+  }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div>
         <h2 className="font-serif text-xl font-semibold text-navy-700 mb-1">Artwork upload</h2>
         <p className="text-sm text-slate-500">
@@ -36,6 +64,39 @@ export function StepArtwork({
           PDF, PNG, JPG, or Word (.doc / .docx). Max 50 MB each.
         </p>
       </div>
+
+      <div className="rounded-xl border border-navy-100 bg-navy-50/40 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-navy-700">Upload all files at once</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Pick multiple files in one go. We&apos;ll create a row for each and pre-fill the
+            description with the filename — you can edit them after.
+          </p>
+        </div>
+        <label
+          htmlFor="batch-artwork-input"
+          aria-disabled={batching || batchCapacity === 0}
+          className={cn(
+            buttonVariants({ variant: "crimson", size: "sm" }),
+            "shrink-0 cursor-pointer",
+            (batching || batchCapacity === 0) && "pointer-events-none opacity-50",
+          )}
+        >
+          {batching ? "Uploading…" : "Upload all files"}
+        </label>
+        <input
+          id="batch-artwork-input"
+          type="file"
+          multiple
+          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="sr-only"
+          onChange={handleBatchInput}
+          disabled={batching}
+        />
+      </div>
+      {batchStatus && (
+        <p className="text-xs text-slate-600">{batchStatus}</p>
+      )}
 
       <div className="space-y-3">
         {rows.map((row, idx) => (
@@ -65,7 +126,7 @@ export function StepArtwork({
         </button>
         <p className="text-xs text-slate-400">
           {countCompleted(rows)} of {rows.length} ready ·{" "}
-          {MAX_ARTWORK_FILES_PER_ORDER - rows.length} more allowed
+          {remainingSlots} more allowed
         </p>
       </div>
 
@@ -170,18 +231,17 @@ function ArtworkRowCard({
               Remove file
             </Button>
           )}
-          <Button
-            type="button"
-            variant={has ? "outline" : "crimson"}
-            size="sm"
-            disabled={busy}
-            loading={busy}
-            asChild
+          <label
+            htmlFor={inputId}
+            aria-disabled={busy}
+            className={cn(
+              buttonVariants({ variant: has ? "outline" : "crimson", size: "sm" }),
+              "cursor-pointer",
+              busy && "pointer-events-none opacity-50",
+            )}
           >
-            <label htmlFor={inputId} className="cursor-pointer">
-              {has ? "Replace" : "Upload"}
-            </label>
-          </Button>
+            {busy ? "Uploading…" : has ? "Replace" : "Upload"}
+          </label>
         </div>
       </div>
 

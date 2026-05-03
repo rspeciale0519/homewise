@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 export function OrderDetailActions({
   orderId,
@@ -83,11 +83,14 @@ export function OrderDetailActions({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
         {summaryUrl && (
-          <Button variant="primary" size="sm" asChild>
-            <a href={summaryUrl} target="_blank" rel="noopener noreferrer">
-              Download summary PDF
-            </a>
-          </Button>
+          <a
+            href={summaryUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({ variant: "primary", size: "sm" })}
+          >
+            Download summary PDF
+          </a>
         )}
         <Button
           variant="outline"

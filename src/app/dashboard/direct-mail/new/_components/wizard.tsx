@@ -234,6 +234,68 @@ export function Wizard({
     });
   }
 
+  async function handleArtworkBatchUpload(files: File[]): Promise<{ uploaded: number; skipped: number; error: string | null }> {
+    if (files.length === 0) return { uploaded: 0, skipped: 0, error: null };
+    const id = await ensureOrderId();
+    let workingRows: ArtworkRow[] = [...draft.artworkRows];
+    const queue: Array<{ file: File; rowId: string }> = [];
+    let skipped = 0;
+
+    for (const file of files) {
+      const emptyIdx = workingRows.findIndex(
+        (r) => !r.upload && r.name.trim().length === 0,
+      );
+      const desc = stripFileExt(file.name);
+      if (emptyIdx >= 0) {
+        const target = workingRows[emptyIdx]!;
+        workingRows = [
+          ...workingRows.slice(0, emptyIdx),
+          { ...target, name: desc },
+          ...workingRows.slice(emptyIdx + 1),
+        ];
+        queue.push({ file, rowId: target.id });
+      } else if (workingRows.length < MAX_ARTWORK_FILES_PER_ORDER) {
+        const newRow: ArtworkRow = { id: nanoid(12), name: desc, upload: null };
+        workingRows = [...workingRows, newRow];
+        queue.push({ file, rowId: newRow.id });
+      } else {
+        skipped += 1;
+      }
+    }
+
+    setDraft((d) => ({ ...d, artworkRows: workingRows }));
+
+    let uploaded = 0;
+    let lastError: string | null = null;
+    for (const { file, rowId } of queue) {
+      try {
+        const result = await uploadArtwork(id, rowId, file);
+        workingRows = workingRows.map((r) =>
+          r.id === rowId
+            ? {
+                ...r,
+                upload: {
+                  fileKey: result.fileKey,
+                  fileName: result.fileName,
+                  byteSize: result.byteSize,
+                  mimeType: result.mimeType,
+                  warnings: result.warnings,
+                },
+              }
+            : r,
+        );
+        const nextRows = workingRows;
+        setDraft((d) => ({ ...d, artworkRows: nextRows }));
+        await patchDraft(id, { artworkFiles: rowsToArtworkFiles(nextRows) });
+        uploaded += 1;
+      } catch (e) {
+        lastError = e instanceof Error ? e.message : "Upload failed";
+      }
+    }
+
+    return { uploaded, skipped, error: lastError };
+  }
+
   async function handleListUpload(file: File): Promise<ListUploadResult> {
     const id = await ensureOrderId();
     const result = await uploadList(id, file);
@@ -298,6 +360,7 @@ export function Wizard({
           onRename={handleArtworkRename}
           onAddRow={handleAddArtworkRow}
           onRemoveRow={handleRemoveArtworkRow}
+          onBatchUpload={handleArtworkBatchUpload}
           errors={errors}
         />
       )}
@@ -320,6 +383,12 @@ export function Wizard({
 function replaceRow(rows: ArtworkRow[], id: string, replacement: ArtworkRow | null): ArtworkRow[] {
   if (!replacement) return rows;
   return rows.map((r) => (r.id === id ? replacement : r));
+}
+
+function stripFileExt(filename: string): string {
+  const idx = filename.lastIndexOf(".");
+  if (idx <= 0) return filename;
+  return filename.slice(0, idx);
 }
 
 export function rowsToArtworkFiles(rows: ArtworkRow[]): ArtworkFile[] {
