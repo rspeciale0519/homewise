@@ -17,6 +17,7 @@ import { StepSpec } from "./step-spec";
 import { StepArtwork } from "./step-artwork";
 import { StepList } from "./step-list";
 import { StepReview } from "./step-review";
+import type { ArtworkUploadResult } from "@/lib/direct-mail/types";
 import {
   createDraft,
   patchDraft,
@@ -161,7 +162,10 @@ export function Wizard({
     }
   }
 
-  async function handleArtworkUpload(slot: "front" | "back", file: File) {
+  async function handleArtworkUpload(
+    slot: "front" | "back",
+    file: File,
+  ): Promise<ArtworkUploadResult> {
     const id = await ensureOrderId();
     const result = await uploadArtwork(id, slot, file);
     const patch: Partial<DraftState> =
@@ -170,6 +174,7 @@ export function Wizard({
         : { backFileKey: result.fileKey };
     patchLocal(patch);
     await persist(patch);
+    return result;
   }
 
   async function handleArtworkRemove(slot: "front" | "back") {

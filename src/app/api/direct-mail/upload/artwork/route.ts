@@ -10,6 +10,7 @@ import {
   extFromMime,
   uploadOrderFile,
 } from "@/lib/direct-mail/storage";
+import { inspectArtwork } from "@/lib/direct-mail/artwork-validator";
 import type { ArtworkUploadResult } from "@/lib/direct-mail/types";
 
 export async function POST(req: Request) {
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
 
   const order = await prisma.mailOrder.findUnique({
     where: { id: orderId },
-    select: { id: true, userId: true, status: true },
+    select: { id: true, userId: true, status: true, productSize: true },
   });
   if (!order || order.userId !== profile.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -56,8 +57,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
   }
 
-  const warnings: string[] = [];
-
   if (!ACCEPTED_ARTWORK_MIME.includes(file.type as (typeof ACCEPTED_ARTWORK_MIME)[number])) {
     return NextResponse.json(
       { error: `Unsupported file type: ${file.type || "unknown"}. Use PDF, PNG, or JPG.` },
@@ -74,6 +73,8 @@ export async function POST(req: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const ext = extFromFileName(file.name) || extFromMime(file.type);
 
+  const inspection = await inspectArtwork(buffer, file.type, order.productSize);
+
   const fileKey = await uploadOrderFile(orderId, slot, {
     buffer,
     mimeType: file.type,
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
     fileName: file.name,
     byteSize: file.size,
     mimeType: file.type,
-    warnings,
+    warnings: inspection.warnings,
   };
 
   return NextResponse.json(result);

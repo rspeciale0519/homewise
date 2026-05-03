@@ -11,7 +11,7 @@ export function StepArtwork({
   errors,
 }: {
   draft: DraftState;
-  onUpload: (slot: "front" | "back", file: File) => Promise<void>;
+  onUpload: (slot: "front" | "back", file: File) => Promise<ArtworkUploadResult>;
   onRemove: (slot: "front" | "back") => Promise<void>;
   errors: Partial<Record<string, string>>;
 }) {
@@ -66,7 +66,7 @@ function ArtworkSlot({
   label: string;
   currentKey: string | null;
   required: boolean;
-  onUpload: (slot: "front" | "back", file: File) => Promise<void>;
+  onUpload: (slot: "front" | "back", file: File) => Promise<ArtworkUploadResult>;
   onRemove: (slot: "front" | "back") => Promise<void>;
   error?: string;
 }) {
@@ -80,7 +80,8 @@ function ArtworkSlot({
     setBusy(true);
     setLocalError(null);
     try {
-      await onUpload(slot, file);
+      const res = await onUpload(slot, file);
+      setLocalResult(res);
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : "Upload failed");
     } finally {

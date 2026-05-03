@@ -176,9 +176,9 @@
 - [x] Stub server actions for step transitions
 
 ### Phase 3: Validation layer
-- [ ] CSV validator (header normalization, row count, preview)
-- [ ] Artwork validator (DPI/dimension extraction, type/size limits)
-- [ ] Co-located unit tests
+- [x] CSV validator (header normalization, row count, preview)
+- [x] Artwork validator (DPI/dimension extraction, type/size limits)
+- [x] Co-located unit tests (20 tests covering both validators)
 
 ### Phase 4: Submission + dispatch pipeline
 - [ ] Final submit endpoint (validate, persist, generate summary PDF, store)
