@@ -157,3 +157,46 @@
 - [x] Update 11 AI API routes to use aiCompleteForFeature()
 - [x] Update ChatbotEngine to resolve model per feature key
 - [x] Create Model Config tab on /admin/ai-usage
+
+## Phase 11: Direct Mail Ordering (feature/direct-mail-ordering)
+
+### Phase 1: Schema + storage + scaffolding
+- [x] Add MailOrder + MailOrderDispatchLog Prisma models with UserProfile.mailOrders backref
+- [x] Apply schema to Supabase via db:push
+- [x] Add direct mail env vars (.env.example, .env.local)
+- [x] Add "Direct Mail" sidebar entry with mail icon, gated to agents/admins
+- [x] Create /dashboard/direct-mail layout with role gating
+- [x] Build hub page with 4 workflow tiles + recent orders strip
+- [x] Scaffold /new, /orders, /orders/[id] route shells
+- [x] Build YlsPill + YlsFulfillmentFooter co-brand components
+
+### Phase 2: Wizard front-end
+- [x] Build 5-step wizard (basics, spec, artwork, list, review) with Zod schemas
+- [x] Implement draft persistence and Save & Exit
+- [x] Stub server actions for step transitions
+
+### Phase 3: Validation layer
+- [x] CSV validator (header normalization, row count, preview)
+- [x] Artwork validator (DPI/dimension extraction, type/size limits)
+- [x] Co-located unit tests (20 tests covering both validators)
+
+### Phase 4: Submission + dispatch pipeline
+- [x] Final submit endpoint (validate, persist, generate summary PDF, store)
+- [x] Inngest dispatchMailOrder function with retry policy + per-attempt logs
+- [x] Resend email with signed Supabase Storage URLs (no attachments)
+- [x] Admin failure-alert email
+- [x] Confirmation banner on order detail page (?just_submitted=1)
+
+### Phase 5: Order history UI
+- [x] /orders list with Submitted | Drafts tabs (25/page)
+- [x] /orders/[id] read-only detail view (signed-URL file tiles)
+- [x] Download summary PDF action
+- [x] Resend to YLS action (5-min rate limit, server + client)
+- [x] Duplicate order action (modal with optional list copy)
+
+### Phase 6: Branding + admin recovery view
+- [x] Apply YlsPill across all direct-mail pages
+- [x] Render YlsFulfillmentFooter on confirmation page + after submit
+- [x] /admin/direct-mail failure-recovery view (failed/pending/recent sections)
+- [x] POST /api/admin/direct-mail/orders/[id]/retry for manual retry
+- [x] Admin sidebar entry under System
