@@ -181,11 +181,11 @@
 - [x] Co-located unit tests (20 tests covering both validators)
 
 ### Phase 4: Submission + dispatch pipeline
-- [ ] Final submit endpoint (validate, persist, generate summary PDF, store)
-- [ ] Inngest dispatchOrderEmail function with retry policy
-- [ ] Resend email with signed Supabase Storage URLs
-- [ ] Admin failure-alert email
-- [ ] Confirmation page with date/time stamp
+- [x] Final submit endpoint (validate, persist, generate summary PDF, store)
+- [x] Inngest dispatchMailOrder function with retry policy + per-attempt logs
+- [x] Resend email with signed Supabase Storage URLs (no attachments)
+- [x] Admin failure-alert email
+- [x] Confirmation banner on order detail page (?just_submitted=1)
 
 ### Phase 5: Order history UI
 - [ ] /orders list with Submitted | Drafts tabs and pagination
