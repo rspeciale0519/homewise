@@ -1172,6 +1172,10 @@ model MailOrder {
   listFiles      Json     @default("[]")
   summaryPdfKey  String?
 
+  /// When the daily purge ran for this order (files removed from storage).
+  /// Null until purged. Submitted orders are purged after 30 days.
+  purgedAt       DateTime?
+
   complianceConfirmed Boolean @default(false)
 
   createdAt DateTime @default(now())

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import {
+  ORDER_FILE_RETENTION_DAYS,
   RESEND_RATE_LIMIT_MS,
   mailClassLabel,
   productTypeLabel,
@@ -104,12 +105,31 @@ export default async function MailOrderDetailPage({
                 Watch for an email from <span className="font-medium">yellowlettershop.com</span>.
                 Check your spam folder if you don&apos;t see it.
               </p>
+              <p className="mt-2 text-xs text-emerald-800/70">
+                <strong>File retention:</strong> the artwork, mailing lists, and order
+                summary you submitted will live on HomeWise for {ORDER_FILE_RETENTION_DAYS} days
+                and then be automatically deleted from the platform. YLS keeps the entire
+                order on their end indefinitely — if you need a copy past
+                {" "}{ORDER_FILE_RETENTION_DAYS} days, contact them.
+              </p>
             </div>
           </div>
         </div>
       )}
 
-      {order.status === "submitted" && (
+      {order.purgedAt && (
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <p className="text-sm text-slate-700">
+            <strong>Files have expired.</strong> The artwork, lists, and summary PDF
+            for this order were deleted from HomeWise on{" "}
+            <span className="font-medium">{formatStamp(order.purgedAt)}</span>{" "}
+            (after the {ORDER_FILE_RETENTION_DAYS}-day retention window). YLS still
+            has the full order — contact them if you need a copy.
+          </p>
+        </div>
+      )}
+
+      {order.status === "submitted" && !order.purgedAt && (
         <div className="mb-6">
           <OrderDetailActions
             orderId={order.id}
@@ -152,6 +172,7 @@ export default async function MailOrderDetailPage({
         )}
       </dl>
 
+      {!order.purgedAt && (
       <section className="mb-6">
         <h2 className="font-serif text-lg font-semibold text-navy-700 mb-3">
           Mailing lists ({listUrls.length})
@@ -201,7 +222,9 @@ export default async function MailOrderDetailPage({
           </ul>
         )}
       </section>
+      )}
 
+      {!order.purgedAt && (
       <section className="mb-6">
         <h2 className="font-serif text-lg font-semibold text-navy-700 mb-3">
           Artwork files ({artworkUrls.length})
@@ -240,9 +263,9 @@ export default async function MailOrderDetailPage({
           </ul>
         )}
       </section>
+      )}
 
-
-      {order.status === "submitted" && (
+      {order.status === "submitted" && !order.purgedAt && (
         <YlsFulfillmentFooter />
       )}
     </div>

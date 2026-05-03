@@ -164,7 +164,8 @@ function buildOrderHtml(input: OrderEmailInput): string {
       <div>${escapeHtml(ra.address1)}${ra.address2 ? `, ${escapeHtml(ra.address2)}` : ""}</div>
       <div>${escapeHtml(ra.city)}, ${escapeHtml(ra.state)} ${escapeHtml(ra.zip)}</div>
 
-      <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Order summary (links expire in 30 days)</h3>
+      <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Order summary</h3>
+      <p style="margin:0 0 6px;font-size:11px;color:#92400e">⏱ Download links expire in 30 days, after which the files are deleted from HomeWise. Save anything you need on your end.</p>
       <ul style="margin:0;padding-left:18px">
         <li><strong>Order summary PDF:</strong> <a href="${input.signedUrls.summary}">Download</a></li>
       </ul>

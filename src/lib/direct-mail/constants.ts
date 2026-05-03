@@ -114,6 +114,9 @@ export const LIST_ACCEPT_HINT = "CSV files only";
 
 export const RESEND_RATE_LIMIT_MS = 5 * 60 * 1000;
 
+/** How long submitted orders' files stay on HomeWise before the daily purge cron deletes them. */
+export const ORDER_FILE_RETENTION_DAYS = 30;
+
 export function dropDateMinBusinessDays(): number {
   const raw = process.env.DIRECT_MAIL_DROP_DATE_MIN_BUSINESS_DAYS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
