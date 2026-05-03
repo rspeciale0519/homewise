@@ -86,7 +86,7 @@ export function mailClassLabel(c: MailClass): string {
 
 export const MAX_ARTWORK_BYTES = 50 * 1024 * 1024;
 export const MAX_ARTWORK_FILES_PER_ORDER = 25;
-export const ARTWORK_INITIAL_ROWS = 3;
+export const ARTWORK_UPLOAD_CONCURRENCY = 4;
 export const MAX_LIST_ROWS = 50_000;
 export const MAX_LIST_BYTES = 25 * 1024 * 1024;
 

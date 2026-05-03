@@ -4,14 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
 import {
-  stepArtworkSchema,
   stepBasicsSchema,
   stepListSchema,
   stepReviewSchema,
   stepSpecSchema,
 } from "@/lib/direct-mail/schemas";
 import {
-  ARTWORK_INITIAL_ROWS,
+  ARTWORK_UPLOAD_CONCURRENCY,
   MAX_ARTWORK_FILES_PER_ORDER,
   type Workflow,
 } from "@/lib/direct-mail/constants";
@@ -27,17 +26,14 @@ import { StepSpec } from "./step-spec";
 import { StepArtwork } from "./step-artwork";
 import { StepList } from "./step-list";
 import { StepReview } from "./step-review";
-import { createDraft, patchDraft, uploadArtwork, uploadList } from "./client-api";
+import {
+  createDraft,
+  patchDraft,
+  uploadArtworkWithProgress,
+  uploadList,
+} from "./client-api";
 
 type Errors = Partial<Record<string, string>>;
-
-function makeEmptyRow(): ArtworkRow {
-  return { id: nanoid(12), name: "", upload: null };
-}
-
-function initialArtworkRows(): ArtworkRow[] {
-  return Array.from({ length: ARTWORK_INITIAL_ROWS }, makeEmptyRow);
-}
 
 function emptyDraft(workflow: Workflow): DraftState {
   return {
@@ -54,7 +50,7 @@ function emptyDraft(workflow: Workflow): DraftState {
     quantity: 0,
     listRowCount: 0,
     specialInstructions: null,
-    artworkRows: initialArtworkRows(),
+    artworkRows: [],
     listFileKey: null,
     complianceConfirmed: false,
   };
@@ -77,9 +73,11 @@ export function Wizard({
     },
   );
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const orderIdRef = useRef<string>(initialDraft?.id ?? "");
+  const pendingFilesRef = useRef<Map<string, File>>(new Map());
 
   async function ensureOrderId(): Promise<string> {
     if (orderIdRef.current) return orderIdRef.current;
@@ -158,6 +156,15 @@ export function Wizard({
   }
 
   async function handleSaveExit() {
+    const pendingCount = draft.artworkRows.filter(
+      (r) => r.status === "pending" || r.status === "failed",
+    ).length;
+    if (pendingCount > 0) {
+      const ok = window.confirm(
+        `You have ${pendingCount} file${pendingCount === 1 ? "" : "s"} that haven't finished uploading. Save & exit will discard them. Continue?`,
+      );
+      if (!ok) return;
+    }
     setBusy(true);
     setPipelineError(null);
     try {
@@ -172,44 +179,25 @@ export function Wizard({
     }
   }
 
-  async function handleArtworkUpload(artworkId: string, file: File): Promise<ArtworkRow> {
-    const id = await ensureOrderId();
-    const result = await uploadArtwork(id, artworkId, file);
-    let updatedRow: ArtworkRow | null = null;
+  function handleAddFiles(files: File[]) {
+    if (files.length === 0) return;
     setDraft((d) => {
-      const rows = d.artworkRows.map((r) => {
-        if (r.id !== artworkId) return r;
-        const next: ArtworkRow = {
-          ...r,
-          upload: {
-            fileKey: result.fileKey,
-            fileName: result.fileName,
-            byteSize: result.byteSize,
-            mimeType: result.mimeType,
-            warnings: result.warnings,
-          },
+      const remainingSlots = MAX_ARTWORK_FILES_PER_ORDER - d.artworkRows.length;
+      const accepted = files.slice(0, Math.max(0, remainingSlots));
+      const newRows: ArtworkRow[] = accepted.map((f) => {
+        const id = nanoid(12);
+        pendingFilesRef.current.set(id, f);
+        return {
+          id,
+          name: "",
+          status: "pending",
+          localFile: { fileName: f.name, byteSize: f.size, mimeType: f.type },
+          upload: null,
+          progress: 0,
+          lastError: null,
         };
-        updatedRow = next;
-        return next;
       });
-      return { ...d, artworkRows: rows };
-    });
-    await patchDraft(id, {
-      artworkFiles: rowsToArtworkFiles(replaceRow(draft.artworkRows, artworkId, updatedRow)),
-    });
-    return updatedRow ?? draft.artworkRows.find((r) => r.id === artworkId)!;
-  }
-
-  async function handleArtworkFileRemove(artworkId: string) {
-    const id = await ensureOrderId();
-    setDraft((d) => ({
-      ...d,
-      artworkRows: d.artworkRows.map((r) => (r.id === artworkId ? { ...r, upload: null } : r)),
-    }));
-    await patchDraft(id, {
-      artworkFiles: rowsToArtworkFiles(
-        draft.artworkRows.map((r) => (r.id === artworkId ? { ...r, upload: null } : r)),
-      ),
+      return { ...d, artworkRows: [...d.artworkRows, ...newRows] };
     });
   }
 
@@ -220,80 +208,108 @@ export function Wizard({
     }));
   }
 
-  function handleAddArtworkRow() {
-    setDraft((d) => {
-      if (d.artworkRows.length >= MAX_ARTWORK_FILES_PER_ORDER) return d;
-      return { ...d, artworkRows: [...d.artworkRows, makeEmptyRow()] };
-    });
+  async function handleRemoveRow(artworkId: string) {
+    const row = draft.artworkRows.find((r) => r.id === artworkId);
+    setDraft((d) => ({
+      ...d,
+      artworkRows: d.artworkRows.filter((r) => r.id !== artworkId),
+    }));
+    pendingFilesRef.current.delete(artworkId);
+    if (row?.status === "uploaded" && orderIdRef.current) {
+      await patchDraft(orderIdRef.current, {
+        artworkFiles: rowsToArtworkFiles(
+          draft.artworkRows.filter((r) => r.id !== artworkId),
+        ),
+      }).catch(() => {});
+    }
   }
 
-  function handleRemoveArtworkRow(artworkId: string) {
-    setDraft((d) => {
-      if (d.artworkRows.length <= 1) return d;
-      return { ...d, artworkRows: d.artworkRows.filter((r) => r.id !== artworkId) };
-    });
-  }
-
-  async function handleArtworkBatchUpload(files: File[]): Promise<{ uploaded: number; skipped: number; error: string | null }> {
-    if (files.length === 0) return { uploaded: 0, skipped: 0, error: null };
+  async function handleUploadAll() {
+    setPipelineError(null);
     const id = await ensureOrderId();
-    let workingRows: ArtworkRow[] = [...draft.artworkRows];
-    const queue: Array<{ file: File; rowId: string }> = [];
-    let skipped = 0;
+    const queue = draft.artworkRows.filter(
+      (r) => (r.status === "pending" || r.status === "failed") && r.name.trim().length > 0,
+    );
+    if (queue.length === 0) return;
 
-    for (const file of files) {
-      const emptyIdx = workingRows.findIndex(
-        (r) => !r.upload && r.name.trim().length === 0,
-      );
-      const desc = stripFileExt(file.name);
-      if (emptyIdx >= 0) {
-        const target = workingRows[emptyIdx]!;
-        workingRows = [
-          ...workingRows.slice(0, emptyIdx),
-          { ...target, name: desc },
-          ...workingRows.slice(emptyIdx + 1),
-        ];
-        queue.push({ file, rowId: target.id });
-      } else if (workingRows.length < MAX_ARTWORK_FILES_PER_ORDER) {
-        const newRow: ArtworkRow = { id: nanoid(12), name: desc, upload: null };
-        workingRows = [...workingRows, newRow];
-        queue.push({ file, rowId: newRow.id });
-      } else {
-        skipped += 1;
+    setUploading(true);
+
+    setDraft((d) => ({
+      ...d,
+      artworkRows: d.artworkRows.map((r) =>
+        queue.some((q) => q.id === r.id)
+          ? { ...r, status: "uploading", progress: 0, lastError: null }
+          : r,
+      ),
+    }));
+
+    const queueRef = [...queue];
+    const workers = Array.from({ length: ARTWORK_UPLOAD_CONCURRENCY }, async () => {
+      while (queueRef.length > 0) {
+        const next = queueRef.shift();
+        if (!next) return;
+        const file = pendingFilesRef.current.get(next.id);
+        if (!file) {
+          markRowFailed(next.id, "Local file lost — please re-add this file.");
+          continue;
+        }
+        try {
+          const { promise } = uploadArtworkWithProgress(id, next.id, file, (pct) => {
+            setDraft((d) => ({
+              ...d,
+              artworkRows: d.artworkRows.map((r) =>
+                r.id === next.id ? { ...r, progress: pct } : r,
+              ),
+            }));
+          });
+          const result = await promise;
+          markRowUploaded(next.id, result);
+          pendingFilesRef.current.delete(next.id);
+        } catch (e) {
+          markRowFailed(next.id, e instanceof Error ? e.message : "Upload failed");
+        }
       }
-    }
+    });
 
-    setDraft((d) => ({ ...d, artworkRows: workingRows }));
+    await Promise.all(workers);
+    setUploading(false);
+    // The debounced effect on `draft` picks up the row state changes and
+    // PATCHes the server with the new artworkFiles list automatically.
+  }
 
-    let uploaded = 0;
-    let lastError: string | null = null;
-    for (const { file, rowId } of queue) {
-      try {
-        const result = await uploadArtwork(id, rowId, file);
-        workingRows = workingRows.map((r) =>
-          r.id === rowId
-            ? {
-                ...r,
-                upload: {
-                  fileKey: result.fileKey,
-                  fileName: result.fileName,
-                  byteSize: result.byteSize,
-                  mimeType: result.mimeType,
-                  warnings: result.warnings,
-                },
-              }
-            : r,
-        );
-        const nextRows = workingRows;
-        setDraft((d) => ({ ...d, artworkRows: nextRows }));
-        await patchDraft(id, { artworkFiles: rowsToArtworkFiles(nextRows) });
-        uploaded += 1;
-      } catch (e) {
-        lastError = e instanceof Error ? e.message : "Upload failed";
-      }
-    }
+  function markRowUploaded(artworkId: string, result: { fileKey: string; fileName: string; byteSize: number; mimeType: string; warnings: string[] }) {
+    setDraft((d) => ({
+      ...d,
+      artworkRows: d.artworkRows.map((r) =>
+        r.id === artworkId
+          ? {
+              ...r,
+              status: "uploaded",
+              progress: 100,
+              localFile: null,
+              lastError: null,
+              upload: {
+                fileKey: result.fileKey,
+                fileName: result.fileName,
+                byteSize: result.byteSize,
+                mimeType: result.mimeType,
+                warnings: result.warnings,
+              },
+            }
+          : r,
+      ),
+    }));
+  }
 
-    return { uploaded, skipped, error: lastError };
+  function markRowFailed(artworkId: string, message: string) {
+    setDraft((d) => ({
+      ...d,
+      artworkRows: d.artworkRows.map((r) =>
+        r.id === artworkId
+          ? { ...r, status: "failed", lastError: message }
+          : r,
+      ),
+    }));
   }
 
   async function handleListUpload(file: File): Promise<ListUploadResult> {
@@ -343,7 +359,7 @@ export function Wizard({
       onNext={handleNext}
       onSaveExit={handleSaveExit}
       nextLabel={nextLabel}
-      busy={busy}
+      busy={busy || uploading}
       errorMessage={pipelineError}
     >
       {draft.currentStep === 1 && (
@@ -355,12 +371,11 @@ export function Wizard({
       {draft.currentStep === 3 && (
         <StepArtwork
           draft={draft}
-          onUpload={handleArtworkUpload}
-          onRemove={handleArtworkFileRemove}
+          onAddFiles={handleAddFiles}
           onRename={handleArtworkRename}
-          onAddRow={handleAddArtworkRow}
-          onRemoveRow={handleRemoveArtworkRow}
-          onBatchUpload={handleArtworkBatchUpload}
+          onRemoveRow={handleRemoveRow}
+          onUploadAll={handleUploadAll}
+          uploading={uploading}
           errors={errors}
         />
       )}
@@ -380,20 +395,9 @@ export function Wizard({
   );
 }
 
-function replaceRow(rows: ArtworkRow[], id: string, replacement: ArtworkRow | null): ArtworkRow[] {
-  if (!replacement) return rows;
-  return rows.map((r) => (r.id === id ? replacement : r));
-}
-
-function stripFileExt(filename: string): string {
-  const idx = filename.lastIndexOf(".");
-  if (idx <= 0) return filename;
-  return filename.slice(0, idx);
-}
-
 export function rowsToArtworkFiles(rows: ArtworkRow[]): ArtworkFile[] {
   return rows
-    .filter((r) => r.upload && r.name.trim().length > 0)
+    .filter((r) => r.status === "uploaded" && r.upload && r.name.trim().length > 0)
     .map((r) => ({
       id: r.id,
       name: r.name.trim(),
@@ -428,18 +432,35 @@ function validateStep(draft: DraftState): Errors {
     }
     case 3: {
       const errs: Errors = {};
-      const incomplete = draft.artworkRows.findIndex(
-        (r) => (r.upload && r.name.trim().length === 0) || (!r.upload && r.name.trim().length > 0),
+      const uploadedCount = draft.artworkRows.filter(
+        (r) => r.status === "uploaded" && r.name.trim().length > 0,
+      ).length;
+      const pending = draft.artworkRows.filter(
+        (r) => r.status === "pending" || r.status === "failed",
       );
-      if (incomplete >= 0) {
-        errs[`artworkFiles.${incomplete}`] =
-          "Each row needs a description AND a file. Remove the row or finish it.";
+      const uploadingNow = draft.artworkRows.some((r) => r.status === "uploading");
+      const namelessUploaded = draft.artworkRows.findIndex(
+        (r) => r.status === "uploaded" && r.name.trim().length === 0,
+      );
+
+      if (uploadingNow) {
+        errs.artworkFiles = "Uploads are still in progress — please wait.";
         return errs;
       }
-      const r = stepArtworkSchema.safeParse({
-        artworkFiles: rowsToArtworkFiles(draft.artworkRows),
-      });
-      return r.success ? {} : zodToErrors(r.error.issues);
+      if (namelessUploaded >= 0) {
+        errs[`artworkFiles.${namelessUploaded}`] =
+          "This file is missing a description.";
+        return errs;
+      }
+      if (pending.length > 0) {
+        errs.artworkFiles = `${pending.length} file${pending.length === 1 ? "" : "s"} not yet uploaded. Click "Upload all files" or remove them.`;
+        return errs;
+      }
+      if (uploadedCount === 0) {
+        errs.artworkFiles = "Add at least one artwork file.";
+        return errs;
+      }
+      return {};
     }
     case 4: {
       const r = stepListSchema.safeParse({

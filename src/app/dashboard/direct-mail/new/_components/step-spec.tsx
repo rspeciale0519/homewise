@@ -58,7 +58,7 @@ export function StepSpec({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-3xl">
       <div>
         <h2 className="font-serif text-xl font-semibold text-navy-700 mb-1">Mail spec</h2>
         <p className="text-sm text-slate-500">

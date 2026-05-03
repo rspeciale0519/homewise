@@ -11,10 +11,22 @@ export type ArtworkFile = {
   warnings: string[];
 };
 
+export type ArtworkRowStatus = "pending" | "uploading" | "uploaded" | "failed";
+
+export type ArtworkLocalFile = {
+  fileName: string;
+  byteSize: number;
+  mimeType: string;
+};
+
 export type ArtworkRow = {
   id: string;
   name: string;
+  status: ArtworkRowStatus;
+  localFile: ArtworkLocalFile | null;
   upload: Omit<ArtworkFile, "id" | "name"> | null;
+  progress: number;
+  lastError: string | null;
 };
 
 export type DraftState = {

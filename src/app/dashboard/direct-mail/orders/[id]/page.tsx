@@ -59,7 +59,7 @@ export default async function MailOrderDetailPage({
     : null;
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
       <div className="mb-8 flex flex-wrap items-center gap-3">
         <div className="flex-1 min-w-0">
           <Link

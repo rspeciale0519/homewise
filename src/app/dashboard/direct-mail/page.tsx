@@ -62,7 +62,7 @@ export default async function DirectMailHubPage() {
   ]);
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-7xl">
       <div className="mb-8 flex flex-wrap items-center gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-crimson-600 mb-2">

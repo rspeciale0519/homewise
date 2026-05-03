@@ -55,7 +55,7 @@ export function StepList({
   const has = !!draft.listFileKey;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl">
       <div>
         <h2 className="font-serif text-xl font-semibold text-navy-700 mb-1">Mailing list</h2>
         <p className="text-sm text-slate-500">

@@ -3,24 +3,18 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { ADDRESS, SITE_NAME } from "@/lib/constants";
-import {
-  ARTWORK_INITIAL_ROWS,
-  workflowFromSlug,
-  workflowLabel,
-} from "@/lib/direct-mail/constants";
+import { workflowFromSlug, workflowLabel } from "@/lib/direct-mail/constants";
 import type { ArtworkFile, ArtworkRow, DraftState } from "@/lib/direct-mail/types";
 import { YlsPill } from "../_components/yls-pill";
 import { Wizard } from "./_components/wizard";
 
-function nanoLikeId(): string {
-  return Math.random().toString(36).slice(2, 14);
-}
-
 function artworkRowsFromFiles(files: unknown): ArtworkRow[] {
   const arr = Array.isArray(files) ? (files as ArtworkFile[]) : [];
-  const rows: ArtworkRow[] = arr.map((f) => ({
+  return arr.map((f) => ({
     id: f.id,
     name: f.name,
+    status: "uploaded" as const,
+    localFile: null,
     upload: {
       fileKey: f.fileKey,
       fileName: f.fileName,
@@ -28,11 +22,9 @@ function artworkRowsFromFiles(files: unknown): ArtworkRow[] {
       mimeType: f.mimeType,
       warnings: f.warnings ?? [],
     },
+    progress: 100,
+    lastError: null,
   }));
-  while (rows.length < ARTWORK_INITIAL_ROWS) {
-    rows.push({ id: nanoLikeId(), name: "", upload: null });
-  }
-  return rows;
 }
 
 const DEFAULT_RETURN_ADDRESS = {
@@ -107,7 +99,7 @@ export default async function NewMailOrderPage({
   }
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10">
+    <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
       <div className="mb-8 flex flex-wrap items-center gap-3">
         <div className="flex-1 min-w-0">
           <Link
