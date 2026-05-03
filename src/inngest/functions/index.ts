@@ -11,6 +11,8 @@ import { generateSeoContent } from "./seo-content-generator";
 import { generateListingEmbeddings, generateSingleEmbedding } from "./generate-embeddings";
 import { processBehavioralTrigger } from "./behavioral-triggers";
 import { trainingReminders } from "./training-reminders";
+import { dispatchMailOrder } from "./dispatch-mail-order";
+import { purgeOldMailOrders } from "./purge-old-mail-orders";
 
 export const ALL_INNGEST_FUNCTIONS = [
   mlsSync,
@@ -28,4 +30,6 @@ export const ALL_INNGEST_FUNCTIONS = [
   generateSingleEmbedding,
   processBehavioralTrigger,
   trainingReminders,
+  dispatchMailOrder,
+  purgeOldMailOrders,
 ];

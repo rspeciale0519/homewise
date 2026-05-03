@@ -146,6 +146,7 @@ model UserProfile {
   agent              Agent?              @relation(fields: [preferredAgent], references: [id])
   agentProfile       Agent?              @relation("AgentUser")
   documentSignatures DocumentSignature[]
+  mailOrders         MailOrder[]
 
   @@index([email])
 }
@@ -1140,4 +1141,65 @@ model BillingSettings {
   transitionGraceDays    Int      @default(30)
   loyaltyDiscountPercent Int      @default(20)
   updatedAt              DateTime @updatedAt
+}
+
+model MailOrder {
+  id     String @id @default(cuid())
+  userId String
+
+  status              String    @default("draft")
+  emailStatus         String    @default("none")
+  currentStep         Int       @default(1)
+  submittedAt         DateTime?
+  lastDispatchedAt    DateTime?
+  dispatchAttempts    Int       @default(0)
+  emailMessageId      String?
+
+  workflow               String
+  subjectPropertyAddress String?
+  campaignName           String?
+
+  productType         String?
+  productSize         String?
+  mailClass           String?
+  dropDate            DateTime?
+  quantity            Int       @default(0)
+  specialInstructions String?
+
+  returnAddress Json?
+
+  artworkFiles   Json     @default("[]")
+  listFiles      Json     @default("[]")
+  summaryPdfKey  String?
+
+  /// When the daily purge ran for this order (files removed from storage).
+  /// Null until purged. Submitted orders are purged after 30 days.
+  purgedAt       DateTime?
+
+  complianceConfirmed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         UserProfile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dispatchLogs MailOrderDispatchLog[]
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([status, emailStatus])
+  @@index([submittedAt])
+}
+
+model MailOrderDispatchLog {
+  id             String   @id @default(cuid())
+  orderId        String
+  attemptedAt    DateTime @default(now())
+  success        Boolean
+  emailMessageId String?
+  errorMessage   String?
+  triggeredBy    String   @default("auto")
+
+  order MailOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, attemptedAt])
 }

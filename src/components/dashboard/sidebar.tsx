@@ -24,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
 const AGENT_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/agent-hub", label: "Resources", icon: "resources", exact: true },
   { href: "/dashboard/agent-hub/documents", label: "Documents", icon: "library" },
+  { href: "/dashboard/direct-mail", label: "Direct Mail", icon: "mail" },
   { href: "/dashboard/training", label: "Training", icon: "training" },
   { href: "/dashboard/billing", label: "Billing", icon: "billing" },
 ];
@@ -40,7 +41,7 @@ export function Sidebar({ role }: SidebarProps) {
 
   const showAgentNav =
     role === "agent" ||
-    (role === "admin" && (pathname.startsWith("/dashboard/agent-hub") || pathname.startsWith("/dashboard/documents") || pathname.startsWith("/dashboard/training") || pathname.startsWith("/dashboard/billing")));
+    (role === "admin" && (pathname.startsWith("/dashboard/agent-hub") || pathname.startsWith("/dashboard/documents") || pathname.startsWith("/dashboard/direct-mail") || pathname.startsWith("/dashboard/training") || pathname.startsWith("/dashboard/billing")));
 
   return (
     <>
@@ -217,6 +218,12 @@ function SidebarIcon({ type, active, mobile }: { type: string; active: boolean; 
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+        </svg>
+      );
+    case "mail":
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
         </svg>
       );
     default:
