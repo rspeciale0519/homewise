@@ -188,11 +188,11 @@
 - [x] Confirmation banner on order detail page (?just_submitted=1)
 
 ### Phase 5: Order history UI
-- [ ] /orders list with Submitted | Drafts tabs and pagination
-- [ ] /orders/[id] read-only detail view
-- [ ] Download summary PDF action
-- [ ] Resend to YLS action (5-min rate limit)
-- [ ] Duplicate order action (with optional list copy)
+- [x] /orders list with Submitted | Drafts tabs (25/page)
+- [x] /orders/[id] read-only detail view (signed-URL file tiles)
+- [x] Download summary PDF action
+- [x] Resend to YLS action (5-min rate limit, server + client)
+- [x] Duplicate order action (modal with optional list copy)
 
 ### Phase 6: Branding + admin recovery view
 - [ ] Apply YlsPill across all direct-mail pages

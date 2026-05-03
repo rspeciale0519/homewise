@@ -2,8 +2,20 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import {
+  RESEND_RATE_LIMIT_MS,
+  mailClassLabel,
+  productTypeLabel,
+  workflowLabel,
+  type MailClass,
+  type ProductType,
+  type Workflow,
+} from "@/lib/direct-mail/constants";
+import { getSignedUrl } from "@/lib/direct-mail/storage";
+import type { ReturnAddress } from "@/lib/direct-mail/schemas";
 import { YlsPill } from "../../_components/yls-pill";
 import { YlsFulfillmentFooter } from "../../_components/yls-fulfillment-footer";
+import { OrderDetailActions } from "../_components/order-detail-actions";
 
 export default async function MailOrderDetailPage({
   params,
@@ -20,26 +32,27 @@ export default async function MailOrderDetailPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?redirectTo=/dashboard/direct-mail/orders/${id}`);
 
-  const order = await prisma.mailOrder.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      userId: true,
-      status: true,
-      workflow: true,
-      productType: true,
-      productSize: true,
-      submittedAt: true,
-      createdAt: true,
-      emailStatus: true,
-      listRowCount: true,
-      dropDate: true,
-    },
-  });
+  const order = await prisma.mailOrder.findUnique({ where: { id } });
+  if (!order || order.userId !== user.id) notFound();
 
-  if (!order || order.userId !== user.id) {
-    notFound();
-  }
+  const summaryUrl = order.summaryPdfKey
+    ? await getSignedUrl(order.summaryPdfKey, 60 * 60).catch(() => null)
+    : null;
+  const frontUrl = order.frontFileKey
+    ? await getSignedUrl(order.frontFileKey, 60 * 60).catch(() => null)
+    : null;
+  const backUrl = order.backFileKey
+    ? await getSignedUrl(order.backFileKey, 60 * 60).catch(() => null)
+    : null;
+  const listUrl = order.listFileKey
+    ? await getSignedUrl(order.listFileKey, 60 * 60).catch(() => null)
+    : null;
+
+  const ra = order.returnAddress as unknown as ReturnAddress | null;
+  const stamp = order.submittedAt ?? order.createdAt;
+  const lastDispatchedAtMs = order.lastDispatchedAt
+    ? order.lastDispatchedAt.getTime()
+    : null;
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 max-w-5xl">
@@ -52,13 +65,19 @@ export default async function MailOrderDetailPage({
             ← My mail orders
           </Link>
           <h1 className="font-serif text-display-sm sm:text-display-md text-navy-700">
-            Order {(order.submittedAt ?? order.createdAt).toLocaleString()}
+            {formatStamp(stamp)}
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Status: {order.status} · Email: {order.emailStatus}
+            {workflowLabel(order.workflow as Workflow)}
+            {order.productType
+              ? ` · ${productTypeLabel(order.productType as ProductType)}${order.productSize ? ` ${order.productSize}` : ""}`
+              : ""}
           </p>
         </div>
-        <YlsPill />
+        <div className="flex items-center gap-2">
+          <StatusPill emailStatus={order.emailStatus} status={order.status} />
+          <YlsPill />
+        </div>
       </div>
 
       {justSubmitted && order.status === "submitted" && (
@@ -73,25 +92,157 @@ export default async function MailOrderDetailPage({
               </p>
               <p className="mt-1 text-sm text-emerald-800/80">
                 Watch for an email from <span className="font-medium">yellowlettershop.com</span>.
-                Check your spam folder if you don&apos;t see it. The proofs and invoice will
-                come straight to your email.
+                Check your spam folder if you don&apos;t see it.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {justSubmitted && (
+      {order.status === "submitted" && (
         <div className="mb-6">
-          <YlsFulfillmentFooter />
+          <OrderDetailActions
+            orderId={order.id}
+            summaryUrl={summaryUrl}
+            hasList={!!order.listFileKey}
+            lastDispatchedAtMs={lastDispatchedAtMs}
+            rateLimitMs={RESEND_RATE_LIMIT_MS}
+          />
         </div>
       )}
 
-      <div className="rounded-2xl bg-white border border-dashed border-slate-200 p-10 text-center">
-        <p className="text-sm text-slate-500">
-          The full read-only detail view (summary, action bar, signed-URL thumbnails) ships in Phase 5.
-        </p>
+      <dl className="rounded-2xl border border-slate-100 divide-y divide-slate-100 overflow-hidden bg-white text-sm mb-6">
+        {order.subjectPropertyAddress && (
+          <Row label="Subject property" value={order.subjectPropertyAddress} />
+        )}
+        {order.campaignName && <Row label="Campaign name" value={order.campaignName} />}
+        <Row
+          label="Mail class"
+          value={order.mailClass ? mailClassLabel(order.mailClass as MailClass) : "—"}
+        />
+        <Row
+          label="Drop date"
+          value={order.dropDate ? formatDate(order.dropDate) : "—"}
+        />
+        <Row label="Quantity" value={`${order.quantity.toLocaleString()} pieces`} />
+        <Row
+          label="List size"
+          value={`${order.listRowCount.toLocaleString()} recipients`}
+        />
+        <Row
+          label="Return address"
+          value={
+            ra
+              ? `${ra.name} · ${ra.address1}${ra.address2 ? `, ${ra.address2}` : ""}, ${ra.city}, ${ra.state} ${ra.zip}`
+              : "—"
+          }
+        />
+        {order.specialInstructions && (
+          <Row label="Special instructions" value={order.specialInstructions} />
+        )}
+      </dl>
+
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <FileTile label="Front artwork" url={frontUrl} present={!!order.frontFileKey} />
+        <FileTile label="Back artwork" url={backUrl} present={!!order.backFileKey} fallback="Single-sided" />
+        <FileTile label="Mailing list" url={listUrl} present={!!order.listFileKey} />
       </div>
+
+      {order.status === "submitted" && (
+        <YlsFulfillmentFooter />
+      )}
     </div>
   );
+}
+
+function StatusPill({
+  emailStatus,
+  status,
+}: {
+  emailStatus: string;
+  status: string;
+}) {
+  if (status === "draft") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+        Draft
+      </span>
+    );
+  }
+  const fallback = { label: "Submitted", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  const map: Record<string, { label: string; classes: string }> = {
+    sent: fallback,
+    none: fallback,
+    pending: { label: "Sending…", classes: "bg-slate-100 text-slate-600 border-slate-200" },
+    failed: { label: "Awaiting send", classes: "bg-amber-50 text-amber-700 border-amber-200" },
+  };
+  const cfg = map[emailStatus] ?? fallback;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${cfg.classes}`}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+      <dt className="shrink-0 text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-44">
+        {label}
+      </dt>
+      <dd className="break-words text-sm text-navy-700">{value}</dd>
+    </div>
+  );
+}
+
+function FileTile({
+  label,
+  url,
+  present,
+  fallback,
+}: {
+  label: string;
+  url: string | null;
+  present: boolean;
+  fallback?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-white p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+        {label}
+      </p>
+      {present && url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-semibold text-navy-700 hover:text-crimson-600"
+        >
+          Open file ↗
+        </a>
+      ) : (
+        <p className="text-sm text-slate-500">{fallback ?? "—"}</p>
+      )}
+    </div>
+  );
+}
+
+function formatStamp(d: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(d));
+}
+
+function formatDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(d));
 }
