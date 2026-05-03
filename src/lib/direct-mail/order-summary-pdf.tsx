@@ -1,4 +1,4 @@
-import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
+import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import {
   mailClassLabel,
   productTypeLabel,
@@ -10,33 +10,10 @@ import {
 import type { ReturnAddress } from "./schemas";
 import type { ArtworkFile, ListFile } from "./types";
 
-Font.register({
-  family: "Cormorant Garamond",
-  fonts: [
-    {
-      src: "https://fonts.gstatic.com/s/cormorantgaramond/v22/co3YmX5slCNuHLi8bLeY9MK7whWMhyjornFLsS6V7wx43g.woff2",
-      fontWeight: "normal",
-    },
-    {
-      src: "https://fonts.gstatic.com/s/cormorantgaramond/v22/co3bmX5slCNuHLi8bLeY9MK7whWMhyjornFLsS6V7wx43g.woff2",
-      fontWeight: "bold",
-    },
-  ],
-});
-
-Font.register({
-  family: "DM Sans",
-  fonts: [
-    {
-      src: "https://fonts.gstatic.com/s/dmsans/v15/rP2Hp2ywxg089UriCZOIHQ.woff2",
-      fontWeight: "normal",
-    },
-    {
-      src: "https://fonts.gstatic.com/s/dmsans/v15/rP2Cp2ywxg089UriASitCBimQ.woff2",
-      fontWeight: "bold",
-    },
-  ],
-});
+// Use the built-in Helvetica/Times-Roman fonts so the PDF has no network
+// dependency on Google Fonts. @react-pdf/renderer cannot parse .woff2, and
+// the .ttf endpoints from Google Fonts are not always reachable from
+// serverless runtimes; using default fonts keeps PDF rendering reliable.
 
 const NAVY = "#2E276D";
 const CRIMSON = "#DB2526";
@@ -47,16 +24,16 @@ const SLATE_600 = "#475569";
 const SLATE_700 = "#334155";
 
 const s = StyleSheet.create({
-  page: { fontFamily: "DM Sans", backgroundColor: "#FFFFFF", padding: 32 },
+  page: { fontFamily: "Helvetica", backgroundColor: "#FFFFFF", padding: 32 },
   header: { borderBottom: `2 solid ${NAVY}`, paddingBottom: 12, marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
   headerLeft: { flexDirection: "column", gap: 2 },
-  brand: { fontFamily: "Cormorant Garamond", fontSize: 16, fontWeight: "bold", color: NAVY, letterSpacing: 2 },
+  brand: { fontFamily: "Times-Roman", fontSize: 16, fontWeight: "bold", color: NAVY, letterSpacing: 2 },
   brandSub: { fontSize: 8, color: SLATE_400, letterSpacing: 1.5, textTransform: "uppercase" },
   headerRight: { flexDirection: "column", alignItems: "flex-end", gap: 2 },
   ylsTag: { fontSize: 8, color: AMBER, letterSpacing: 1, textTransform: "uppercase" },
   stamp: { fontSize: 9, color: SLATE_600 },
 
-  title: { fontFamily: "Cormorant Garamond", fontSize: 22, fontWeight: "bold", color: NAVY, marginBottom: 4 },
+  title: { fontFamily: "Times-Roman", fontSize: 22, fontWeight: "bold", color: NAVY, marginBottom: 4 },
   subtitle: { fontSize: 10, color: SLATE_600, marginBottom: 18 },
 
   sectionLabel: { fontSize: 8, fontWeight: "bold", color: CRIMSON, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6, marginTop: 14 },

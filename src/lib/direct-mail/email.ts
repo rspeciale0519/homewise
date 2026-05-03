@@ -30,7 +30,7 @@ const FROM_EMAIL =
   process.env.HOMEWISE_DIRECT_MAIL_FROM_EMAIL ??
   "Homewise Direct Mail <direct-mail@email.homewisefl.com>";
 
-const YLS_INBOX = process.env.YLS_ORDERS_INBOX_EMAIL ?? "orders@yellowlettershop.com";
+const YLS_INBOX = process.env.YLS_ORDERS_INBOX_EMAIL ?? "sales@yellowlettershop.com";
 
 const ADMIN_ALERT_EMAIL =
   process.env.DIRECT_MAIL_ADMIN_ALERT_EMAIL ?? "admin@homewisefl.com";
