@@ -1,6 +1,22 @@
 import type { ReturnAddress } from "./schemas";
 import type { Workflow, ProductType, MailClass } from "./constants";
 
+export type ArtworkFile = {
+  id: string;
+  name: string;
+  fileKey: string;
+  fileName: string;
+  byteSize: number;
+  mimeType: string;
+  warnings: string[];
+};
+
+export type ArtworkRow = {
+  id: string;
+  name: string;
+  upload: Omit<ArtworkFile, "id" | "name"> | null;
+};
+
 export type DraftState = {
   id: string;
   currentStep: number;
@@ -15,8 +31,7 @@ export type DraftState = {
   quantity: number;
   listRowCount: number;
   specialInstructions: string | null;
-  frontFileKey: string | null;
-  backFileKey: string | null;
+  artworkRows: ArtworkRow[];
   listFileKey: string | null;
   complianceConfirmed: boolean;
 };

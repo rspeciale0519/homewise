@@ -13,6 +13,7 @@ import {
 } from "@/lib/direct-mail/constants";
 import { getSignedUrl } from "@/lib/direct-mail/storage";
 import type { ReturnAddress } from "@/lib/direct-mail/schemas";
+import type { ArtworkFile } from "@/lib/direct-mail/types";
 import { YlsPill } from "../../_components/yls-pill";
 import { YlsFulfillmentFooter } from "../../_components/yls-fulfillment-footer";
 import { OrderDetailActions } from "../_components/order-detail-actions";
@@ -38,15 +39,18 @@ export default async function MailOrderDetailPage({
   const summaryUrl = order.summaryPdfKey
     ? await getSignedUrl(order.summaryPdfKey, 60 * 60).catch(() => null)
     : null;
-  const frontUrl = order.frontFileKey
-    ? await getSignedUrl(order.frontFileKey, 60 * 60).catch(() => null)
-    : null;
-  const backUrl = order.backFileKey
-    ? await getSignedUrl(order.backFileKey, 60 * 60).catch(() => null)
-    : null;
   const listUrl = order.listFileKey
     ? await getSignedUrl(order.listFileKey, 60 * 60).catch(() => null)
     : null;
+  const artworkFiles = Array.isArray(order.artworkFiles)
+    ? (order.artworkFiles as unknown as ArtworkFile[])
+    : [];
+  const artworkUrls: Array<{ file: ArtworkFile; url: string | null }> = await Promise.all(
+    artworkFiles.map(async (f) => ({
+      file: f,
+      url: await getSignedUrl(f.fileKey, 60 * 60).catch(() => null),
+    })),
+  );
 
   const ra = order.returnAddress as unknown as ReturnAddress | null;
   const stamp = order.submittedAt ?? order.createdAt;
@@ -142,9 +146,46 @@ export default async function MailOrderDetailPage({
         )}
       </dl>
 
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <FileTile label="Front artwork" url={frontUrl} present={!!order.frontFileKey} />
-        <FileTile label="Back artwork" url={backUrl} present={!!order.backFileKey} fallback="Single-sided" />
+      <section className="mb-6">
+        <h2 className="font-serif text-lg font-semibold text-navy-700 mb-3">
+          Artwork files ({artworkUrls.length})
+        </h2>
+        {artworkUrls.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            No artwork files attached.
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 gap-2">
+            {artworkUrls.map(({ file, url }) => (
+              <li
+                key={file.id}
+                className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white p-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-navy-700 truncate">{file.name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                    {file.fileName} · {formatBytes(file.byteSize)}
+                  </p>
+                </div>
+                {url ? (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-xs font-semibold text-navy-600 hover:text-crimson-600"
+                  >
+                    Open ↗
+                  </a>
+                ) : (
+                  <span className="shrink-0 text-xs text-slate-400">unavailable</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="mb-6">
         <FileTile label="Mailing list" url={listUrl} present={!!order.listFileKey} />
       </div>
 
@@ -245,4 +286,10 @@ function formatDate(d: Date): string {
     day: "numeric",
     year: "numeric",
   }).format(new Date(d));
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

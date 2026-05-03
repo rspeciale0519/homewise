@@ -54,8 +54,10 @@ export function StepReview({
               : "—"
           }
         />
-        <Row label="Front artwork" value={draft.frontFileKey ? "Uploaded" : "—"} />
-        <Row label="Back artwork" value={draft.backFileKey ? "Uploaded" : "Single-sided"} />
+        <Row
+          label="Artwork files"
+          value={artworkSummary(draft)}
+        />
         <Row
           label="Mailing list"
           value={
@@ -95,7 +97,15 @@ function Row({ label, value }: { label: string; value: string }) {
       <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-44 shrink-0">
         {label}
       </dt>
-      <dd className="text-sm text-navy-700 break-words">{value}</dd>
+      <dd className="text-sm text-navy-700 break-words whitespace-pre-line">{value}</dd>
     </div>
   );
+}
+
+function artworkSummary(draft: DraftState): string {
+  const completed = draft.artworkRows.filter(
+    (r) => r.upload && r.name.trim().length > 0,
+  );
+  if (completed.length === 0) return "—";
+  return completed.map((r) => `• ${r.name} (${r.upload!.fileName})`).join("\n");
 }

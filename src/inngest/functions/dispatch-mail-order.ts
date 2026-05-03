@@ -2,6 +2,7 @@ import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { getSignedUrl } from "@/lib/direct-mail/storage";
 import { sendDispatchFailureAlert, sendOrderToYls } from "@/lib/direct-mail/email";
+import type { ArtworkLink } from "@/lib/direct-mail/email";
 import { SITE_NAME } from "@/lib/constants";
 import type {
   MailClass,
@@ -9,6 +10,7 @@ import type {
   Workflow,
 } from "@/lib/direct-mail/constants";
 import type { ReturnAddress } from "@/lib/direct-mail/schemas";
+import type { ArtworkFile } from "@/lib/direct-mail/types";
 
 const SIGNED_URL_TTL_SECONDS = 30 * 24 * 60 * 60;
 const MAX_ATTEMPTS = 3;
@@ -34,19 +36,28 @@ export const dispatchMailOrder = inngest.createFunction(
     if (!order || !order.user || order.status !== "submitted") {
       return { skipped: true, reason: "order missing or not submitted" };
     }
-    if (!order.frontFileKey || !order.listFileKey || !order.summaryPdfKey) {
+    const artworkFiles = Array.isArray(order.artworkFiles)
+      ? (order.artworkFiles as unknown as ArtworkFile[])
+      : [];
+    if (!order.listFileKey || !order.summaryPdfKey || artworkFiles.length === 0) {
       await markFailed(orderId, "Order missing one or more file keys");
       return { skipped: true, reason: "missing file keys" };
     }
 
     const signed = await step.run("sign-urls", async () => {
-      const [summary, front, list, back] = await Promise.all([
+      const [summary, list] = await Promise.all([
         getSignedUrl(order.summaryPdfKey!, SIGNED_URL_TTL_SECONDS),
-        getSignedUrl(order.frontFileKey!, SIGNED_URL_TTL_SECONDS),
         getSignedUrl(order.listFileKey!, SIGNED_URL_TTL_SECONDS),
-        order.backFileKey ? getSignedUrl(order.backFileKey, SIGNED_URL_TTL_SECONDS) : Promise.resolve(null),
       ]);
-      return { summary, front, list, back };
+      const artworkLinks: ArtworkLink[] = await Promise.all(
+        artworkFiles.map(async (f) => ({
+          id: f.id,
+          name: f.name,
+          fileName: f.fileName,
+          url: await getSignedUrl(f.fileKey, SIGNED_URL_TTL_SECONDS),
+        })),
+      );
+      return { summary, list, artworkLinks };
     });
 
     const agentName = `${order.user.firstName} ${order.user.lastName}`.trim() || order.user.email;
@@ -79,7 +90,8 @@ export const dispatchMailOrder = inngest.createFunction(
           listRowCount: order.listRowCount,
           returnAddress: order.returnAddress as unknown as ReturnAddress,
           specialInstructions: order.specialInstructions,
-          signedUrls: signed,
+          signedUrls: { summary: signed.summary, list: signed.list },
+          artworkLinks: signed.artworkLinks,
         });
 
         await prisma.mailOrderDispatchLog.create({

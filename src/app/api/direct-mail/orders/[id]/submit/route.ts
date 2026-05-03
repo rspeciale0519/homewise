@@ -53,8 +53,7 @@ export async function POST(
     returnAddress: order.returnAddress,
     quantity: order.quantity,
     specialInstructions: order.specialInstructions,
-    frontFileKey: order.frontFileKey,
-    backFileKey: order.backFileKey,
+    artworkFiles: order.artworkFiles,
     listFileKey: order.listFileKey,
     listRowCount: order.listRowCount,
     complianceConfirmed: order.complianceConfirmed,
@@ -92,11 +91,8 @@ export async function POST(
       listRowCount: order.listRowCount,
       returnAddress: order.returnAddress as unknown as ReturnAddress,
       specialInstructions: order.specialInstructions,
-      fileRefs: {
-        front: basename(order.frontFileKey),
-        back: order.backFileKey ? basename(order.backFileKey) : null,
-        list: basename(order.listFileKey),
-      },
+      artworkFiles: parsed.data.artworkFiles,
+      listFileName: basename(order.listFileKey),
     }) as ReactElement<DocumentProps>,
   );
 

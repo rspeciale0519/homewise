@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
+import { nanoid } from "nanoid";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { uploadOrderFile, getSignedUrl } from "@/lib/direct-mail/storage";
+import {
+  artworkFileKeyFor,
+  copyToKey,
+  fileKeyFor,
+  getSignedUrl,
+} from "@/lib/direct-mail/storage";
+import type { ArtworkFile } from "@/lib/direct-mail/types";
 
 export async function POST(
   req: Request,
@@ -54,44 +61,50 @@ export async function POST(
     select: { id: true },
   });
 
-  if (source.frontFileKey) {
-    await copyKey(source.frontFileKey, draft.id, "front");
-  }
-  if (source.backFileKey) {
-    await copyKey(source.backFileKey, draft.id, "back");
-  }
-  if (includeList && source.listFileKey) {
-    await copyKey(source.listFileKey, draft.id, "list");
+  const sourceArtwork = Array.isArray(source.artworkFiles)
+    ? (source.artworkFiles as unknown as ArtworkFile[])
+    : [];
+
+  const newArtwork: ArtworkFile[] = [];
+  for (const f of sourceArtwork) {
+    const newId = nanoid(12);
+    const newKey = artworkFileKeyFor(draft.id, newId, ext(f.fileKey));
+    await copyKey(f.fileKey, newKey, f.mimeType);
+    newArtwork.push({
+      id: newId,
+      name: f.name,
+      fileKey: newKey,
+      fileName: f.fileName,
+      byteSize: f.byteSize,
+      mimeType: f.mimeType,
+      warnings: f.warnings,
+    });
   }
 
-  const data: {
-    frontFileKey?: string;
-    backFileKey?: string;
-    listFileKey?: string;
-  } = {};
-  if (source.frontFileKey) data.frontFileKey = `${draft.id}/front.${ext(source.frontFileKey)}`;
-  if (source.backFileKey) data.backFileKey = `${draft.id}/back.${ext(source.backFileKey)}`;
+  let listFileKey: string | null = null;
   if (includeList && source.listFileKey) {
-    data.listFileKey = `${draft.id}/list.${ext(source.listFileKey)}`;
+    const newListKey = fileKeyFor(draft.id, "list", ext(source.listFileKey));
+    await copyKey(source.listFileKey, newListKey, "text/csv");
+    listFileKey = newListKey;
   }
-  if (Object.keys(data).length > 0) {
-    await prisma.mailOrder.update({ where: { id: draft.id }, data });
-  }
+
+  await prisma.mailOrder.update({
+    where: { id: draft.id },
+    data: {
+      artworkFiles: newArtwork as unknown as object,
+      ...(listFileKey ? { listFileKey } : {}),
+    },
+  });
 
   return NextResponse.json({ orderId: draft.id });
 }
 
-async function copyKey(srcKey: string, newOrderId: string, slot: "front" | "back" | "list") {
+async function copyKey(srcKey: string, destKey: string, mimeType: string) {
   const url = await getSignedUrl(srcKey, 60);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch source file ${srcKey}: ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
-  const mime = res.headers.get("content-type") ?? "application/octet-stream";
-  await uploadOrderFile(newOrderId, slot, {
-    buffer: buf,
-    mimeType: mime,
-    ext: ext(srcKey),
-  });
+  await copyToKey(destKey, { buffer: buf, mimeType });
 }
 
 function ext(key: string): string {

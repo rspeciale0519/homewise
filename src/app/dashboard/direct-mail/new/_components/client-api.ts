@@ -1,6 +1,15 @@
 import type { OrderDraftPatchInput } from "@/lib/direct-mail/schemas";
-import type { ArtworkUploadResult, ListUploadResult } from "@/lib/direct-mail/types";
+import type { ListUploadResult } from "@/lib/direct-mail/types";
 import type { Workflow } from "@/lib/direct-mail/constants";
+
+export type ArtworkUploadOutcome = {
+  artworkId: string;
+  fileKey: string;
+  fileName: string;
+  byteSize: number;
+  mimeType: string;
+  warnings: string[];
+};
 
 export async function createDraft(workflow: Workflow): Promise<{ id: string }> {
   const res = await fetch("/api/direct-mail/orders", {
@@ -33,20 +42,20 @@ export async function patchDraft(
 
 export async function uploadArtwork(
   orderId: string,
-  slot: "front" | "back",
+  artworkId: string,
   file: File,
-): Promise<ArtworkUploadResult> {
+): Promise<ArtworkUploadOutcome> {
   const fd = new FormData();
   fd.append("file", file);
   const res = await fetch(
-    `/api/direct-mail/upload/artwork?orderId=${encodeURIComponent(orderId)}&slot=${slot}`,
+    `/api/direct-mail/upload/artwork?orderId=${encodeURIComponent(orderId)}&artworkId=${encodeURIComponent(artworkId)}`,
     { method: "POST", body: fd },
   );
   if (!res.ok) {
     const j = await res.json().catch(() => ({}));
     throw new Error(j.error ?? "Artwork upload failed");
   }
-  return (await res.json()) as ArtworkUploadResult;
+  return (await res.json()) as ArtworkUploadOutcome;
 }
 
 export async function uploadList(orderId: string, file: File): Promise<ListUploadResult> {

@@ -115,30 +115,24 @@ export function StepSpec({
           Return address
         </legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Name / brokerage"
-            required
-            value={ra.name}
-            onChange={(e) => patchRa({ name: e.target.value })}
-            error={errors["returnAddress.name"]}
-          />
-          <Input
-            label="Phone (optional, on file)"
-            value=""
-            disabled
-            hint="Not printed on the mailer."
-          />
+          <div className="sm:col-span-2">
+            <Input
+              label="Name / brokerage"
+              required
+              value={ra.name}
+              onChange={(e) => patchRa({ name: e.target.value })}
+              error={errors["returnAddress.name"]}
+            />
+          </div>
           <Input
             label="Address line 1"
             required
-            className="sm:col-span-2"
             value={ra.address1}
             onChange={(e) => patchRa({ address1: e.target.value })}
             error={errors["returnAddress.address1"]}
           />
           <Input
             label="Address line 2"
-            className="sm:col-span-2"
             value={ra.address2 ?? ""}
             onChange={(e) => patchRa({ address2: e.target.value })}
           />

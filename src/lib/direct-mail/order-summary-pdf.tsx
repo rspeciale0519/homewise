@@ -8,6 +8,7 @@ import {
   type Workflow,
 } from "./constants";
 import type { ReturnAddress } from "./schemas";
+import type { ArtworkFile } from "./types";
 
 Font.register({
   family: "Cormorant Garamond",
@@ -91,11 +92,8 @@ export interface OrderSummaryPdfProps {
   listRowCount: number;
   returnAddress: ReturnAddress;
   specialInstructions: string | null;
-  fileRefs: {
-    front: string;
-    back: string | null;
-    list: string;
-  };
+  artworkFiles: ArtworkFile[];
+  listFileName: string;
 }
 
 export function OrderSummaryPdf(props: OrderSummaryPdfProps) {
@@ -148,11 +146,16 @@ export function OrderSummaryPdf(props: OrderSummaryPdfProps) {
           <Row label="City/State/ZIP" value={`${props.returnAddress.city}, ${props.returnAddress.state} ${props.returnAddress.zip}`} />
         </View>
 
-        <Text style={s.sectionLabel}>Files</Text>
+        <Text style={s.sectionLabel}>Artwork files</Text>
         <View style={s.block}>
-          <Row label="Front artwork" value={props.fileRefs.front} />
-          <Row label="Back artwork" value={props.fileRefs.back ?? "None (single-sided)"} />
-          <Row label="Mailing list" value={props.fileRefs.list} />
+          {props.artworkFiles.map((f) => (
+            <Row key={f.id} label={f.name} value={f.fileName} />
+          ))}
+        </View>
+
+        <Text style={s.sectionLabel}>Mailing list</Text>
+        <View style={s.block}>
+          <Row label="CSV file" value={props.listFileName} />
         </View>
 
         {props.specialInstructions && (

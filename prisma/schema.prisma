@@ -1169,8 +1169,7 @@ model MailOrder {
 
   returnAddress Json?
 
-  frontFileKey   String?
-  backFileKey    String?
+  artworkFiles   Json     @default("[]")
   listFileKey    String?
   summaryPdfKey  String?
 

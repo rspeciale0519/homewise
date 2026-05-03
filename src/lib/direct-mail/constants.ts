@@ -85,6 +85,8 @@ export function mailClassLabel(c: MailClass): string {
 }
 
 export const MAX_ARTWORK_BYTES = 50 * 1024 * 1024;
+export const MAX_ARTWORK_FILES_PER_ORDER = 25;
+export const ARTWORK_INITIAL_ROWS = 3;
 export const MAX_LIST_ROWS = 50_000;
 export const MAX_LIST_BYTES = 25 * 1024 * 1024;
 
@@ -93,7 +95,11 @@ export const ACCEPTED_ARTWORK_MIME = [
   "image/png",
   "image/jpeg",
   "image/jpg",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
+
+export const ARTWORK_ACCEPT_HINT = "PDF, PNG, JPG, or Word (.doc / .docx)";
 
 export const RESEND_RATE_LIMIT_MS = 5 * 60 * 1000;
 

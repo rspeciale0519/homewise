@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { nanoid } from "nanoid";
 import {
   stepArtworkSchema,
   stepBasicsSchema,
@@ -9,23 +10,34 @@ import {
   stepReviewSchema,
   stepSpecSchema,
 } from "@/lib/direct-mail/schemas";
-import type { Workflow } from "@/lib/direct-mail/constants";
-import type { DraftState, ListUploadResult } from "@/lib/direct-mail/types";
+import {
+  ARTWORK_INITIAL_ROWS,
+  MAX_ARTWORK_FILES_PER_ORDER,
+  type Workflow,
+} from "@/lib/direct-mail/constants";
+import type {
+  ArtworkFile,
+  ArtworkRow,
+  DraftState,
+  ListUploadResult,
+} from "@/lib/direct-mail/types";
 import { WizardShell } from "./wizard-shell";
 import { StepBasics } from "./step-basics";
 import { StepSpec } from "./step-spec";
 import { StepArtwork } from "./step-artwork";
 import { StepList } from "./step-list";
 import { StepReview } from "./step-review";
-import type { ArtworkUploadResult } from "@/lib/direct-mail/types";
-import {
-  createDraft,
-  patchDraft,
-  uploadArtwork,
-  uploadList,
-} from "./client-api";
+import { createDraft, patchDraft, uploadArtwork, uploadList } from "./client-api";
 
 type Errors = Partial<Record<string, string>>;
+
+function makeEmptyRow(): ArtworkRow {
+  return { id: nanoid(12), name: "", upload: null };
+}
+
+function initialArtworkRows(): ArtworkRow[] {
+  return Array.from({ length: ARTWORK_INITIAL_ROWS }, makeEmptyRow);
+}
 
 function emptyDraft(workflow: Workflow): DraftState {
   return {
@@ -42,8 +54,7 @@ function emptyDraft(workflow: Workflow): DraftState {
     quantity: 0,
     listRowCount: 0,
     specialInstructions: null,
-    frontFileKey: null,
-    backFileKey: null,
+    artworkRows: initialArtworkRows(),
     listFileKey: null,
     complianceConfirmed: false,
   };
@@ -70,7 +81,6 @@ export function Wizard({
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const orderIdRef = useRef<string>(initialDraft?.id ?? "");
 
-  // Lazily create the draft order on first interaction
   async function ensureOrderId(): Promise<string> {
     if (orderIdRef.current) return orderIdRef.current;
     const { id } = await createDraft(draft.workflow);
@@ -85,7 +95,7 @@ export function Wizard({
 
   async function persist(partial: Partial<DraftState>): Promise<void> {
     const id = await ensureOrderId();
-    await patchDraft(id, partialToServer(partial));
+    await patchDraft(id, partialToServer({ ...draft, ...partial }));
   }
 
   async function handleNext() {
@@ -162,26 +172,66 @@ export function Wizard({
     }
   }
 
-  async function handleArtworkUpload(
-    slot: "front" | "back",
-    file: File,
-  ): Promise<ArtworkUploadResult> {
+  async function handleArtworkUpload(artworkId: string, file: File): Promise<ArtworkRow> {
     const id = await ensureOrderId();
-    const result = await uploadArtwork(id, slot, file);
-    const patch: Partial<DraftState> =
-      slot === "front"
-        ? { frontFileKey: result.fileKey }
-        : { backFileKey: result.fileKey };
-    patchLocal(patch);
-    await persist(patch);
-    return result;
+    const result = await uploadArtwork(id, artworkId, file);
+    let updatedRow: ArtworkRow | null = null;
+    setDraft((d) => {
+      const rows = d.artworkRows.map((r) => {
+        if (r.id !== artworkId) return r;
+        const next: ArtworkRow = {
+          ...r,
+          upload: {
+            fileKey: result.fileKey,
+            fileName: result.fileName,
+            byteSize: result.byteSize,
+            mimeType: result.mimeType,
+            warnings: result.warnings,
+          },
+        };
+        updatedRow = next;
+        return next;
+      });
+      return { ...d, artworkRows: rows };
+    });
+    await patchDraft(id, {
+      artworkFiles: rowsToArtworkFiles(replaceRow(draft.artworkRows, artworkId, updatedRow)),
+    });
+    return updatedRow ?? draft.artworkRows.find((r) => r.id === artworkId)!;
   }
 
-  async function handleArtworkRemove(slot: "front" | "back") {
-    const patch: Partial<DraftState> =
-      slot === "front" ? { frontFileKey: null } : { backFileKey: null };
-    patchLocal(patch);
-    await persist(patch);
+  async function handleArtworkFileRemove(artworkId: string) {
+    const id = await ensureOrderId();
+    setDraft((d) => ({
+      ...d,
+      artworkRows: d.artworkRows.map((r) => (r.id === artworkId ? { ...r, upload: null } : r)),
+    }));
+    await patchDraft(id, {
+      artworkFiles: rowsToArtworkFiles(
+        draft.artworkRows.map((r) => (r.id === artworkId ? { ...r, upload: null } : r)),
+      ),
+    });
+  }
+
+  function handleArtworkRename(artworkId: string, name: string) {
+    setDraft((d) => ({
+      ...d,
+      artworkRows: d.artworkRows.map((r) => (r.id === artworkId ? { ...r, name } : r)),
+    }));
+  }
+
+  function handleAddArtworkRow() {
+    setDraft((d) => {
+      if (d.artworkRows.length >= MAX_ARTWORK_FILES_PER_ORDER) return d;
+      return { ...d, artworkRows: [...d.artworkRows, makeEmptyRow()] };
+    });
+  }
+
+  function handleRemoveArtworkRow(artworkId: string) {
+    setDraft((d) => {
+      if (d.artworkRows.length <= 1) return d;
+      return { ...d, artworkRows: d.artworkRows.filter((r) => r.id !== artworkId) };
+    });
   }
 
   async function handleListUpload(file: File): Promise<ListUploadResult> {
@@ -212,7 +262,6 @@ export function Wizard({
     return "Continue →";
   }, [draft.currentStep]);
 
-  // Persist field-level edits with a debounce
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (!orderIdRef.current) return;
@@ -245,7 +294,10 @@ export function Wizard({
         <StepArtwork
           draft={draft}
           onUpload={handleArtworkUpload}
-          onRemove={handleArtworkRemove}
+          onRemove={handleArtworkFileRemove}
+          onRename={handleArtworkRename}
+          onAddRow={handleAddArtworkRow}
+          onRemoveRow={handleRemoveArtworkRow}
           errors={errors}
         />
       )}
@@ -263,6 +315,25 @@ export function Wizard({
       )}
     </WizardShell>
   );
+}
+
+function replaceRow(rows: ArtworkRow[], id: string, replacement: ArtworkRow | null): ArtworkRow[] {
+  if (!replacement) return rows;
+  return rows.map((r) => (r.id === id ? replacement : r));
+}
+
+export function rowsToArtworkFiles(rows: ArtworkRow[]): ArtworkFile[] {
+  return rows
+    .filter((r) => r.upload && r.name.trim().length > 0)
+    .map((r) => ({
+      id: r.id,
+      name: r.name.trim(),
+      fileKey: r.upload!.fileKey,
+      fileName: r.upload!.fileName,
+      byteSize: r.upload!.byteSize,
+      mimeType: r.upload!.mimeType,
+      warnings: r.upload!.warnings,
+    }));
 }
 
 function validateStep(draft: DraftState): Errors {
@@ -287,9 +358,17 @@ function validateStep(draft: DraftState): Errors {
       return r.success ? {} : zodToErrors(r.error.issues);
     }
     case 3: {
+      const errs: Errors = {};
+      const incomplete = draft.artworkRows.findIndex(
+        (r) => (r.upload && r.name.trim().length === 0) || (!r.upload && r.name.trim().length > 0),
+      );
+      if (incomplete >= 0) {
+        errs[`artworkFiles.${incomplete}`] =
+          "Each row needs a description AND a file. Remove the row or finish it.";
+        return errs;
+      }
       const r = stepArtworkSchema.safeParse({
-        frontFileKey: draft.frontFileKey,
-        backFileKey: draft.backFileKey,
+        artworkFiles: rowsToArtworkFiles(draft.artworkRows),
       });
       return r.success ? {} : zodToErrors(r.error.issues);
     }
@@ -334,8 +413,7 @@ function partialToServer(d: Partial<DraftState>) {
     quantity: d.quantity,
     listRowCount: d.listRowCount,
     specialInstructions: d.specialInstructions,
-    frontFileKey: d.frontFileKey,
-    backFileKey: d.backFileKey,
+    artworkFiles: d.artworkRows ? rowsToArtworkFiles(d.artworkRows) : undefined,
     listFileKey: d.listFileKey,
     complianceConfirmed: d.complianceConfirmed,
   };

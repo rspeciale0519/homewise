@@ -2,11 +2,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const STORAGE_BUCKET = process.env.DIRECT_MAIL_STORAGE_BUCKET ?? "direct-mail-orders";
 
-export type FileSlot = "front" | "back" | "list" | "summary";
+export type FileSlot = "list" | "summary" | "artwork";
 
-export function fileKeyFor(orderId: string, slot: FileSlot, ext: string): string {
-  const safeExt = ext.replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 10) || "bin";
-  return `${orderId}/${slot}.${safeExt}`;
+function safeExt(ext: string): string {
+  return ext.replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 10) || "bin";
+}
+
+export function fileKeyFor(orderId: string, slot: "list" | "summary", ext: string): string {
+  return `${orderId}/${slot}.${safeExt(ext)}`;
+}
+
+export function artworkFileKeyFor(orderId: string, artworkId: string, ext: string): string {
+  const cleanId = artworkId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) || "file";
+  return `${orderId}/artwork-${cleanId}.${safeExt(ext)}`;
 }
 
 export function extFromFileName(fileName: string): string {
@@ -24,6 +32,10 @@ export function extFromMime(mime: string): string {
     case "image/jpeg":
     case "image/jpg":
       return "jpg";
+    case "application/msword":
+      return "doc";
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      return "docx";
     case "text/csv":
     case "application/vnd.ms-excel":
       return "csv";
@@ -52,11 +64,36 @@ async function ensureBucket(): Promise<void> {
 
 export async function uploadOrderFile(
   orderId: string,
-  slot: FileSlot,
+  slot: "list" | "summary",
   file: { buffer: Buffer; mimeType: string; ext: string },
 ): Promise<string> {
   await ensureBucket();
   const key = fileKeyFor(orderId, slot, file.ext);
+  return uploadAt(key, file);
+}
+
+export async function uploadArtworkFile(
+  orderId: string,
+  artworkId: string,
+  file: { buffer: Buffer; mimeType: string; ext: string },
+): Promise<string> {
+  await ensureBucket();
+  const key = artworkFileKeyFor(orderId, artworkId, file.ext);
+  return uploadAt(key, file);
+}
+
+export async function copyToKey(
+  destKey: string,
+  file: { buffer: Buffer; mimeType: string },
+): Promise<string> {
+  await ensureBucket();
+  return uploadAt(destKey, { buffer: file.buffer, mimeType: file.mimeType, ext: "bin" });
+}
+
+async function uploadAt(
+  key: string,
+  file: { buffer: Buffer; mimeType: string; ext: string },
+): Promise<string> {
   const admin = createAdminClient();
   const { error } = await admin.storage
     .from(STORAGE_BUCKET)

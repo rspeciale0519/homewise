@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   MAIL_CLASSES,
+  MAX_ARTWORK_FILES_PER_ORDER,
   PRODUCT_TYPES,
   WORKFLOWS,
   earliestDropDate,
@@ -11,6 +12,25 @@ const trimmedString = (max = 500) =>
     .string()
     .trim()
     .max(max);
+
+export const artworkFileSchema = z.object({
+  id: z.string().min(1),
+  name: trimmedString(120).min(1, "Description is required"),
+  fileKey: z.string().min(1),
+  fileName: z.string().min(1),
+  byteSize: z.number().int().nonnegative(),
+  mimeType: z.string().min(1),
+  warnings: z.array(z.string()),
+});
+export type ArtworkFileInput = z.infer<typeof artworkFileSchema>;
+
+export const artworkFilesArraySchema = z
+  .array(artworkFileSchema)
+  .min(1, "Upload at least one artwork file")
+  .max(
+    MAX_ARTWORK_FILES_PER_ORDER,
+    `At most ${MAX_ARTWORK_FILES_PER_ORDER} artwork files per order`,
+  );
 
 export const returnAddressSchema = z.object({
   name: trimmedString(120).min(1, "Name is required"),
@@ -52,8 +72,7 @@ export const stepSpecSchema = z.object({
 export type StepSpecInput = z.infer<typeof stepSpecSchema>;
 
 export const stepArtworkSchema = z.object({
-  frontFileKey: z.string().min(1, "Upload the front artwork"),
-  backFileKey: z.string().optional().nullable(),
+  artworkFiles: artworkFilesArraySchema,
 });
 export type StepArtworkInput = z.infer<typeof stepArtworkSchema>;
 
@@ -88,8 +107,10 @@ export const orderDraftPatchSchema = z.object({
   returnAddress: returnAddressSchema.optional().nullable(),
   quantity: z.number().int().nonnegative().optional(),
   specialInstructions: trimmedString(2000).optional().nullable(),
-  frontFileKey: z.string().optional().nullable(),
-  backFileKey: z.string().optional().nullable(),
+  artworkFiles: z
+    .array(artworkFileSchema)
+    .max(MAX_ARTWORK_FILES_PER_ORDER)
+    .optional(),
   listFileKey: z.string().optional().nullable(),
   listRowCount: z.number().int().nonnegative().optional(),
   complianceConfirmed: z.boolean().optional(),

@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
+import { nanoid } from "nanoid";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import {
   ACCEPTED_ARTWORK_MIME,
   MAX_ARTWORK_BYTES,
+  MAX_ARTWORK_FILES_PER_ORDER,
 } from "@/lib/direct-mail/constants";
 import {
   extFromFileName,
   extFromMime,
-  uploadOrderFile,
+  uploadArtworkFile,
 } from "@/lib/direct-mail/storage";
 import { inspectArtwork } from "@/lib/direct-mail/artwork-validator";
-import type { ArtworkUploadResult } from "@/lib/direct-mail/types";
+import type { ArtworkFile } from "@/lib/direct-mail/types";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -28,21 +30,29 @@ export async function POST(req: Request) {
 
   const url = new URL(req.url);
   const orderId = url.searchParams.get("orderId") ?? "";
-  const slot = url.searchParams.get("slot");
+  const artworkId = url.searchParams.get("artworkId") || nanoid(12);
   if (!orderId) return NextResponse.json({ error: "orderId required" }, { status: 400 });
-  if (slot !== "front" && slot !== "back") {
-    return NextResponse.json({ error: "slot must be 'front' or 'back'" }, { status: 400 });
-  }
 
   const order = await prisma.mailOrder.findUnique({
     where: { id: orderId },
-    select: { id: true, userId: true, status: true, productSize: true },
+    select: { id: true, userId: true, status: true, productSize: true, artworkFiles: true },
   });
   if (!order || order.userId !== profile.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   if (order.status !== "draft") {
     return NextResponse.json({ error: "Submitted orders cannot accept new files" }, { status: 409 });
+  }
+
+  const existing = Array.isArray(order.artworkFiles)
+    ? (order.artworkFiles as unknown as ArtworkFile[])
+    : [];
+  const isReplacing = existing.some((f) => f.id === artworkId);
+  if (!isReplacing && existing.length >= MAX_ARTWORK_FILES_PER_ORDER) {
+    return NextResponse.json(
+      { error: `At most ${MAX_ARTWORK_FILES_PER_ORDER} artwork files per order.` },
+      { status: 409 },
+    );
   }
 
   let formData: FormData;
@@ -59,7 +69,7 @@ export async function POST(req: Request) {
 
   if (!ACCEPTED_ARTWORK_MIME.includes(file.type as (typeof ACCEPTED_ARTWORK_MIME)[number])) {
     return NextResponse.json(
-      { error: `Unsupported file type: ${file.type || "unknown"}. Use PDF, PNG, or JPG.` },
+      { error: `Unsupported file type: ${file.type || "unknown"}. Use PDF, PNG, JPG, or Word (.doc / .docx).` },
       { status: 415 },
     );
   }
@@ -75,19 +85,18 @@ export async function POST(req: Request) {
 
   const inspection = await inspectArtwork(buffer, file.type, order.productSize);
 
-  const fileKey = await uploadOrderFile(orderId, slot, {
+  const fileKey = await uploadArtworkFile(orderId, artworkId, {
     buffer,
     mimeType: file.type,
     ext,
   });
 
-  const result: ArtworkUploadResult = {
+  return NextResponse.json({
+    artworkId,
     fileKey,
     fileName: file.name,
     byteSize: file.size,
     mimeType: file.type,
     warnings: inspection.warnings,
-  };
-
-  return NextResponse.json(result);
+  });
 }

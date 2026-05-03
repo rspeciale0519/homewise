@@ -17,7 +17,7 @@ export async function POST(
       id: true,
       status: true,
       summaryPdfKey: true,
-      frontFileKey: true,
+      artworkFiles: true,
       listFileKey: true,
     },
   });
@@ -25,7 +25,8 @@ export async function POST(
   if (order.status !== "submitted") {
     return NextResponse.json({ error: "Only submitted orders can be retried" }, { status: 409 });
   }
-  if (!order.summaryPdfKey || !order.frontFileKey || !order.listFileKey) {
+  const artworkLen = Array.isArray(order.artworkFiles) ? order.artworkFiles.length : 0;
+  if (!order.summaryPdfKey || !order.listFileKey || artworkLen === 0) {
     return NextResponse.json({ error: "Order missing required files" }, { status: 409 });
   }
 

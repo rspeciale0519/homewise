@@ -79,8 +79,7 @@ export async function PATCH(
   if (p.returnAddress !== undefined) data.returnAddress = p.returnAddress as Prisma.InputJsonValue;
   if (p.quantity !== undefined) data.quantity = p.quantity;
   if (p.specialInstructions !== undefined) data.specialInstructions = p.specialInstructions;
-  if (p.frontFileKey !== undefined) data.frontFileKey = p.frontFileKey;
-  if (p.backFileKey !== undefined) data.backFileKey = p.backFileKey;
+  if (p.artworkFiles !== undefined) data.artworkFiles = p.artworkFiles as unknown as Prisma.InputJsonValue;
   if (p.listFileKey !== undefined) data.listFileKey = p.listFileKey;
   if (p.listRowCount !== undefined) data.listRowCount = p.listRowCount;
   if (p.complianceConfirmed !== undefined) data.complianceConfirmed = p.complianceConfirmed;

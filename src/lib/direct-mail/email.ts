@@ -9,6 +9,13 @@ import {
 } from "./constants";
 import type { ReturnAddress } from "./schemas";
 
+export type ArtworkLink = {
+  id: string;
+  name: string;
+  fileName: string;
+  url: string;
+};
+
 const FROM_EMAIL =
   process.env.HOMEWISE_DIRECT_MAIL_FROM_EMAIL ??
   "Homewise Direct Mail <direct-mail@email.homewisefl.com>";
@@ -35,10 +42,9 @@ export interface OrderEmailInput {
   specialInstructions: string | null;
   signedUrls: {
     summary: string;
-    front: string;
-    back: string | null;
     list: string;
   };
+  artworkLinks: ArtworkLink[];
 }
 
 export async function sendOrderToYls(
@@ -84,9 +90,12 @@ function buildOrderHtml(input: OrderEmailInput): string {
       ? `Campaign: ${escapeHtml(input.campaignName)}`
       : "Custom direct mail order";
   const ra = input.returnAddress;
-  const back = input.signedUrls.back
-    ? `<li><strong>Back artwork:</strong> <a href="${input.signedUrls.back}">Download</a></li>`
-    : `<li><strong>Back artwork:</strong> Single-sided (no back file)</li>`;
+  const artworkItems = input.artworkLinks
+    .map(
+      (a) =>
+        `<li><strong>${escapeHtml(a.name)}:</strong> <a href="${a.url}">${escapeHtml(a.fileName)}</a></li>`,
+    )
+    .join("");
 
   return `<!DOCTYPE html>
 <html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#334155;background:#f8fafc;padding:20px">
@@ -117,12 +126,15 @@ function buildOrderHtml(input: OrderEmailInput): string {
       <div>${escapeHtml(ra.address1)}${ra.address2 ? `, ${escapeHtml(ra.address2)}` : ""}</div>
       <div>${escapeHtml(ra.city)}, ${escapeHtml(ra.state)} ${escapeHtml(ra.zip)}</div>
 
-      <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Files (links expire in 30 days)</h3>
+      <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Order summary &amp; mailing list (links expire in 30 days)</h3>
       <ul style="margin:0;padding-left:18px">
         <li><strong>Order summary PDF:</strong> <a href="${input.signedUrls.summary}">Download</a></li>
-        <li><strong>Front artwork:</strong> <a href="${input.signedUrls.front}">Download</a></li>
-        ${back}
         <li><strong>Mailing list (CSV):</strong> <a href="${input.signedUrls.list}">Download</a></li>
+      </ul>
+
+      <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Artwork files (${input.artworkLinks.length})</h3>
+      <ul style="margin:0;padding-left:18px">
+        ${artworkItems}
       </ul>
 
       ${

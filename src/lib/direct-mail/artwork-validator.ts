@@ -31,6 +31,12 @@ export async function inspectArtwork(
     case "image/jpg":
       inspection = inspectJpg(buffer);
       break;
+    case "application/msword":
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      // Word documents — YLS team converts to print-ready format on their end.
+      // No DPI/dimension inspection possible (they're documents, not raster art).
+      inspection = { warnings: [] };
+      break;
     default:
       inspection = { warnings: [`Skipping inspection — unsupported type: ${mimeType}`] };
   }

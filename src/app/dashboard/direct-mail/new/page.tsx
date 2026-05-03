@@ -3,10 +3,37 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { ADDRESS, SITE_NAME } from "@/lib/constants";
-import { workflowFromSlug, workflowLabel } from "@/lib/direct-mail/constants";
-import type { DraftState } from "@/lib/direct-mail/types";
+import {
+  ARTWORK_INITIAL_ROWS,
+  workflowFromSlug,
+  workflowLabel,
+} from "@/lib/direct-mail/constants";
+import type { ArtworkFile, ArtworkRow, DraftState } from "@/lib/direct-mail/types";
 import { YlsPill } from "../_components/yls-pill";
 import { Wizard } from "./_components/wizard";
+
+function nanoLikeId(): string {
+  return Math.random().toString(36).slice(2, 14);
+}
+
+function artworkRowsFromFiles(files: unknown): ArtworkRow[] {
+  const arr = Array.isArray(files) ? (files as ArtworkFile[]) : [];
+  const rows: ArtworkRow[] = arr.map((f) => ({
+    id: f.id,
+    name: f.name,
+    upload: {
+      fileKey: f.fileKey,
+      fileName: f.fileName,
+      byteSize: f.byteSize,
+      mimeType: f.mimeType,
+      warnings: f.warnings ?? [],
+    },
+  }));
+  while (rows.length < ARTWORK_INITIAL_ROWS) {
+    rows.push({ id: nanoLikeId(), name: "", upload: null });
+  }
+  return rows;
+}
 
 const DEFAULT_RETURN_ADDRESS = {
   name: SITE_NAME,
@@ -49,8 +76,7 @@ export default async function NewMailOrderPage({
         quantity: true,
         listRowCount: true,
         specialInstructions: true,
-        frontFileKey: true,
-        backFileKey: true,
+        artworkFiles: true,
         listFileKey: true,
         complianceConfirmed: true,
       },
@@ -74,8 +100,7 @@ export default async function NewMailOrderPage({
       quantity: order.quantity,
       listRowCount: order.listRowCount,
       specialInstructions: order.specialInstructions,
-      frontFileKey: order.frontFileKey,
-      backFileKey: order.backFileKey,
+      artworkRows: artworkRowsFromFiles(order.artworkFiles),
       listFileKey: order.listFileKey,
       complianceConfirmed: order.complianceConfirmed,
     };
