@@ -80,8 +80,7 @@ export async function PATCH(
   if (p.quantity !== undefined) data.quantity = p.quantity;
   if (p.specialInstructions !== undefined) data.specialInstructions = p.specialInstructions;
   if (p.artworkFiles !== undefined) data.artworkFiles = p.artworkFiles as unknown as Prisma.InputJsonValue;
-  if (p.listFileKey !== undefined) data.listFileKey = p.listFileKey;
-  if (p.listRowCount !== undefined) data.listRowCount = p.listRowCount;
+  if (p.listFiles !== undefined) data.listFiles = p.listFiles as unknown as Prisma.InputJsonValue;
   if (p.complianceConfirmed !== undefined) data.complianceConfirmed = p.complianceConfirmed;
 
   const updated = await prisma.mailOrder.update({

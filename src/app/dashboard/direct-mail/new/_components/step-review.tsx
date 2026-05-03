@@ -58,15 +58,8 @@ export function StepReview({
           label="Artwork files"
           value={artworkSummary(draft)}
         />
-        <Row
-          label="Mailing list"
-          value={
-            draft.listFileKey
-              ? `${draft.listRowCount.toLocaleString()} recipients`
-              : "—"
-          }
-        />
-        <Row label="Quantity" value={draft.quantity.toLocaleString()} />
+        <Row label="Mailing lists" value={listSummary(draft)} />
+        <Row label="Total recipients" value={totalRecipients(draft).toLocaleString()} />
         {draft.specialInstructions && (
           <Row label="Special instructions" value={draft.specialInstructions} />
         )}
@@ -108,4 +101,28 @@ function artworkSummary(draft: DraftState): string {
   );
   if (completed.length === 0) return "—";
   return completed.map((r) => `• ${r.name} (${r.upload!.fileName})`).join("\n");
+}
+
+function listSummary(draft: DraftState): string {
+  const completed = draft.listRows.filter(
+    (r) => r.upload && r.name.trim().length > 0,
+  );
+  if (completed.length === 0) return "—";
+  return completed
+    .map((r) => {
+      const u = r.upload!;
+      const kept = u.columns.length - r.excludedColumns.length;
+      const colNote =
+        r.excludedColumns.length > 0
+          ? ` · ${kept} of ${u.columns.length} columns sent`
+          : ` · ${u.columns.length} columns`;
+      return `• ${r.name} (${u.rowCount.toLocaleString()} rows${colNote})`;
+    })
+    .join("\n");
+}
+
+function totalRecipients(draft: DraftState): number {
+  return draft.listRows
+    .filter((r) => r.status === "uploaded" && r.upload)
+    .reduce((sum, r) => sum + r.upload!.rowCount, 0);
 }

@@ -51,7 +51,7 @@ export default async function DirectMailHubPage() {
         workflow: true,
         productType: true,
         productSize: true,
-        listRowCount: true,
+        listFiles: true,
         submittedAt: true,
         emailStatus: true,
       },
@@ -143,7 +143,7 @@ export default async function DirectMailHubPage() {
                     <p className="text-xs text-slate-500 mt-0.5">
                       {order.submittedAt ? formatStamp(order.submittedAt) : "—"}
                       {" · "}
-                      {order.listRowCount.toLocaleString()} recipient{order.listRowCount === 1 ? "" : "s"}
+                      {totalListRecipients(order.listFiles).toLocaleString()} recipient{totalListRecipients(order.listFiles) === 1 ? "" : "s"}
                     </p>
                   </div>
                   <StatusPill emailStatus={order.emailStatus} />
@@ -154,6 +154,14 @@ export default async function DirectMailHubPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function totalListRecipients(listFiles: unknown): number {
+  if (!Array.isArray(listFiles)) return 0;
+  return (listFiles as Array<{ rowCount?: number }>).reduce(
+    (sum, l) => sum + (l.rowCount ?? 0),
+    0,
   );
 }
 

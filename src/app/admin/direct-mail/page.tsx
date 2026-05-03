@@ -135,7 +135,7 @@ export default async function AdminDirectMailPage() {
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Sent {fmt(o.lastDispatchedAt ?? o.submittedAt)} ·{" "}
-                    {o.listRowCount.toLocaleString()} recipients
+                    {totalListRecipients(o.listFiles).toLocaleString()} recipients
                   </p>
                 </div>
                 <Link
@@ -181,6 +181,14 @@ function EmptyState({ children }: { children: React.ReactNode }) {
     <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
       <p className="text-sm text-slate-500">{children}</p>
     </div>
+  );
+}
+
+function totalListRecipients(listFiles: unknown): number {
+  if (!Array.isArray(listFiles)) return 0;
+  return (listFiles as Array<{ rowCount?: number }>).reduce(
+    (sum, l) => sum + (l.rowCount ?? 0),
+    0,
   );
 }
 

@@ -11,7 +11,7 @@ export type SubmittedRow = {
   workflow: string;
   productType: string | null;
   productSize: string | null;
-  listRowCount: number;
+  totalRecipients: number;
   dropDate: string | null;
   submittedAt: string | null;
   emailStatus: string;
@@ -108,7 +108,7 @@ function SubmittedTab({ rows }: { rows: SubmittedRow[] }) {
               <p className="text-xs text-slate-500 mt-0.5">
                 {row.submittedAt ? formatStamp(row.submittedAt) : "—"}
                 {" · "}
-                {row.listRowCount.toLocaleString()} recipient{row.listRowCount === 1 ? "" : "s"}
+                {row.totalRecipients.toLocaleString()} recipient{row.totalRecipients === 1 ? "" : "s"}
                 {row.dropDate ? ` · drop ${formatDate(row.dropDate)}` : ""}
               </p>
             </div>

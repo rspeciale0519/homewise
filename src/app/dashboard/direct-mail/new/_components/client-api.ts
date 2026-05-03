@@ -1,5 +1,5 @@
 import type { OrderDraftPatchInput } from "@/lib/direct-mail/schemas";
-import type { ListUploadResult } from "@/lib/direct-mail/types";
+import type { ListUploadOutcome } from "@/lib/direct-mail/types";
 import type { Workflow } from "@/lib/direct-mail/constants";
 
 export type ArtworkUploadOutcome = {
@@ -137,16 +137,69 @@ function parseXhrError(xhr: XMLHttpRequest): string | null {
   }
 }
 
-export async function uploadList(orderId: string, file: File): Promise<ListUploadResult> {
-  const fd = new FormData();
-  fd.append("file", file);
-  const res = await fetch(
-    `/api/direct-mail/upload/list?orderId=${encodeURIComponent(orderId)}`,
-    { method: "POST", body: fd },
-  );
-  if (!res.ok) {
-    const j = await res.json().catch(() => ({}));
-    throw new Error(j.error ?? "List upload failed");
-  }
-  return (await res.json()) as ListUploadResult;
+export function uploadListWithProgress(
+  orderId: string,
+  listId: string,
+  file: File,
+  callbacks: ArtworkUploadCallbacks,
+): { promise: Promise<ListUploadOutcome>; abort: () => void } {
+  let activeXhr: XMLHttpRequest | null = null;
+  const promise = (async (): Promise<ListUploadOutcome> => {
+    const sign = await fetchJson<{ fileKey: string; signedUrl: string; token: string }>(
+      "/api/direct-mail/upload/list/sign",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          listId,
+          fileName: file.name,
+          mimeType: file.type || "text/csv",
+          byteSize: file.size,
+        }),
+      },
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      activeXhr = xhr;
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+          callbacks.onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      });
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          callbacks.onProgress(100);
+          resolve();
+        } else {
+          reject(new Error(parseXhrError(xhr) ?? `Storage upload failed (HTTP ${xhr.status}).`));
+        }
+      });
+      xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
+      xhr.addEventListener("abort", () => reject(new Error("Upload aborted.")));
+      xhr.open("PUT", sign.signedUrl);
+      xhr.setRequestHeader("Content-Type", file.type || "text/csv");
+      xhr.send(file);
+    });
+
+    callbacks.onUploadComplete();
+
+    const finalized = await fetchJson<ListUploadOutcome>(
+      "/api/direct-mail/upload/list/finalize",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          listId,
+          fileKey: sign.fileKey,
+          fileName: file.name,
+          byteSize: file.size,
+        }),
+      },
+    );
+    return { ...finalized, listId };
+  })();
+  return { promise, abort: () => activeXhr?.abort() };
 }

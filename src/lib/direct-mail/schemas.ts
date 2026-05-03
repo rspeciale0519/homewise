@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   MAIL_CLASSES,
   MAX_ARTWORK_FILES_PER_ORDER,
+  MAX_LIST_FILES_PER_ORDER,
   PRODUCT_TYPES,
   WORKFLOWS,
   earliestDropDate,
@@ -30,6 +31,35 @@ export const artworkFilesArraySchema = z
   .max(
     MAX_ARTWORK_FILES_PER_ORDER,
     `At most ${MAX_ARTWORK_FILES_PER_ORDER} artwork files per order`,
+  );
+
+export const listFileSchema = z.object({
+  id: z.string().min(1),
+  name: trimmedString(120).min(1, "Description is required"),
+  fileKey: z.string().min(1),
+  fileName: z.string().min(1),
+  byteSize: z.number().int().nonnegative(),
+  rowCount: z.number().int().nonnegative(),
+  columns: z.array(z.string()).min(1),
+  fillPercent: z.record(z.string(), z.number()),
+  excludedColumns: z.array(z.string()),
+  warnings: z.array(z.string()),
+});
+export type ListFileInput = z.infer<typeof listFileSchema>;
+
+export const listFilesArraySchema = z
+  .array(listFileSchema)
+  .min(1, "Upload at least one mailing list")
+  .max(
+    MAX_LIST_FILES_PER_ORDER,
+    `At most ${MAX_LIST_FILES_PER_ORDER} mailing lists per order`,
+  )
+  .refine(
+    (lists) =>
+      lists.every(
+        (l) => l.columns.length - l.excludedColumns.length >= 1,
+      ),
+    { message: "Each list must keep at least one column" },
   );
 
 export const returnAddressSchema = z.object({
@@ -77,9 +107,7 @@ export const stepArtworkSchema = z.object({
 export type StepArtworkInput = z.infer<typeof stepArtworkSchema>;
 
 export const stepListSchema = z.object({
-  listFileKey: z.string().min(1, "Upload your mailing list"),
-  listRowCount: z.number().int().nonnegative(),
-  quantity: z.number().int().positive("Quantity must be at least 1"),
+  listFiles: listFilesArraySchema,
 });
 export type StepListInput = z.infer<typeof stepListSchema>;
 
@@ -111,8 +139,10 @@ export const orderDraftPatchSchema = z.object({
     .array(artworkFileSchema)
     .max(MAX_ARTWORK_FILES_PER_ORDER)
     .optional(),
-  listFileKey: z.string().optional().nullable(),
-  listRowCount: z.number().int().nonnegative().optional(),
+  listFiles: z
+    .array(listFileSchema)
+    .max(MAX_LIST_FILES_PER_ORDER)
+    .optional(),
   complianceConfirmed: z.boolean().optional(),
 });
 export type OrderDraftPatchInput = z.infer<typeof orderDraftPatchSchema>;

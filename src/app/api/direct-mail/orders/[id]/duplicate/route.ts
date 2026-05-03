@@ -5,10 +5,10 @@ import { prisma } from "@/lib/prisma";
 import {
   artworkFileKeyFor,
   copyToKey,
-  fileKeyFor,
   getSignedUrl,
+  listFileKeyFor,
 } from "@/lib/direct-mail/storage";
-import type { ArtworkFile } from "@/lib/direct-mail/types";
+import type { ArtworkFile, ListFile } from "@/lib/direct-mail/types";
 
 export async function POST(
   req: Request,
@@ -54,7 +54,6 @@ export async function POST(
       dropDate: null,
       returnAddress: source.returnAddress ?? undefined,
       quantity: includeList ? source.quantity : 0,
-      listRowCount: includeList ? source.listRowCount : 0,
       specialInstructions: source.specialInstructions,
       complianceConfirmed: false,
     },
@@ -81,18 +80,35 @@ export async function POST(
     });
   }
 
-  let listFileKey: string | null = null;
-  if (includeList && source.listFileKey) {
-    const newListKey = fileKeyFor(draft.id, "list", ext(source.listFileKey));
-    await copyKey(source.listFileKey, newListKey, "text/csv");
-    listFileKey = newListKey;
+  const newLists: ListFile[] = [];
+  if (includeList) {
+    const sourceLists = Array.isArray(source.listFiles)
+      ? (source.listFiles as unknown as ListFile[])
+      : [];
+    for (const l of sourceLists) {
+      const newId = nanoid(12);
+      const newKey = listFileKeyFor(draft.id, newId);
+      await copyKey(l.fileKey, newKey, "text/csv");
+      newLists.push({
+        id: newId,
+        name: l.name,
+        fileKey: newKey,
+        fileName: l.fileName,
+        byteSize: l.byteSize,
+        rowCount: l.rowCount,
+        columns: l.columns,
+        fillPercent: l.fillPercent,
+        excludedColumns: l.excludedColumns,
+        warnings: l.warnings,
+      });
+    }
   }
 
   await prisma.mailOrder.update({
     where: { id: draft.id },
     data: {
       artworkFiles: newArtwork as unknown as object,
-      ...(listFileKey ? { listFileKey } : {}),
+      listFiles: newLists as unknown as object,
     },
   });
 

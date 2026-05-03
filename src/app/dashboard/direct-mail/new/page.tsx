@@ -4,7 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { ADDRESS, SITE_NAME } from "@/lib/constants";
 import { workflowFromSlug, workflowLabel } from "@/lib/direct-mail/constants";
-import type { ArtworkFile, ArtworkRow, DraftState } from "@/lib/direct-mail/types";
+import type {
+  ArtworkFile,
+  ArtworkRow,
+  DraftState,
+  ListFile,
+  ListRow,
+} from "@/lib/direct-mail/types";
 import { YlsPill } from "../_components/yls-pill";
 import { Wizard } from "./_components/wizard";
 
@@ -22,6 +28,29 @@ function artworkRowsFromFiles(files: unknown): ArtworkRow[] {
       mimeType: f.mimeType,
       warnings: f.warnings ?? [],
     },
+    progress: 100,
+    lastError: null,
+  }));
+}
+
+function listRowsFromFiles(files: unknown): ListRow[] {
+  const arr = Array.isArray(files) ? (files as ListFile[]) : [];
+  return arr.map((f) => ({
+    id: f.id,
+    name: f.name,
+    status: "uploaded" as const,
+    localFile: null,
+    upload: {
+      fileKey: f.fileKey,
+      fileName: f.fileName,
+      byteSize: f.byteSize,
+      rowCount: f.rowCount,
+      columns: f.columns,
+      fillPercent: f.fillPercent ?? {},
+      previewRows: [],
+      warnings: f.warnings ?? [],
+    },
+    excludedColumns: f.excludedColumns ?? [],
     progress: 100,
     lastError: null,
   }));
@@ -66,10 +95,9 @@ export default async function NewMailOrderPage({
         dropDate: true,
         returnAddress: true,
         quantity: true,
-        listRowCount: true,
         specialInstructions: true,
         artworkFiles: true,
-        listFileKey: true,
+        listFiles: true,
         complianceConfirmed: true,
       },
     });
@@ -90,10 +118,9 @@ export default async function NewMailOrderPage({
       returnAddress:
         (order.returnAddress as DraftState["returnAddress"]) ?? DEFAULT_RETURN_ADDRESS,
       quantity: order.quantity,
-      listRowCount: order.listRowCount,
       specialInstructions: order.specialInstructions,
       artworkRows: artworkRowsFromFiles(order.artworkFiles),
-      listFileKey: order.listFileKey,
+      listRows: listRowsFromFiles(order.listFiles),
       complianceConfirmed: order.complianceConfirmed,
     };
   }

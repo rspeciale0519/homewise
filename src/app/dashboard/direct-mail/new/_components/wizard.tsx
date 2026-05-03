@@ -12,13 +12,15 @@ import {
 import {
   ARTWORK_UPLOAD_CONCURRENCY,
   MAX_ARTWORK_FILES_PER_ORDER,
+  MAX_LIST_FILES_PER_ORDER,
   type Workflow,
 } from "@/lib/direct-mail/constants";
 import type {
   ArtworkFile,
   ArtworkRow,
   DraftState,
-  ListUploadResult,
+  ListFile,
+  ListRow,
 } from "@/lib/direct-mail/types";
 import { WizardShell } from "./wizard-shell";
 import { StepBasics } from "./step-basics";
@@ -30,7 +32,7 @@ import {
   createDraft,
   patchDraft,
   uploadArtworkWithProgress,
-  uploadList,
+  uploadListWithProgress,
 } from "./client-api";
 
 type Errors = Partial<Record<string, string>>;
@@ -48,10 +50,9 @@ function emptyDraft(workflow: Workflow): DraftState {
     dropDate: null,
     returnAddress: null,
     quantity: 0,
-    listRowCount: 0,
     specialInstructions: null,
     artworkRows: [],
-    listFileKey: null,
+    listRows: [],
     complianceConfirmed: false,
   };
 }
@@ -78,6 +79,7 @@ export function Wizard({
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const orderIdRef = useRef<string>(initialDraft?.id ?? "");
   const pendingFilesRef = useRef<Map<string, File>>(new Map());
+  const pendingListFilesRef = useRef<Map<string, File>>(new Map());
 
   async function ensureOrderId(): Promise<string> {
     if (orderIdRef.current) return orderIdRef.current;
@@ -91,10 +93,6 @@ export function Wizard({
     setDraft((d) => ({ ...d, ...partial }));
   }
 
-  async function persist(partial: Partial<DraftState>): Promise<void> {
-    const id = await ensureOrderId();
-    await patchDraft(id, partialToServer({ ...draft, ...partial }));
-  }
 
   async function handleNext() {
     setPipelineError(null);
@@ -156,12 +154,16 @@ export function Wizard({
   }
 
   async function handleSaveExit() {
-    const pendingCount = draft.artworkRows.filter(
+    const pendingArt = draft.artworkRows.filter(
       (r) => r.status === "pending" || r.status === "failed",
     ).length;
-    if (pendingCount > 0) {
+    const pendingLists = draft.listRows.filter(
+      (r) => r.status === "pending" || r.status === "failed",
+    ).length;
+    const total = pendingArt + pendingLists;
+    if (total > 0) {
       const ok = window.confirm(
-        `You have ${pendingCount} file${pendingCount === 1 ? "" : "s"} that haven't finished uploading. Save & exit will discard them. Continue?`,
+        `You have ${total} file${total === 1 ? "" : "s"} that haven't finished uploading. Save & exit will discard them. Continue?`,
       );
       if (!ok) return;
     }
@@ -322,27 +324,186 @@ export function Wizard({
     }));
   }
 
-  async function handleListUpload(file: File): Promise<ListUploadResult> {
-    const id = await ensureOrderId();
-    const result = await uploadList(id, file);
-    const patch: Partial<DraftState> = {
-      listFileKey: result.fileKey,
-      listRowCount: result.rowCount,
-      quantity: result.rowCount,
-    };
-    patchLocal(patch);
-    await persist(patch);
-    return result;
+  function handleAddListFiles(files: File[]) {
+    if (files.length === 0) return;
+    setDraft((d) => {
+      const remainingSlots = MAX_LIST_FILES_PER_ORDER - d.listRows.length;
+      const accepted = files.slice(0, Math.max(0, remainingSlots));
+      const newRows: ListRow[] = accepted.map((f) => {
+        const id = nanoid(12);
+        pendingListFilesRef.current.set(id, f);
+        return {
+          id,
+          name: defaultNameFromFilename(f.name),
+          status: "pending",
+          localFile: { fileName: f.name, byteSize: f.size, mimeType: f.type || "text/csv" },
+          upload: null,
+          excludedColumns: [],
+          progress: 0,
+          lastError: null,
+        };
+      });
+      return { ...d, listRows: [...d.listRows, ...newRows] };
+    });
   }
 
-  async function handleListRemove() {
-    const patch: Partial<DraftState> = {
-      listFileKey: null,
-      listRowCount: 0,
-      quantity: 0,
-    };
-    patchLocal(patch);
-    await persist(patch);
+  function handleListRename(listId: string, name: string) {
+    setDraft((d) => ({
+      ...d,
+      listRows: d.listRows.map((r) => (r.id === listId ? { ...r, name } : r)),
+    }));
+  }
+
+  async function handleRemoveListRow(listId: string) {
+    const row = draft.listRows.find((r) => r.id === listId);
+    setDraft((d) => ({
+      ...d,
+      listRows: d.listRows.filter((r) => r.id !== listId),
+    }));
+    pendingListFilesRef.current.delete(listId);
+    if (row?.status === "uploaded" && orderIdRef.current) {
+      await patchDraft(orderIdRef.current, {
+        listFiles: rowsToListFiles(draft.listRows.filter((r) => r.id !== listId)),
+      }).catch(() => {});
+    }
+  }
+
+  function handleListColumnToggle(listId: string, columnName: string) {
+    setDraft((d) => ({
+      ...d,
+      listRows: d.listRows.map((r) => {
+        if (r.id !== listId) return r;
+        const isExcluded = r.excludedColumns.includes(columnName);
+        const next = isExcluded
+          ? r.excludedColumns.filter((c) => c !== columnName)
+          : [...r.excludedColumns, columnName];
+        return { ...r, excludedColumns: next };
+      }),
+    }));
+  }
+
+  function handleListBulkColumns(listId: string, mode: "all" | "none") {
+    setDraft((d) => ({
+      ...d,
+      listRows: d.listRows.map((r) => {
+        if (r.id !== listId) return r;
+        if (!r.upload) return r;
+        const all = r.upload.columns;
+        return { ...r, excludedColumns: mode === "all" ? [] : [...all] };
+      }),
+    }));
+  }
+
+  async function handleListUploadAll() {
+    setPipelineError(null);
+    const id = await ensureOrderId();
+    const queue = draft.listRows.filter(
+      (r) => (r.status === "pending" || r.status === "failed") && r.name.trim().length > 0,
+    );
+    if (queue.length === 0) return;
+
+    setUploading(true);
+
+    setDraft((d) => ({
+      ...d,
+      listRows: d.listRows.map((r) =>
+        queue.some((q) => q.id === r.id)
+          ? { ...r, status: "uploading", progress: 0, lastError: null }
+          : r,
+      ),
+    }));
+
+    const queueRef = [...queue];
+    const workers = Array.from({ length: ARTWORK_UPLOAD_CONCURRENCY }, async () => {
+      while (queueRef.length > 0) {
+        const next = queueRef.shift();
+        if (!next) return;
+        const file = pendingListFilesRef.current.get(next.id);
+        if (!file) {
+          markListRowFailed(next.id, "Local file lost — please re-add this list.");
+          continue;
+        }
+        try {
+          const { promise } = uploadListWithProgress(id, next.id, file, {
+            onProgress: (pct) => {
+              setDraft((d) => ({
+                ...d,
+                listRows: d.listRows.map((r) =>
+                  r.id === next.id ? { ...r, progress: pct } : r,
+                ),
+              }));
+            },
+            onUploadComplete: () => {
+              setDraft((d) => ({
+                ...d,
+                listRows: d.listRows.map((r) =>
+                  r.id === next.id ? { ...r, status: "finalizing", progress: 100 } : r,
+                ),
+              }));
+            },
+          });
+          const result = await promise;
+          markListRowUploaded(next.id, result);
+          pendingListFilesRef.current.delete(next.id);
+        } catch (e) {
+          markListRowFailed(next.id, e instanceof Error ? e.message : "Upload failed");
+        }
+      }
+    });
+
+    await Promise.all(workers);
+    setUploading(false);
+  }
+
+  function markListRowUploaded(
+    listId: string,
+    result: {
+      fileKey: string;
+      fileName: string;
+      byteSize: number;
+      rowCount: number;
+      columns: string[];
+      fillPercent: Record<string, number>;
+      previewRows: Array<Record<string, string>>;
+      warnings: string[];
+    },
+  ) {
+    setDraft((d) => ({
+      ...d,
+      listRows: d.listRows.map((r) =>
+        r.id === listId
+          ? {
+              ...r,
+              status: "uploaded",
+              progress: 100,
+              localFile: null,
+              lastError: null,
+              upload: {
+                fileKey: result.fileKey,
+                fileName: result.fileName,
+                byteSize: result.byteSize,
+                rowCount: result.rowCount,
+                columns: result.columns,
+                fillPercent: result.fillPercent,
+                previewRows: result.previewRows,
+                warnings: result.warnings,
+              },
+              excludedColumns: [],
+            }
+          : r,
+      ),
+    }));
+  }
+
+  function markListRowFailed(listId: string, message: string) {
+    setDraft((d) => ({
+      ...d,
+      listRows: d.listRows.map((r) =>
+        r.id === listId
+          ? { ...r, status: "failed", lastError: message }
+          : r,
+      ),
+    }));
   }
 
   const nextLabel = useMemo(() => {
@@ -392,9 +553,13 @@ export function Wizard({
       {draft.currentStep === 4 && (
         <StepList
           draft={draft}
-          onUpload={handleListUpload}
-          onRemove={handleListRemove}
-          onChange={patchLocal}
+          onAddFiles={handleAddListFiles}
+          onRename={handleListRename}
+          onRemoveRow={handleRemoveListRow}
+          onUploadAll={handleListUploadAll}
+          onColumnToggle={handleListColumnToggle}
+          onBulkColumns={handleListBulkColumns}
+          uploading={uploading}
           errors={errors}
         />
       )}
@@ -481,10 +646,40 @@ function validateStep(draft: DraftState): Errors {
       return {};
     }
     case 4: {
+      const errs: Errors = {};
+      const uploadingNow = draft.listRows.some(
+        (r) => r.status === "uploading" || r.status === "finalizing",
+      );
+      const pending = draft.listRows.filter(
+        (r) => r.status === "pending" || r.status === "failed",
+      );
+      const namelessUploaded = draft.listRows.findIndex(
+        (r) => r.status === "uploaded" && r.name.trim().length === 0,
+      );
+      if (uploadingNow) {
+        errs.listFiles = "Uploads are still in progress — please wait.";
+        return errs;
+      }
+      if (namelessUploaded >= 0) {
+        errs[`listFiles.${namelessUploaded}`] = "This list is missing a description.";
+        return errs;
+      }
+      if (pending.length > 0) {
+        errs.listFiles = `${pending.length} list${pending.length === 1 ? "" : "s"} not yet uploaded. Click "Upload all files" or remove them.`;
+        return errs;
+      }
+      const noKept = draft.listRows.findIndex(
+        (r) =>
+          r.status === "uploaded" &&
+          r.upload &&
+          r.upload.columns.length - r.excludedColumns.length < 1,
+      );
+      if (noKept >= 0) {
+        errs[`listFiles.${noKept}`] = "Keep at least one column for this list.";
+        return errs;
+      }
       const r = stepListSchema.safeParse({
-        listFileKey: draft.listFileKey,
-        listRowCount: draft.listRowCount,
-        quantity: draft.quantity,
+        listFiles: rowsToListFiles(draft.listRows),
       });
       return r.success ? {} : zodToErrors(r.error.issues);
     }
@@ -519,10 +714,26 @@ function partialToServer(d: Partial<DraftState>) {
     dropDate: d.dropDate,
     returnAddress: d.returnAddress,
     quantity: d.quantity,
-    listRowCount: d.listRowCount,
     specialInstructions: d.specialInstructions,
     artworkFiles: d.artworkRows ? rowsToArtworkFiles(d.artworkRows) : undefined,
-    listFileKey: d.listFileKey,
+    listFiles: d.listRows ? rowsToListFiles(d.listRows) : undefined,
     complianceConfirmed: d.complianceConfirmed,
   };
+}
+
+export function rowsToListFiles(rows: ListRow[]): ListFile[] {
+  return rows
+    .filter((r) => r.status === "uploaded" && r.upload && r.name.trim().length > 0)
+    .map((r) => ({
+      id: r.id,
+      name: r.name.trim(),
+      fileKey: r.upload!.fileKey,
+      fileName: r.upload!.fileName,
+      byteSize: r.upload!.byteSize,
+      rowCount: r.upload!.rowCount,
+      columns: r.upload!.columns,
+      fillPercent: r.upload!.fillPercent,
+      excludedColumns: r.excludedColumns,
+      warnings: r.upload!.warnings,
+    }));
 }

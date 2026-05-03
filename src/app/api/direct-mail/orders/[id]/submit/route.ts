@@ -11,9 +11,16 @@ import {
   type ProductType,
   type Workflow,
 } from "@/lib/direct-mail/constants";
-import { uploadOrderFile } from "@/lib/direct-mail/storage";
+import {
+  downloadObject,
+  filteredListFileKeyFor,
+  uploadAtKey,
+  uploadOrderFile,
+} from "@/lib/direct-mail/storage";
+import { filterCsvColumns } from "@/lib/direct-mail/csv-validator";
 import { OrderSummaryPdf } from "@/lib/direct-mail/order-summary-pdf";
 import type { ReturnAddress } from "@/lib/direct-mail/schemas";
+import type { ListFile } from "@/lib/direct-mail/types";
 
 export const maxDuration = 60;
 
@@ -54,8 +61,7 @@ export async function POST(
     quantity: order.quantity,
     specialInstructions: order.specialInstructions,
     artworkFiles: order.artworkFiles,
-    listFileKey: order.listFileKey,
-    listRowCount: order.listRowCount,
+    listFiles: order.listFiles,
     complianceConfirmed: order.complianceConfirmed,
   };
 
@@ -67,8 +73,39 @@ export async function POST(
     );
   }
 
+  // Generate filtered CSV copies for any list with excluded columns.
+  // Original files are preserved so the agent's master list isn't mutated.
+  const finalLists: ListFile[] = [];
+  for (const list of parsed.data.listFiles) {
+    if (list.excludedColumns.length === 0) {
+      finalLists.push(list);
+      continue;
+    }
+    try {
+      const original = await downloadObject(list.fileKey);
+      const filteredText = filterCsvColumns(
+        original.buffer.toString("utf-8"),
+        list.excludedColumns,
+      );
+      const filteredKey = filteredListFileKeyFor(order.id, list.id);
+      await uploadAtKey(filteredKey, {
+        buffer: Buffer.from(filteredText, "utf-8"),
+        mimeType: "text/csv",
+        ext: "csv",
+      });
+      finalLists.push({ ...list, fileKey: filteredKey });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "unknown";
+      return NextResponse.json(
+        { error: `Failed to filter list "${list.name}": ${msg}` },
+        { status: 500 },
+      );
+    }
+  }
+
   const submittedAt = new Date();
   const agentName = `${profile.firstName} ${profile.lastName}`.trim() || profile.email;
+  const totalRecipients = finalLists.reduce((sum, l) => sum + l.rowCount, 0);
 
   const pdfBuffer = await renderToBuffer(
     createElement(OrderSummaryPdf, {
@@ -87,12 +124,14 @@ export async function POST(
       productSize: order.productSize ?? "",
       mailClass: order.mailClass as MailClass,
       dropDate: parsed.data.dropDate,
-      quantity: order.quantity,
-      listRowCount: order.listRowCount,
+      quantity: order.quantity || totalRecipients,
       returnAddress: order.returnAddress as unknown as ReturnAddress,
       specialInstructions: order.specialInstructions,
       artworkFiles: parsed.data.artworkFiles,
-      listFileName: basename(order.listFileKey),
+      listFiles: finalLists,
+      // listFiles already encodes original list metadata + filtered fileKey.
+      // Original list ids/names retained for the PDF.
+      originalLists: parsed.data.listFiles,
     }) as ReactElement<DocumentProps>,
   );
 
@@ -109,6 +148,9 @@ export async function POST(
       submittedAt,
       emailStatus: "pending",
       summaryPdfKey: summaryKey,
+      // Persist the filtered keys so dispatch + downloads use the filtered files.
+      listFiles: finalLists as unknown as object,
+      quantity: order.quantity || totalRecipients,
     },
     select: { id: true, submittedAt: true },
   });
@@ -126,10 +168,4 @@ function toIsoDate(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
-}
-
-function basename(key: string | null | undefined): string {
-  if (!key) return "";
-  const idx = key.lastIndexOf("/");
-  return idx >= 0 ? key.slice(idx + 1) : key;
 }

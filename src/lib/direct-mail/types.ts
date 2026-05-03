@@ -1,6 +1,53 @@
 import type { ReturnAddress } from "./schemas";
 import type { Workflow, ProductType, MailClass } from "./constants";
 
+export type ListFile = {
+  id: string;
+  name: string;
+  fileKey: string;
+  fileName: string;
+  byteSize: number;
+  rowCount: number;
+  columns: string[];
+  fillPercent: Record<string, number>;
+  excludedColumns: string[];
+  warnings: string[];
+};
+
+export type ListUploadOutcome = {
+  listId: string;
+  fileKey: string;
+  fileName: string;
+  byteSize: number;
+  rowCount: number;
+  columns: string[];
+  fillPercent: Record<string, number>;
+  previewRows: Array<Record<string, string>>;
+  warnings: string[];
+};
+
+export type ListRowUpload = {
+  fileKey: string;
+  fileName: string;
+  byteSize: number;
+  rowCount: number;
+  columns: string[];
+  fillPercent: Record<string, number>;
+  previewRows: Array<Record<string, string>>;
+  warnings: string[];
+};
+
+export type ListRow = {
+  id: string;
+  name: string;
+  status: ArtworkRowStatus;
+  localFile: ArtworkLocalFile | null;
+  upload: ListRowUpload | null;
+  excludedColumns: string[];
+  progress: number;
+  lastError: string | null;
+};
+
 export type ArtworkFile = {
   id: string;
   name: string;
@@ -46,10 +93,9 @@ export type DraftState = {
   dropDate: string | null;
   returnAddress: ReturnAddress | null;
   quantity: number;
-  listRowCount: number;
   specialInstructions: string | null;
   artworkRows: ArtworkRow[];
-  listFileKey: string | null;
+  listRows: ListRow[];
   complianceConfirmed: boolean;
 };
 
@@ -58,14 +104,5 @@ export type ArtworkUploadResult = {
   fileName: string;
   byteSize: number;
   mimeType: string;
-  warnings: string[];
-};
-
-export type ListUploadResult = {
-  fileKey: string;
-  fileName: string;
-  byteSize: number;
-  rowCount: number;
-  previewRows: Array<Record<string, string>>;
   warnings: string[];
 };

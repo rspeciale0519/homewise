@@ -30,7 +30,7 @@ export async function POST(
       lastDispatchedAt: true,
       summaryPdfKey: true,
       artworkFiles: true,
-      listFileKey: true,
+      listFiles: true,
     },
   });
   if (!order || order.userId !== profile.id) {
@@ -40,7 +40,8 @@ export async function POST(
     return NextResponse.json({ error: "Only submitted orders can be resent" }, { status: 409 });
   }
   const artworkLen = Array.isArray(order.artworkFiles) ? order.artworkFiles.length : 0;
-  if (!order.summaryPdfKey || !order.listFileKey || artworkLen === 0) {
+  const listLen = Array.isArray(order.listFiles) ? order.listFiles.length : 0;
+  if (!order.summaryPdfKey || listLen === 0 || artworkLen === 0) {
     return NextResponse.json(
       { error: "This order is missing files and cannot be resent. Contact support." },
       { status: 409 },

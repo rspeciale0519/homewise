@@ -1164,13 +1164,12 @@ model MailOrder {
   mailClass           String?
   dropDate            DateTime?
   quantity            Int       @default(0)
-  listRowCount        Int       @default(0)
   specialInstructions String?
 
   returnAddress Json?
 
   artworkFiles   Json     @default("[]")
-  listFileKey    String?
+  listFiles      Json     @default("[]")
   summaryPdfKey  String?
 
   complianceConfirmed Boolean @default(false)

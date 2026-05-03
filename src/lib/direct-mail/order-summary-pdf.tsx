@@ -8,7 +8,7 @@ import {
   type Workflow,
 } from "./constants";
 import type { ReturnAddress } from "./schemas";
-import type { ArtworkFile } from "./types";
+import type { ArtworkFile, ListFile } from "./types";
 
 Font.register({
   family: "Cormorant Garamond",
@@ -89,11 +89,12 @@ export interface OrderSummaryPdfProps {
   mailClass: MailClass;
   dropDate: string;
   quantity: number;
-  listRowCount: number;
   returnAddress: ReturnAddress;
   specialInstructions: string | null;
   artworkFiles: ArtworkFile[];
-  listFileName: string;
+  listFiles: ListFile[];
+  /** Original (pre-filter) list metadata so we can show what was excluded. */
+  originalLists: ListFile[];
 }
 
 export function OrderSummaryPdf(props: OrderSummaryPdfProps) {
@@ -135,7 +136,6 @@ export function OrderSummaryPdf(props: OrderSummaryPdfProps) {
           <Row label="Mail class" value={mailClassLabel(props.mailClass)} />
           <Row label="Drop date" value={props.dropDate} />
           <Row label="Quantity" value={`${props.quantity.toLocaleString()} pieces`} />
-          <Row label="List size" value={`${props.listRowCount.toLocaleString()} recipients`} />
         </View>
 
         <Text style={s.sectionLabel}>Return address</Text>
@@ -153,9 +153,30 @@ export function OrderSummaryPdf(props: OrderSummaryPdfProps) {
           ))}
         </View>
 
-        <Text style={s.sectionLabel}>Mailing list</Text>
+        <Text style={s.sectionLabel}>Mailing lists ({props.listFiles.length})</Text>
         <View style={s.block}>
-          <Row label="CSV file" value={props.listFileName} />
+          {props.listFiles.map((l, idx) => {
+            const original = props.originalLists.find((o) => o.id === l.id) ?? l;
+            const keptCols = original.columns.filter(
+              (c) => !original.excludedColumns.includes(c),
+            );
+            const summary = original.excludedColumns.length > 0
+              ? `${l.rowCount.toLocaleString()} rows · ${keptCols.length} of ${original.columns.length} columns sent`
+              : `${l.rowCount.toLocaleString()} rows · ${original.columns.length} columns`;
+            return (
+              <View key={l.id} style={idx > 0 ? { marginTop: 6 } : undefined}>
+                <Row label={l.name} value={summary} strong />
+                <Row label="File" value={l.fileName} />
+                <Row label="Columns sent" value={keptCols.join(", ") || "(none)"} />
+                {original.excludedColumns.length > 0 && (
+                  <Row
+                    label="Excluded"
+                    value={original.excludedColumns.join(", ")}
+                  />
+                )}
+              </View>
+            );
+          })}
         </View>
 
         {props.specialInstructions && (

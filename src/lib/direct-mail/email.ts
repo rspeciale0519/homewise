@@ -16,6 +16,16 @@ export type ArtworkLink = {
   url: string;
 };
 
+export type ListLink = {
+  id: string;
+  name: string;
+  fileName: string;
+  url: string;
+  rowCount: number;
+  columnsSent: string[];
+  columnsExcluded: string[];
+};
+
 const FROM_EMAIL =
   process.env.HOMEWISE_DIRECT_MAIL_FROM_EMAIL ??
   "Homewise Direct Mail <direct-mail@email.homewisefl.com>";
@@ -37,14 +47,13 @@ export interface OrderEmailInput {
   mailClass: MailClass;
   dropDate: string;
   quantity: number;
-  listRowCount: number;
   returnAddress: ReturnAddress;
   specialInstructions: string | null;
   signedUrls: {
     summary: string;
-    list: string;
   };
   artworkLinks: ArtworkLink[];
+  listLinks: ListLink[];
 }
 
 export async function sendOrderToYls(
@@ -96,6 +105,26 @@ function buildOrderHtml(input: OrderEmailInput): string {
         `<li><strong>${escapeHtml(a.name)}:</strong> <a href="${a.url}">${escapeHtml(a.fileName)}</a></li>`,
     )
     .join("");
+  const listItems = input.listLinks
+    .map((l) => {
+      const colNote =
+        l.columnsExcluded.length > 0
+          ? ` · ${l.columnsSent.length} of ${l.columnsSent.length + l.columnsExcluded.length} columns sent (agent excluded ${l.columnsExcluded.length})`
+          : ` · ${l.columnsSent.length} columns`;
+      const excludedNote =
+        l.columnsExcluded.length > 0
+          ? `<div style="margin-top:4px;font-size:11px;color:#92400e">Excluded by agent: ${escapeHtml(l.columnsExcluded.join(", "))}</div>`
+          : "";
+      return `
+        <li>
+          <strong>${escapeHtml(l.name)}:</strong>
+          <a href="${l.url}">${escapeHtml(l.fileName)}</a>
+          <span style="color:#64748b">${escapeHtml(`${l.rowCount.toLocaleString()} rows${colNote}`)}</span>
+          ${excludedNote}
+        </li>
+      `;
+    })
+    .join("");
 
   return `<!DOCTYPE html>
 <html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#334155;background:#f8fafc;padding:20px">
@@ -118,7 +147,6 @@ function buildOrderHtml(input: OrderEmailInput): string {
         <li>Mail class: ${escapeHtml(mailClassLabel(input.mailClass))}</li>
         <li>Drop date: <strong>${escapeHtml(input.dropDate)}</strong></li>
         <li>Quantity: ${input.quantity.toLocaleString()} pieces</li>
-        <li>List size: ${input.listRowCount.toLocaleString()} recipients</li>
       </ul>
 
       <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Return address</h3>
@@ -126,15 +154,19 @@ function buildOrderHtml(input: OrderEmailInput): string {
       <div>${escapeHtml(ra.address1)}${ra.address2 ? `, ${escapeHtml(ra.address2)}` : ""}</div>
       <div>${escapeHtml(ra.city)}, ${escapeHtml(ra.state)} ${escapeHtml(ra.zip)}</div>
 
-      <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Order summary &amp; mailing list (links expire in 30 days)</h3>
+      <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Order summary (links expire in 30 days)</h3>
       <ul style="margin:0;padding-left:18px">
         <li><strong>Order summary PDF:</strong> <a href="${input.signedUrls.summary}">Download</a></li>
-        <li><strong>Mailing list (CSV):</strong> <a href="${input.signedUrls.list}">Download</a></li>
       </ul>
 
       <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Artwork files (${input.artworkLinks.length})</h3>
       <ul style="margin:0;padding-left:18px">
         ${artworkItems}
+      </ul>
+
+      <h3 style="margin:18px 0 6px;font-size:13px;color:#DB2526;text-transform:uppercase;letter-spacing:1px">Mailing lists (${input.listLinks.length})</h3>
+      <ul style="margin:0;padding-left:18px">
+        ${listItems}
       </ul>
 
       ${

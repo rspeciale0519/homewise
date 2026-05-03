@@ -2,7 +2,7 @@ import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { getSignedUrl } from "@/lib/direct-mail/storage";
 import { sendDispatchFailureAlert, sendOrderToYls } from "@/lib/direct-mail/email";
-import type { ArtworkLink } from "@/lib/direct-mail/email";
+import type { ArtworkLink, ListLink } from "@/lib/direct-mail/email";
 import { SITE_NAME } from "@/lib/constants";
 import type {
   MailClass,
@@ -10,7 +10,7 @@ import type {
   Workflow,
 } from "@/lib/direct-mail/constants";
 import type { ReturnAddress } from "@/lib/direct-mail/schemas";
-import type { ArtworkFile } from "@/lib/direct-mail/types";
+import type { ArtworkFile, ListFile } from "@/lib/direct-mail/types";
 
 const SIGNED_URL_TTL_SECONDS = 30 * 24 * 60 * 60;
 const MAX_ATTEMPTS = 3;
@@ -39,16 +39,16 @@ export const dispatchMailOrder = inngest.createFunction(
     const artworkFiles = Array.isArray(order.artworkFiles)
       ? (order.artworkFiles as unknown as ArtworkFile[])
       : [];
-    if (!order.listFileKey || !order.summaryPdfKey || artworkFiles.length === 0) {
+    const listFiles = Array.isArray(order.listFiles)
+      ? (order.listFiles as unknown as ListFile[])
+      : [];
+    if (!order.summaryPdfKey || artworkFiles.length === 0 || listFiles.length === 0) {
       await markFailed(orderId, "Order missing one or more file keys");
       return { skipped: true, reason: "missing file keys" };
     }
 
     const signed = await step.run("sign-urls", async () => {
-      const [summary, list] = await Promise.all([
-        getSignedUrl(order.summaryPdfKey!, SIGNED_URL_TTL_SECONDS),
-        getSignedUrl(order.listFileKey!, SIGNED_URL_TTL_SECONDS),
-      ]);
+      const summary = await getSignedUrl(order.summaryPdfKey!, SIGNED_URL_TTL_SECONDS);
       const artworkLinks: ArtworkLink[] = await Promise.all(
         artworkFiles.map(async (f) => ({
           id: f.id,
@@ -57,7 +57,18 @@ export const dispatchMailOrder = inngest.createFunction(
           url: await getSignedUrl(f.fileKey, SIGNED_URL_TTL_SECONDS),
         })),
       );
-      return { summary, list, artworkLinks };
+      const listLinks: ListLink[] = await Promise.all(
+        listFiles.map(async (l) => ({
+          id: l.id,
+          name: l.name,
+          fileName: l.fileName,
+          url: await getSignedUrl(l.fileKey, SIGNED_URL_TTL_SECONDS),
+          rowCount: l.rowCount,
+          columnsSent: l.columns.filter((c) => !l.excludedColumns.includes(c)),
+          columnsExcluded: l.excludedColumns,
+        })),
+      );
+      return { summary, artworkLinks, listLinks };
     });
 
     const agentName = `${order.user.firstName} ${order.user.lastName}`.trim() || order.user.email;
@@ -87,11 +98,11 @@ export const dispatchMailOrder = inngest.createFunction(
           mailClass: order.mailClass as MailClass,
           dropDate: dropDateStr,
           quantity: order.quantity,
-          listRowCount: order.listRowCount,
           returnAddress: order.returnAddress as unknown as ReturnAddress,
           specialInstructions: order.specialInstructions,
-          signedUrls: { summary: signed.summary, list: signed.list },
+          signedUrls: { summary: signed.summary },
           artworkLinks: signed.artworkLinks,
+          listLinks: signed.listLinks,
         });
 
         await prisma.mailOrderDispatchLog.create({

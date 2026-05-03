@@ -2,19 +2,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const STORAGE_BUCKET = process.env.DIRECT_MAIL_STORAGE_BUCKET ?? "direct-mail-orders";
 
-export type FileSlot = "list" | "summary" | "artwork";
+export type FileSlot = "summary" | "artwork" | "list";
 
 function safeExt(ext: string): string {
   return ext.replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 10) || "bin";
 }
 
-export function fileKeyFor(orderId: string, slot: "list" | "summary", ext: string): string {
+export function fileKeyFor(orderId: string, slot: "summary", ext: string): string {
   return `${orderId}/${slot}.${safeExt(ext)}`;
 }
 
 export function artworkFileKeyFor(orderId: string, artworkId: string, ext: string): string {
   const cleanId = artworkId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) || "file";
   return `${orderId}/artwork-${cleanId}.${safeExt(ext)}`;
+}
+
+export function listFileKeyFor(orderId: string, listId: string): string {
+  const cleanId = listId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) || "file";
+  return `${orderId}/list-${cleanId}.csv`;
+}
+
+export function filteredListFileKeyFor(orderId: string, listId: string): string {
+  const cleanId = listId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) || "file";
+  return `${orderId}/list-${cleanId}-filtered.csv`;
 }
 
 export function extFromFileName(fileName: string): string {
@@ -64,11 +74,19 @@ async function ensureBucket(): Promise<void> {
 
 export async function uploadOrderFile(
   orderId: string,
-  slot: "list" | "summary",
+  slot: "summary",
   file: { buffer: Buffer; mimeType: string; ext: string },
 ): Promise<string> {
   await ensureBucket();
   const key = fileKeyFor(orderId, slot, file.ext);
+  return uploadAt(key, file);
+}
+
+export async function uploadAtKey(
+  key: string,
+  file: { buffer: Buffer; mimeType: string; ext: string },
+): Promise<string> {
+  await ensureBucket();
   return uploadAt(key, file);
 }
 

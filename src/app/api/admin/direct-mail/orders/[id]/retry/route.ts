@@ -18,7 +18,7 @@ export async function POST(
       status: true,
       summaryPdfKey: true,
       artworkFiles: true,
-      listFileKey: true,
+      listFiles: true,
     },
   });
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -26,7 +26,8 @@ export async function POST(
     return NextResponse.json({ error: "Only submitted orders can be retried" }, { status: 409 });
   }
   const artworkLen = Array.isArray(order.artworkFiles) ? order.artworkFiles.length : 0;
-  if (!order.summaryPdfKey || !order.listFileKey || artworkLen === 0) {
+  const listLen = Array.isArray(order.listFiles) ? order.listFiles.length : 0;
+  if (!order.summaryPdfKey || listLen === 0 || artworkLen === 0) {
     return NextResponse.json({ error: "Order missing required files" }, { status: 409 });
   }
 

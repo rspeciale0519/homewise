@@ -20,7 +20,7 @@ export default async function MailOrdersListPage() {
         workflow: true,
         productType: true,
         productSize: true,
-        listRowCount: true,
+        listFiles: true,
         dropDate: true,
         submittedAt: true,
         emailStatus: true,
@@ -39,11 +39,22 @@ export default async function MailOrdersListPage() {
     }),
   ]);
 
-  const submitted = submittedRows.map((r) => ({
-    ...r,
-    dropDate: r.dropDate ? r.dropDate.toISOString() : null,
-    submittedAt: r.submittedAt ? r.submittedAt.toISOString() : null,
-  }));
+  const submitted = submittedRows.map((r) => {
+    const lists = Array.isArray(r.listFiles)
+      ? (r.listFiles as Array<{ rowCount?: number }>)
+      : [];
+    const totalRecipients = lists.reduce((sum, l) => sum + (l.rowCount ?? 0), 0);
+    return {
+      id: r.id,
+      workflow: r.workflow,
+      productType: r.productType,
+      productSize: r.productSize,
+      totalRecipients,
+      dropDate: r.dropDate ? r.dropDate.toISOString() : null,
+      submittedAt: r.submittedAt ? r.submittedAt.toISOString() : null,
+      emailStatus: r.emailStatus,
+    };
+  });
 
   const drafts = draftRows.map((r) => ({
     ...r,

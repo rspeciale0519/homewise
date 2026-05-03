@@ -43,7 +43,6 @@ export async function POST(req: Request) {
       status: "draft",
       currentStep: 1,
       quantity: 0,
-      listRowCount: 0,
     },
     select: { id: true, workflow: true, currentStep: true },
   });
@@ -65,7 +64,7 @@ export async function GET() {
       workflow: true,
       productType: true,
       productSize: true,
-      listRowCount: true,
+      listFiles: true,
       submittedAt: true,
       createdAt: true,
       currentStep: true,

@@ -87,8 +87,10 @@ export function mailClassLabel(c: MailClass): string {
 export const MAX_ARTWORK_BYTES = 50 * 1024 * 1024;
 export const MAX_ARTWORK_FILES_PER_ORDER = 25;
 export const ARTWORK_UPLOAD_CONCURRENCY = 4;
+export const MAX_LIST_FILES_PER_ORDER = 10;
 export const MAX_LIST_ROWS = 50_000;
 export const MAX_LIST_BYTES = 25 * 1024 * 1024;
+export const LIST_PREVIEW_ROW_COUNT = 5;
 
 export const ACCEPTED_ARTWORK_MIME = [
   "application/pdf",
@@ -101,31 +103,16 @@ export const ACCEPTED_ARTWORK_MIME = [
 
 export const ARTWORK_ACCEPT_HINT = "PDF, PNG, JPG, or Word (.doc / .docx)";
 
-export const RESEND_RATE_LIMIT_MS = 5 * 60 * 1000;
-
-export const REQUIRED_LIST_COLUMNS = [
-  "first_name",
-  "last_name",
-  "address_1",
-  "city",
-  "state",
-  "zip",
+export const ACCEPTED_LIST_MIME = [
+  "text/csv",
+  "application/vnd.ms-excel",
+  "application/csv",
+  "text/plain",
 ] as const;
 
-export const LIST_COLUMN_ALIASES: Record<string, string> = {
-  firstname: "first_name",
-  first: "first_name",
-  fname: "first_name",
-  lastname: "last_name",
-  last: "last_name",
-  lname: "last_name",
-  address: "address_1",
-  address1: "address_1",
-  street: "address_1",
-  zipcode: "zip",
-  postalcode: "zip",
-  postal_code: "zip",
-};
+export const LIST_ACCEPT_HINT = "CSV files only";
+
+export const RESEND_RATE_LIMIT_MS = 5 * 60 * 1000;
 
 export function dropDateMinBusinessDays(): number {
   const raw = process.env.DIRECT_MAIL_DROP_DATE_MIN_BUSINESS_DAYS;

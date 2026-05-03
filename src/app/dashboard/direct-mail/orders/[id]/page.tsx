@@ -13,7 +13,7 @@ import {
 } from "@/lib/direct-mail/constants";
 import { getSignedUrl } from "@/lib/direct-mail/storage";
 import type { ReturnAddress } from "@/lib/direct-mail/schemas";
-import type { ArtworkFile } from "@/lib/direct-mail/types";
+import type { ArtworkFile, ListFile } from "@/lib/direct-mail/types";
 import { YlsPill } from "../../_components/yls-pill";
 import { YlsFulfillmentFooter } from "../../_components/yls-fulfillment-footer";
 import { OrderDetailActions } from "../_components/order-detail-actions";
@@ -39,14 +39,20 @@ export default async function MailOrderDetailPage({
   const summaryUrl = order.summaryPdfKey
     ? await getSignedUrl(order.summaryPdfKey, 60 * 60).catch(() => null)
     : null;
-  const listUrl = order.listFileKey
-    ? await getSignedUrl(order.listFileKey, 60 * 60).catch(() => null)
-    : null;
   const artworkFiles = Array.isArray(order.artworkFiles)
     ? (order.artworkFiles as unknown as ArtworkFile[])
     : [];
+  const listFiles = Array.isArray(order.listFiles)
+    ? (order.listFiles as unknown as ListFile[])
+    : [];
   const artworkUrls: Array<{ file: ArtworkFile; url: string | null }> = await Promise.all(
     artworkFiles.map(async (f) => ({
+      file: f,
+      url: await getSignedUrl(f.fileKey, 60 * 60).catch(() => null),
+    })),
+  );
+  const listUrls: Array<{ file: ListFile; url: string | null }> = await Promise.all(
+    listFiles.map(async (f) => ({
       file: f,
       url: await getSignedUrl(f.fileKey, 60 * 60).catch(() => null),
     })),
@@ -108,7 +114,7 @@ export default async function MailOrderDetailPage({
           <OrderDetailActions
             orderId={order.id}
             summaryUrl={summaryUrl}
-            hasList={!!order.listFileKey}
+            hasList={listFiles.length > 0}
             lastDispatchedAtMs={lastDispatchedAtMs}
             rateLimitMs={RESEND_RATE_LIMIT_MS}
           />
@@ -130,8 +136,8 @@ export default async function MailOrderDetailPage({
         />
         <Row label="Quantity" value={`${order.quantity.toLocaleString()} pieces`} />
         <Row
-          label="List size"
-          value={`${order.listRowCount.toLocaleString()} recipients`}
+          label="Total recipients"
+          value={`${listFiles.reduce((s, l) => s + l.rowCount, 0).toLocaleString()}`}
         />
         <Row
           label="Return address"
@@ -145,6 +151,56 @@ export default async function MailOrderDetailPage({
           <Row label="Special instructions" value={order.specialInstructions} />
         )}
       </dl>
+
+      <section className="mb-6">
+        <h2 className="font-serif text-lg font-semibold text-navy-700 mb-3">
+          Mailing lists ({listUrls.length})
+        </h2>
+        {listUrls.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            No mailing lists attached.
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 gap-2">
+            {listUrls.map(({ file, url }) => {
+              const keptCols = file.columns.filter(
+                (c) => !file.excludedColumns.includes(c),
+              );
+              return (
+                <li
+                  key={file.id}
+                  className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white p-4"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-navy-700 truncate">{file.name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                      {file.fileName} · {file.rowCount.toLocaleString()} rows ·{" "}
+                      {keptCols.length} of {file.columns.length} columns sent
+                    </p>
+                    {file.excludedColumns.length > 0 && (
+                      <p className="text-[11px] text-amber-700 mt-1 truncate">
+                        Excluded: {file.excludedColumns.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                  {url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-xs font-semibold text-navy-600 hover:text-crimson-600"
+                    >
+                      Open ↗
+                    </a>
+                  ) : (
+                    <span className="shrink-0 text-xs text-slate-400">unavailable</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section className="mb-6">
         <h2 className="font-serif text-lg font-semibold text-navy-700 mb-3">
@@ -185,9 +241,6 @@ export default async function MailOrderDetailPage({
         )}
       </section>
 
-      <div className="mb-6">
-        <FileTile label="Mailing list" url={listUrl} present={!!order.listFileKey} />
-      </div>
 
       {order.status === "submitted" && (
         <YlsFulfillmentFooter />
@@ -234,38 +287,6 @@ function Row({ label, value }: { label: string; value: string }) {
         {label}
       </dt>
       <dd className="break-words text-sm text-navy-700">{value}</dd>
-    </div>
-  );
-}
-
-function FileTile({
-  label,
-  url,
-  present,
-  fallback,
-}: {
-  label: string;
-  url: string | null;
-  present: boolean;
-  fallback?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-100 bg-white p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-        {label}
-      </p>
-      {present && url ? (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-semibold text-navy-700 hover:text-crimson-600"
-        >
-          Open file ↗
-        </a>
-      ) : (
-        <p className="text-sm text-slate-500">{fallback ?? "—"}</p>
-      )}
     </div>
   );
 }
