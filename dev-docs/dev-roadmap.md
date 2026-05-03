@@ -171,9 +171,9 @@
 - [x] Build YlsPill + YlsFulfillmentFooter co-brand components
 
 ### Phase 2: Wizard front-end
-- [ ] Build 5-step wizard (basics, spec, artwork, list, review) with Zod schemas
-- [ ] Implement draft persistence and Save & Exit
-- [ ] Stub server actions for step transitions
+- [x] Build 5-step wizard (basics, spec, artwork, list, review) with Zod schemas
+- [x] Implement draft persistence and Save & Exit
+- [x] Stub server actions for step transitions
 
 ### Phase 3: Validation layer
 - [ ] CSV validator (header normalization, row count, preview)
