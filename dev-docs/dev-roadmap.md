@@ -195,6 +195,8 @@
 - [x] Duplicate order action (modal with optional list copy)
 
 ### Phase 6: Branding + admin recovery view
-- [ ] Apply YlsPill across all direct-mail pages
-- [ ] Render YlsFulfillmentFooter on confirmation page
-- [ ] /admin/direct-mail failure-recovery view with manual retry
+- [x] Apply YlsPill across all direct-mail pages
+- [x] Render YlsFulfillmentFooter on confirmation page + after submit
+- [x] /admin/direct-mail failure-recovery view (failed/pending/recent sections)
+- [x] POST /api/admin/direct-mail/orders/[id]/retry for manual retry
+- [x] Admin sidebar entry under System

@@ -71,6 +71,7 @@ const ADMIN_SECTIONS: NavSection[] = [
       { href: "/admin/cma", label: "CMA Tool", icon: "document" },
       { href: "/admin/ai-usage", label: "AI Usage", icon: "sparkle" },
       { href: "/admin/jobs", label: "Background Jobs", icon: "jobs" },
+      { href: "/admin/direct-mail", label: "Direct Mail", icon: "mail" },
       { href: "/admin/settings", label: "Settings", icon: "gear" },
     ],
   },
