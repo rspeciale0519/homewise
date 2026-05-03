@@ -5,6 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { inngest } from "@/inngest/client";
 import { SITE_NAME } from "@/lib/constants";
+import {
+  SHOULD_DISPATCH_INLINE,
+  dispatchMailOrderOnce,
+} from "@/lib/direct-mail/dispatch";
 import { orderSubmitSchema } from "@/lib/direct-mail/schemas";
 import {
   type MailClass,
@@ -155,10 +159,16 @@ export async function POST(
     select: { id: true, submittedAt: true },
   });
 
-  await inngest.send({
-    name: "direct-mail/order.submitted",
-    data: { orderId: order.id },
-  });
+  if (SHOULD_DISPATCH_INLINE) {
+    // Local dev: skip Inngest cloud (which can't reach localhost) and run
+    // dispatch synchronously inside this request.
+    await dispatchMailOrderOnce(order.id, "auto");
+  } else {
+    await inngest.send({
+      name: "direct-mail/order.submitted",
+      data: { orderId: order.id },
+    });
+  }
 
   return NextResponse.json({ order: updated });
 }

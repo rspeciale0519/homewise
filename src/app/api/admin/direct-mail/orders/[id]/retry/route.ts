@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { inngest } from "@/inngest/client";
+import {
+  SHOULD_DISPATCH_INLINE,
+  dispatchMailOrderOnce,
+} from "@/lib/direct-mail/dispatch";
 
 export async function POST(
   _req: Request,
@@ -36,10 +40,14 @@ export async function POST(
     data: { emailStatus: "pending", lastDispatchedAt: new Date() },
   });
 
-  await inngest.send({
-    name: "direct-mail/order.submitted",
-    data: { orderId: id, triggeredBy: "admin_retry" },
-  });
+  if (SHOULD_DISPATCH_INLINE) {
+    await dispatchMailOrderOnce(id, "admin_retry");
+  } else {
+    await inngest.send({
+      name: "direct-mail/order.submitted",
+      data: { orderId: id, triggeredBy: "admin_retry" },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

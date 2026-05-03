@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { inngest } from "@/inngest/client";
 import { RESEND_RATE_LIMIT_MS } from "@/lib/direct-mail/constants";
+import {
+  SHOULD_DISPATCH_INLINE,
+  dispatchMailOrderOnce,
+} from "@/lib/direct-mail/dispatch";
 
 export async function POST(
   _req: Request,
@@ -70,10 +74,14 @@ export async function POST(
     data: { emailStatus: "pending", lastDispatchedAt: new Date() },
   });
 
-  await inngest.send({
-    name: "direct-mail/order.submitted",
-    data: { orderId: order.id, triggeredBy: "resend_button" },
-  });
+  if (SHOULD_DISPATCH_INLINE) {
+    await dispatchMailOrderOnce(order.id, "resend_button");
+  } else {
+    await inngest.send({
+      name: "direct-mail/order.submitted",
+      data: { orderId: order.id, triggeredBy: "resend_button" },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }
