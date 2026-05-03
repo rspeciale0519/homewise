@@ -39,6 +39,7 @@ export function StepArtwork({
     uploaded: rows.filter((r) => r.status === "uploaded").length,
     pending: rows.filter((r) => r.status === "pending" || r.status === "failed").length,
     uploading: rows.filter((r) => r.status === "uploading").length,
+    finalizing: rows.filter((r) => r.status === "finalizing").length,
   };
   const remainingSlots = MAX_ARTWORK_FILES_PER_ORDER - rows.length;
 
@@ -123,7 +124,9 @@ export function StepArtwork({
           loading={uploading}
         >
           {uploading
-            ? `Uploading ${counts.uploading} file${counts.uploading === 1 ? "" : "s"}…`
+            ? counts.finalizing > 0 && counts.uploading === 0
+              ? `Finalizing ${counts.finalizing} file${counts.finalizing === 1 ? "" : "s"}…`
+              : `Uploading ${counts.uploading} file${counts.uploading === 1 ? "" : "s"}…`
             : readyToUpload > 0
               ? `Upload all files (${readyToUpload})`
               : "Upload all files"}
@@ -270,6 +273,7 @@ function ArtworkRowCard({
         "relative rounded-xl border p-4",
         row.status === "uploaded" && "border-emerald-200 bg-emerald-50/30",
         row.status === "uploading" && "border-navy-200 bg-navy-50/30",
+        row.status === "finalizing" && "border-amber-200 bg-amber-50/30",
         row.status === "failed" && "border-crimson-200 bg-crimson-50/30",
         row.status === "pending" && "border-slate-200 bg-slate-50/40",
       )}
@@ -287,7 +291,7 @@ function ArtworkRowCard({
           type="button"
           onClick={() => onRemoveRow(row.id)}
           aria-label={`Remove ${fileNameText || `file ${index + 1}`}`}
-          disabled={row.status === "uploading"}
+          disabled={row.status === "uploading" || row.status === "finalizing"}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-200/60 hover:text-crimson-600 disabled:opacity-30"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -302,7 +306,7 @@ function ArtworkRowCard({
         placeholder="e.g., Postcard front, Yellow letter, Envelope"
         value={row.name}
         onChange={(e) => onRename(row.id, e.target.value)}
-        disabled={row.status === "uploading"}
+        disabled={row.status === "uploading" || row.status === "finalizing"}
       />
 
       {row.status === "uploading" && (
@@ -314,6 +318,18 @@ function ArtworkRowCard({
             />
           </div>
           <p className="mt-1 text-[11px] text-slate-500 tabular-nums">{row.progress}%</p>
+        </div>
+      )}
+
+      {row.status === "finalizing" && (
+        <div className="mt-3 flex items-center gap-2 text-[11px] text-amber-800">
+          <span
+            aria-hidden
+            className="h-3 w-3 rounded-full border-2 border-amber-300 border-t-amber-700 animate-spin"
+          />
+          <span>
+            Inspecting file (DPI &amp; dimensions)…
+          </span>
         </div>
       )}
 
@@ -343,8 +359,12 @@ function StatusBadge({ row }: { row: ArtworkRow }) {
       classes: "bg-slate-100 text-slate-600 border-slate-200",
     },
     uploading: {
-      label: "Uploading…",
+      label: row.progress > 0 ? `Uploading ${row.progress}%` : "Uploading…",
       classes: "bg-navy-50 text-navy-700 border-navy-200",
+    },
+    finalizing: {
+      label: "Finalizing…",
+      classes: "bg-amber-50 text-amber-800 border-amber-200",
     },
     uploaded: {
       label: "Uploaded",

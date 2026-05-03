@@ -40,11 +40,16 @@ export async function patchDraft(
   }
 }
 
+export type ArtworkUploadCallbacks = {
+  onProgress: (pct: number) => void;
+  onUploadComplete: () => void;
+};
+
 export function uploadArtworkWithProgress(
   orderId: string,
   artworkId: string,
   file: File,
-  onProgress: (pct: number) => void,
+  callbacks: ArtworkUploadCallbacks,
 ): { promise: Promise<ArtworkUploadOutcome>; abort: () => void } {
   let activeXhr: XMLHttpRequest | null = null;
   const promise = (async (): Promise<ArtworkUploadOutcome> => {
@@ -68,12 +73,16 @@ export function uploadArtworkWithProgress(
       activeXhr = xhr;
       xhr.upload.addEventListener("progress", (e) => {
         if (e.lengthComputable) {
-          onProgress(Math.round((e.loaded / e.total) * 95));
+          callbacks.onProgress(Math.round((e.loaded / e.total) * 100));
         }
       });
       xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error(parseXhrError(xhr) ?? `Storage upload failed (HTTP ${xhr.status}).`));
+        if (xhr.status >= 200 && xhr.status < 300) {
+          callbacks.onProgress(100);
+          resolve();
+        } else {
+          reject(new Error(parseXhrError(xhr) ?? `Storage upload failed (HTTP ${xhr.status}).`));
+        }
       });
       xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
       xhr.addEventListener("abort", () => reject(new Error("Upload aborted.")));
@@ -82,7 +91,8 @@ export function uploadArtworkWithProgress(
       xhr.send(file);
     });
 
-    onProgress(97);
+    callbacks.onUploadComplete();
+
     const finalized = await fetchJson<ArtworkUploadOutcome>(
       "/api/direct-mail/upload/artwork/finalize",
       {
@@ -98,7 +108,6 @@ export function uploadArtworkWithProgress(
         }),
       },
     );
-    onProgress(100);
     return { ...finalized, artworkId };
   })();
   return { promise, abort: () => activeXhr?.abort() };

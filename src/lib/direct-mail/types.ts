@@ -11,7 +11,12 @@ export type ArtworkFile = {
   warnings: string[];
 };
 
-export type ArtworkRowStatus = "pending" | "uploading" | "uploaded" | "failed";
+export type ArtworkRowStatus =
+  | "pending"
+  | "uploading"
+  | "finalizing"
+  | "uploaded"
+  | "failed";
 
 export type ArtworkLocalFile = {
   fileName: string;

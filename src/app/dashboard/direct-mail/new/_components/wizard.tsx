@@ -254,13 +254,23 @@ export function Wizard({
           continue;
         }
         try {
-          const { promise } = uploadArtworkWithProgress(id, next.id, file, (pct) => {
-            setDraft((d) => ({
-              ...d,
-              artworkRows: d.artworkRows.map((r) =>
-                r.id === next.id ? { ...r, progress: pct } : r,
-              ),
-            }));
+          const { promise } = uploadArtworkWithProgress(id, next.id, file, {
+            onProgress: (pct) => {
+              setDraft((d) => ({
+                ...d,
+                artworkRows: d.artworkRows.map((r) =>
+                  r.id === next.id ? { ...r, progress: pct } : r,
+                ),
+              }));
+            },
+            onUploadComplete: () => {
+              setDraft((d) => ({
+                ...d,
+                artworkRows: d.artworkRows.map((r) =>
+                  r.id === next.id ? { ...r, status: "finalizing", progress: 100 } : r,
+                ),
+              }));
+            },
           });
           const result = await promise;
           markRowUploaded(next.id, result);
@@ -444,7 +454,9 @@ function validateStep(draft: DraftState): Errors {
       const pending = draft.artworkRows.filter(
         (r) => r.status === "pending" || r.status === "failed",
       );
-      const uploadingNow = draft.artworkRows.some((r) => r.status === "uploading");
+      const uploadingNow = draft.artworkRows.some(
+        (r) => r.status === "uploading" || r.status === "finalizing",
+      );
       const namelessUploaded = draft.artworkRows.findIndex(
         (r) => r.status === "uploaded" && r.name.trim().length === 0,
       );
