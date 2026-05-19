@@ -1,0 +1,108 @@
+"use client";
+
+import { DocumentDrawer } from "@/components/admin/document-drawer";
+import { DocumentCategoryDrawer } from "@/components/admin/document-category-drawer";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { BulkDeleteDialog } from "./bulk-delete-dialog";
+import type { BulkDeleteResult } from "@/lib/documents/bulk-delete";
+import type {
+  DocumentCategoryItem,
+  DocumentItem,
+  DocumentSection,
+} from "./types";
+
+interface OrganizeDialogsProps {
+  docDrawerOpen: boolean;
+  setDocDrawerOpen: (open: boolean) => void;
+  editingDoc: DocumentItem | null;
+  setEditingDoc: (doc: DocumentItem | null) => void;
+  drawerCategories: DocumentCategoryItem[];
+  addDocSection: DocumentSection;
+  catDrawerOpen: boolean;
+  setCatDrawerOpen: (open: boolean) => void;
+  editingCat: DocumentCategoryItem | null;
+  setEditingCat: (cat: DocumentCategoryItem | null) => void;
+  pendingDelete: { id: string; name: string } | null;
+  deleting: boolean;
+  confirmDelete: () => void;
+  setPendingDelete: (value: { id: string; name: string } | null) => void;
+  bulkOpen: boolean;
+  setBulkOpen: (open: boolean) => void;
+  handleBulkDeleted: (result: BulkDeleteResult) => void;
+  refetch: () => void;
+}
+
+export function OrganizeDialogs({
+  docDrawerOpen,
+  setDocDrawerOpen,
+  editingDoc,
+  setEditingDoc,
+  drawerCategories,
+  addDocSection,
+  catDrawerOpen,
+  setCatDrawerOpen,
+  editingCat,
+  setEditingCat,
+  pendingDelete,
+  deleting,
+  confirmDelete,
+  setPendingDelete,
+  bulkOpen,
+  setBulkOpen,
+  handleBulkDeleted,
+  refetch,
+}: OrganizeDialogsProps) {
+  return (
+    <>
+      <DocumentDrawer
+        open={docDrawerOpen}
+        onClose={() => {
+          setDocDrawerOpen(false);
+          setEditingDoc(null);
+        }}
+        item={editingDoc}
+        categories={drawerCategories}
+        onSaved={refetch}
+        defaultSection={addDocSection}
+      />
+
+      <DocumentCategoryDrawer
+        open={catDrawerOpen}
+        onClose={() => {
+          setCatDrawerOpen(false);
+          setEditingCat(null);
+        }}
+        item={editingCat}
+        onSaved={refetch}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete Document"
+        message={
+          pendingDelete
+            ? `This will permanently delete "${pendingDelete.name}" and its file. Agent favorites and drafts that reference this document will remain but show as missing. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete permanently"
+        typeToConfirm="DELETE"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          if (!deleting) setPendingDelete(null);
+        }}
+      />
+
+      <BulkDeleteDialog
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        onDeleted={handleBulkDeleted}
+        categories={drawerCategories.map((c) => ({
+          id: c.id,
+          title: c.title,
+          section: c.section,
+        }))}
+      />
+    </>
+  );
+}

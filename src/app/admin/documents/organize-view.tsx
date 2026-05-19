@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import type { DragStartEvent } from "@dnd-kit/core";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
-import { DocumentDrawer } from "@/components/admin/document-drawer";
-import { DocumentCategoryDrawer } from "@/components/admin/document-category-drawer";
-import { ConfirmDialog } from "@/components/admin/confirm-dialog";
-import { BulkDeleteDialog } from "./bulk-delete-dialog";
+import { OrganizeDialogs } from "./organize-dialogs";
 import type { BulkDeleteResult } from "@/lib/documents/bulk-delete";
 import type {
   AdminCategoryTree,
@@ -16,6 +13,7 @@ import type {
   DocumentCategoryItem,
   DocumentItem,
   DocumentSection,
+  OrganizeTab,
   OrganizeTree,
 } from "./types";
 import { fetchOrganizeTree, moveMembership } from "@/lib/documents-organize/api";
@@ -30,9 +28,10 @@ import { DndContextProvider } from "@/components/admin/documents-organize/dnd-co
 import { DragPreviewCard } from "@/components/admin/documents-organize/drag-preview-card";
 import { OrganizeToolbar } from "@/components/admin/documents-organize/organize-toolbar";
 import { SectionBoard } from "@/components/admin/documents-organize/section-board";
+import { SectionTabs } from "@/components/admin/documents-organize/section-tabs";
 import { useOrganizeDragEnd } from "@/components/admin/documents-organize/use-organize-drag-end";
 
-const TABS: Array<{ key: DocumentSection; label: string }> = [
+const TABS: Array<{ key: OrganizeTab; label: string }> = [
   { key: "office", label: "Office" },
   { key: "listing", label: "Listing" },
   { key: "sales", label: "Sales" },
@@ -56,7 +55,7 @@ export function OrganizeView() {
     null,
   );
   const [pendingDelete, setPendingDelete] =
-    useState<AdminDocumentInCategory | null>(null);
+    useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
@@ -343,34 +342,17 @@ export function OrganizeView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-1 p-1 bg-slate-100/80 rounded-xl overflow-x-auto w-fit">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 ${
-                isActive
-                  ? "bg-white text-navy-700 shadow-sm"
-                  : "text-slate-500 hover:text-navy-600"
-              }`}
-            >
-              {tab.label}
-              <span
-                className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full transition-colors ${
-                  isActive
-                    ? "bg-crimson-50 text-crimson-600"
-                    : "bg-slate-200/60 text-slate-400"
-                }`}
-              >
-                {sectionCounts[tab.key]}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <SectionTabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onSelect={setActiveTab}
+        counts={{
+          office: sectionCounts.office,
+          listing: sectionCounts.listing,
+          sales: sectionCounts.sales,
+          uncategorized: 0,
+        }}
+      />
 
       <OrganizeToolbar
         preview={preview}
@@ -419,58 +401,29 @@ export function OrganizeView() {
           onToggleQuickAccess={handleToggleQuickAccess}
           onMoveTo={handleMoveViaMenu}
           onOpenInViewer={handleOpenInViewer}
-          onDeleteDoc={setPendingDelete}
+          onDeleteDoc={(d) => setPendingDelete({ id: d.id, name: d.name })}
         />
       </DndContextProvider>
 
-      <DocumentDrawer
-        open={docDrawerOpen}
-        onClose={() => {
-          setDocDrawerOpen(false);
-          setEditingDoc(null);
-        }}
-        item={editingDoc}
-        categories={drawerCategories}
-        onSaved={refetch}
-        defaultSection={addDocSection}
-      />
-
-      <DocumentCategoryDrawer
-        open={catDrawerOpen}
-        onClose={() => {
-          setCatDrawerOpen(false);
-          setEditingCat(null);
-        }}
-        item={editingCat}
-        onSaved={refetch}
-      />
-
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Delete Document"
-        message={
-          pendingDelete
-            ? `This will permanently delete "${pendingDelete.name}" and its file. Agent favorites and drafts that reference this document will remain but show as missing. This cannot be undone.`
-            : ""
-        }
-        confirmLabel="Delete permanently"
-        typeToConfirm="DELETE"
-        busy={deleting}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          if (!deleting) setPendingDelete(null);
-        }}
-      />
-
-      <BulkDeleteDialog
-        open={bulkOpen}
-        onClose={() => setBulkOpen(false)}
-        onDeleted={handleBulkDeleted}
-        categories={drawerCategories.map((c) => ({
-          id: c.id,
-          title: c.title,
-          section: c.section,
-        }))}
+      <OrganizeDialogs
+        docDrawerOpen={docDrawerOpen}
+        setDocDrawerOpen={setDocDrawerOpen}
+        editingDoc={editingDoc}
+        setEditingDoc={setEditingDoc}
+        drawerCategories={drawerCategories}
+        addDocSection={addDocSection}
+        catDrawerOpen={catDrawerOpen}
+        setCatDrawerOpen={setCatDrawerOpen}
+        editingCat={editingCat}
+        setEditingCat={setEditingCat}
+        pendingDelete={pendingDelete}
+        deleting={deleting}
+        confirmDelete={confirmDelete}
+        setPendingDelete={setPendingDelete}
+        bulkOpen={bulkOpen}
+        setBulkOpen={setBulkOpen}
+        handleBulkDeleted={handleBulkDeleted}
+        refetch={refetch}
       />
     </div>
   );
