@@ -231,6 +231,7 @@ export function BulkUploadDialog({
               {rows.map((r) => (
                 <div key={r.id} className="flex items-center gap-2 p-2">
                   <input
+                    aria-label={`Document name for ${r.file.name}`}
                     value={r.name}
                     disabled={
                       r.status.kind === "invalid" ||
@@ -268,6 +269,7 @@ export function BulkUploadDialog({
 
           <div className="flex gap-2 pt-4 items-center">
             <button
+              type="button"
               onClick={runUpload}
               disabled={!canUpload}
               className="px-4 py-2 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
@@ -278,6 +280,7 @@ export function BulkUploadDialog({
               {hasErrors ? "Retry failed" : submitting ? "Uploading…" : "Upload"}
             </button>
             <button
+              type="button"
               onClick={() => handleOpenChange(false)}
               disabled={submitting}
               className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 disabled:text-slate-300"
