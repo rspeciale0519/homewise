@@ -3,12 +3,14 @@
 import { useCallback } from "react";
 import { uncategorizedToDocumentItem } from "@/lib/documents-organize/shapers";
 import type { BulkCreateResult } from "@/lib/documents/bulk-upload";
+import type { BulkDeleteResult } from "@/lib/documents/bulk-delete";
 import type { AdminUncategorizedDoc, DocumentItem, OrganizeTab } from "./types";
 
 interface Deps {
   setEditingDoc: (item: DocumentItem) => void;
   setDocDrawerOpen: (open: boolean) => void;
   setBulkUploadOpen: (open: boolean) => void;
+  setBulkOpen: (open: boolean) => void;
   setActiveTab: (tab: OrganizeTab) => void;
   refetch: () => void;
   toast: (message: string, kind: "success" | "error") => void;
@@ -19,6 +21,7 @@ export function useUncategorizedActions(deps: Deps) {
     setEditingDoc,
     setDocDrawerOpen,
     setBulkUploadOpen,
+    setBulkOpen,
     setActiveTab,
     refetch,
     toast,
@@ -48,5 +51,20 @@ export function useUncategorizedActions(deps: Deps) {
     [setBulkUploadOpen, toast, setActiveTab, refetch],
   );
 
-  return { handleEditUncategorized, handleBulkUploaded };
+  const handleBulkDeleted = useCallback(
+    (result: BulkDeleteResult) => {
+      setBulkOpen(false);
+      toast(
+        `Deleted ${result.documentCount} document(s)` +
+          (result.storageErrors > 0
+            ? ` — ${result.storageErrors} storage object(s) failed to remove`
+            : ""),
+        result.storageErrors > 0 ? "error" : "success",
+      );
+      refetch();
+    },
+    [setBulkOpen, toast, refetch],
+  );
+
+  return { handleEditUncategorized, handleBulkUploaded, handleBulkDeleted };
 }

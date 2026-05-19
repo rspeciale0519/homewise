@@ -6,7 +6,6 @@ import type { DragStartEvent } from "@dnd-kit/core";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import { OrganizeDialogs } from "./organize-dialogs";
-import type { BulkDeleteResult } from "@/lib/documents/bulk-delete";
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
@@ -25,7 +24,7 @@ import {
 } from "@/lib/documents-organize/shapers";
 import { useOrganizeUrlState } from "@/lib/documents-organize/use-organize-url-state";
 import { DndContextProvider } from "@/components/admin/documents-organize/dnd-context";
-import { DragPreviewCard } from "@/components/admin/documents-organize/drag-preview-card";
+import { DragOverlay } from "@/components/admin/documents-organize/drag-overlay";
 import { OrganizeToolbar } from "@/components/admin/documents-organize/organize-toolbar";
 import { SectionBoard } from "@/components/admin/documents-organize/section-board";
 import { SectionTabs } from "@/components/admin/documents-organize/section-tabs";
@@ -279,26 +278,12 @@ export function OrganizeView() {
     }
   }, [pendingDelete, refetch, toast]);
 
-  const handleBulkDeleted = useCallback(
-    (result: BulkDeleteResult) => {
-      setBulkOpen(false);
-      toast(
-        `Deleted ${result.documentCount} document(s)` +
-          (result.storageErrors > 0
-            ? ` — ${result.storageErrors} storage object(s) failed to remove`
-            : ""),
-        result.storageErrors > 0 ? "error" : "success",
-      );
-      refetch();
-    },
-    [refetch, toast],
-  );
-
-  const { handleEditUncategorized, handleBulkUploaded } =
+  const { handleEditUncategorized, handleBulkUploaded, handleBulkDeleted } =
     useUncategorizedActions({
       setEditingDoc,
       setDocDrawerOpen,
       setBulkUploadOpen,
+      setBulkOpen,
       setActiveTab,
       refetch,
       toast,
@@ -403,16 +388,7 @@ export function OrganizeView() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragCancel={clearActiveDrag}
-          overlay={
-            activeDragDoc ? (
-              <DragPreviewCard document={activeDragDoc} />
-            ) : activeDragCategory ? (
-              <div className="px-4 py-3 rounded-xl border border-crimson-200 bg-white shadow-2xl font-serif text-lg font-semibold text-navy-700 pointer-events-none">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-crimson-600 mr-2 align-middle" />
-                {activeDragCategory.title}
-              </div>
-            ) : null
-          }
+          overlay={<DragOverlay activeDragDoc={activeDragDoc} activeDragCategory={activeDragCategory} />}
         >
           <SectionBoard
             section={activeTab}
