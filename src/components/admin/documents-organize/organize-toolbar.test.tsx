@@ -6,6 +6,7 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
   const onPreviewChange = vi.fn();
   const onSearchChange = vi.fn();
   const onAddDocument = vi.fn();
+  const onBulkDelete = vi.fn();
   render(
     <OrganizeToolbar
       preview={false}
@@ -13,10 +14,11 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
       search=""
       onSearchChange={onSearchChange}
       onAddDocument={onAddDocument}
+      onBulkDelete={onBulkDelete}
       {...overrides}
     />,
   );
-  return { onPreviewChange, onSearchChange, onAddDocument };
+  return { onPreviewChange, onSearchChange, onAddDocument, onBulkDelete };
 }
 
 describe("OrganizeToolbar", () => {
@@ -52,5 +54,18 @@ describe("OrganizeToolbar", () => {
     const { onPreviewChange } = setup();
     fireEvent.click(screen.getByRole("switch"));
     expect(onPreviewChange).toHaveBeenCalledWith(true);
+  });
+
+  it("fires onBulkDelete when the Bulk delete button is clicked", () => {
+    const { onBulkDelete } = setup();
+    fireEvent.click(screen.getByRole("button", { name: /bulk delete/i }));
+    expect(onBulkDelete).toHaveBeenCalledOnce();
+  });
+
+  it("hides the Bulk delete button when preview is on", () => {
+    setup({ preview: true });
+    expect(
+      screen.queryByRole("button", { name: /bulk delete/i }),
+    ).not.toBeInTheDocument();
   });
 });

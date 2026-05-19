@@ -1131,6 +1131,31 @@ model DocumentRecent {
   @@index([viewedAt])
 }
 
+model DocumentDeletionLog {
+  id                    String   @id @default(cuid())
+  adminUserId           String
+  adminEmail            String?
+  outcome               String   @default("executed")
+  scopeType             String
+  section               String?
+  categoryId            String?
+  categoryName          String?
+  expectedDocumentCount Int?
+  actualDocumentCount   Int?
+  documentCount         Int
+  draftCount            Int
+  favoriteCount         Int
+  recentCount           Int
+  crossSectionCount     Int      @default(0)
+  storageRequested      Int      @default(0)
+  storageRemoved        Int      @default(0)
+  storageErrors         Int      @default(0)
+  storageErrorKeys      String[] @default([])
+  createdAt             DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model BillingSettings {
   id                     String   @id @default(cuid())
   gracePeriodWarningDays Int      @default(7)
