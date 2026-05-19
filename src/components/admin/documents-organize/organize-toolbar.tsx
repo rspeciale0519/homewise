@@ -10,7 +10,7 @@ interface OrganizeToolbarProps {
   onSearchChange: (next: string) => void;
   onAddDocument: () => void;
   onBulkDelete: () => void;
-  onBulkUpload?: () => void;
+  onBulkUpload: () => void;
 }
 
 export function OrganizeToolbar({
@@ -42,7 +42,7 @@ export function OrganizeToolbar({
           <>
             <button
               type="button"
-              onClick={() => onBulkUpload?.()}
+              onClick={onBulkUpload}
               className="inline-flex items-center gap-1.5 h-9 px-3 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 focus-visible:ring-offset-1"
             >
               <UploadCloud className="h-4 w-4" />
