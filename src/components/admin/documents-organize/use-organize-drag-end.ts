@@ -14,6 +14,7 @@ import {
 } from "@/lib/documents-organize/api";
 import type {
   DocumentSection,
+  OrganizeTab,
   OrganizeTree,
 } from "@/app/admin/documents/types";
 
@@ -29,7 +30,7 @@ type OverData =
 
 interface UseOrganizeDragEndArgs {
   tree: OrganizeTree | null;
-  activeTab: DocumentSection;
+  activeTab: OrganizeTab;
   setTree: (next: OrganizeTree) => void;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
@@ -46,7 +47,7 @@ export function useOrganizeDragEnd({
 
   return useCallback(
     async (event: DragEndEvent) => {
-      if (!tree) return;
+      if (!tree || activeTab === "uncategorized") return;
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
