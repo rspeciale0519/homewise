@@ -92,4 +92,23 @@ describe("GET /api/admin/documents/bulk-delete", () => {
     const res = await GET(getReq("scopeType=category&section=office&categoryId=c1"));
     expect(res.status).toBe(400);
   });
+
+  it("returns counts with crossSectionCount for scopeType=section", async () => {
+    documentCountMock.mockResolvedValue(1);
+    const res = await GET(getReq("scopeType=section&section=office"));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      documentCount: 3,
+      draftCount: 2,
+      favoriteCount: 5,
+      recentCount: 7,
+      crossSectionCount: 1,
+    });
+  });
+
+  it("400 when category is not found at all", async () => {
+    categoryFindUniqueMock.mockResolvedValue(null);
+    const res = await GET(getReq("scopeType=category&section=office&categoryId=c1"));
+    expect(res.status).toBe(400);
+  });
 });

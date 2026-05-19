@@ -28,7 +28,8 @@ type ScopeInput = z.infer<typeof scopeSchema>;
 
 type ResolvedScope =
   | { error: NextResponse }
-  | { targetSection: string | null; categoryName: string | null };
+  | { targetSection: null; categoryName: null }
+  | { targetSection: string; categoryName: string | null };
 
 async function resolveScope(scope: ScopeInput): Promise<ResolvedScope> {
   if (scope.scopeType === "all") {
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
 
   const sp = request.nextUrl.searchParams;
   const parsed = scopeSchema.safeParse({
-    scopeType: sp.get("scopeType"),
+    scopeType: sp.get("scopeType") ?? undefined,
     section: sp.get("section") ?? undefined,
     categoryId: sp.get("categoryId") ?? undefined,
   });
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
     select: { id: true },
   });
   const ids = matched.map((m) => m.id);
-  const documentCount = await prisma.document.count({ where });
+  const documentCount = ids.length;
 
   const [draftCount, favoriteCount, recentCount] = await Promise.all([
     prisma.documentDraft.count({ where: { documentId: { in: ids } } }),
@@ -95,10 +96,10 @@ export async function GET(request: NextRequest) {
   ]);
 
   const crossSectionCount =
-    scope.scopeType === "all"
+    meta.targetSection === null
       ? 0
       : await prisma.document.count({
-          where: buildCrossSectionWhere(where, meta.targetSection!),
+          where: buildCrossSectionWhere(where, meta.targetSection),
         });
 
   return NextResponse.json({
