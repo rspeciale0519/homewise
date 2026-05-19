@@ -12,6 +12,7 @@ const {
   deleteManyMock,
   logCreateMock,
   logUpdateMock,
+  storageRemoveMock,
   transactionMock,
 } = vi.hoisted(() => ({
   requireAdminApiMock: vi.fn(),
@@ -24,6 +25,7 @@ const {
   deleteManyMock: vi.fn(),
   logCreateMock: vi.fn(),
   logUpdateMock: vi.fn(),
+  storageRemoveMock: vi.fn(),
   transactionMock: vi.fn(),
 }));
 
@@ -44,7 +46,11 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    storage: { from: () => ({ remove: storageRemoveMock }) },
+  }),
+}));
 
 import { GET, POST } from "@/app/api/admin/documents/bulk-delete/route";
 
@@ -159,6 +165,7 @@ describe("POST /api/admin/documents/bulk-delete", () => {
       return undefined;
     });
     deleteManyMock.mockResolvedValue({ count: 2 });
+    storageRemoveMock.mockResolvedValue({ data: {}, error: null });
   });
 
   it("400 on wrong confirmation phrase", async () => {
@@ -217,5 +224,33 @@ describe("POST /api/admin/documents/bulk-delete", () => {
         data: expect.objectContaining({ outcome: "executed", documentCount: 0 }),
       }),
     );
+  });
+
+  it("removes supabase storage objects and patches the log", async () => {
+    storageRemoveMock.mockResolvedValue({ data: {}, error: null });
+    const res = await POST(
+      postReq({ scopeType: "all", expectedDocumentCount: 2, confirmationPhrase: "DELETE ALL" }),
+    );
+    expect(res.status).toBe(200);
+    expect(storageRemoveMock).toHaveBeenCalledWith(["k2"]);
+    expect(logUpdateMock).toHaveBeenCalledWith({
+      where: { id: "log-1" },
+      data: { storageRemoved: 1, storageErrors: 0, storageErrorKeys: [] },
+    });
+    expect(await res.json()).toEqual(
+      expect.objectContaining({ storageRequested: 1, storageRemoved: 1 }),
+    );
+  });
+
+  it("records failed storage keys when removal errors", async () => {
+    storageRemoveMock.mockResolvedValue({ data: null, error: { message: "boom" } });
+    const res = await POST(
+      postReq({ scopeType: "all", expectedDocumentCount: 2, confirmationPhrase: "DELETE ALL" }),
+    );
+    expect(res.status).toBe(200);
+    expect(logUpdateMock).toHaveBeenCalledWith({
+      where: { id: "log-1" },
+      data: { storageRemoved: 0, storageErrors: 1, storageErrorKeys: ["k2"] },
+    });
   });
 });

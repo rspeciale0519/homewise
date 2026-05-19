@@ -5,9 +5,11 @@ import { prisma } from "@/lib/prisma";
 import {
   buildCrossSectionWhere,
   buildDocumentWhere,
+  chunk,
   CONFIRMATION_PHRASE,
   type BulkDeleteScope,
 } from "@/lib/documents/bulk-delete";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const scopeSchema = z
   .object({
@@ -230,6 +232,27 @@ export async function POST(request: NextRequest) {
     { timeout: 50_000 },
   );
 
+  let storageRemoved = 0;
+  let storageErrors = 0;
+  const storageErrorKeys: string[] = [];
+
+  if (storageKeys.length > 0) {
+    const supabase = createAdminClient();
+    for (const batch of chunk(storageKeys, 100)) {
+      const { error } = await supabase.storage.from("documents").remove(batch);
+      if (error) {
+        storageErrors += batch.length;
+        storageErrorKeys.push(...batch);
+      } else {
+        storageRemoved += batch.length;
+      }
+    }
+    await prisma.documentDeletionLog.update({
+      where: { id: result.logId },
+      data: { storageRemoved, storageErrors, storageErrorKeys },
+    });
+  }
+
   return NextResponse.json({
     success: true,
     documentCount: result.deleted,
@@ -237,7 +260,7 @@ export async function POST(request: NextRequest) {
     favoriteCount: result.favoriteCount,
     recentCount: result.recentCount,
     storageRequested: storageKeys.length,
-    storageRemoved: 0,
-    storageErrors: 0,
+    storageRemoved,
+    storageErrors,
   });
 }
