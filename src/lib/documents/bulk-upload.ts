@@ -81,7 +81,7 @@ export async function runWithConcurrency<T, R>(
   async function lane(): Promise<void> {
     while (next < items.length) {
       const i = next++;
-      results[i] = await worker(items[i], i);
+      results[i] = await worker(items[i]!, i);
     }
   }
   const lanes = Array.from(
@@ -115,7 +115,7 @@ export function xhrPut(
       if (opts.signal.aborted) {
         xhr.abort();
       } else {
-        opts.signal.addEventListener("abort", () => xhr.abort());
+        opts.signal.addEventListener("abort", () => xhr.abort(), { once: true });
       }
     }
     xhr.send(body);
