@@ -9,6 +9,10 @@ const {
   favoriteCountMock,
   recentCountMock,
   categoryFindUniqueMock,
+  deleteManyMock,
+  logCreateMock,
+  logUpdateMock,
+  transactionMock,
 } = vi.hoisted(() => ({
   requireAdminApiMock: vi.fn(),
   documentCountMock: vi.fn(),
@@ -17,6 +21,10 @@ const {
   favoriteCountMock: vi.fn(),
   recentCountMock: vi.fn(),
   categoryFindUniqueMock: vi.fn(),
+  deleteManyMock: vi.fn(),
+  logCreateMock: vi.fn(),
+  logUpdateMock: vi.fn(),
+  transactionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/admin-api", () => ({
@@ -31,17 +39,26 @@ vi.mock("@/lib/prisma", () => ({
     documentFavorite: { count: favoriteCountMock },
     documentRecent: { count: recentCountMock },
     documentCategory: { findUnique: categoryFindUniqueMock },
+    documentDeletionLog: { create: logCreateMock, update: logUpdateMock },
+    $transaction: transactionMock,
   },
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 
-import { GET } from "@/app/api/admin/documents/bulk-delete/route";
+import { GET, POST } from "@/app/api/admin/documents/bulk-delete/route";
 
 function getReq(qs: string): NextRequest {
   return new NextRequest(
     `http://localhost/api/admin/documents/bulk-delete?${qs}`,
   );
+}
+
+function postReq(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/admin/documents/bulk-delete", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 describe("GET /api/admin/documents/bulk-delete", () => {
@@ -110,5 +127,95 @@ describe("GET /api/admin/documents/bulk-delete", () => {
     categoryFindUniqueMock.mockResolvedValue(null);
     const res = await GET(getReq("scopeType=category&section=office&categoryId=c1"));
     expect(res.status).toBe(400);
+  });
+});
+
+describe("POST /api/admin/documents/bulk-delete", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireAdminApiMock.mockResolvedValue({
+      user: { id: "admin-1", email: "a@x.com" },
+      profile: { role: "admin" },
+    });
+    documentFindManyMock.mockResolvedValue([
+      { id: "d1", storageProvider: "local", storageKey: null },
+      { id: "d2", storageProvider: "supabase", storageKey: "k2" },
+    ]);
+    documentCountMock.mockResolvedValue(0);
+    draftCountMock.mockResolvedValue(1);
+    favoriteCountMock.mockResolvedValue(2);
+    recentCountMock.mockResolvedValue(3);
+    logCreateMock.mockResolvedValue({ id: "log-1" });
+    transactionMock.mockImplementation(async (cb: unknown) => {
+      if (typeof cb === "function") {
+        return cb({
+          documentDraft: { count: draftCountMock },
+          documentFavorite: { count: favoriteCountMock },
+          documentRecent: { count: recentCountMock },
+          document: { deleteMany: deleteManyMock },
+          documentDeletionLog: { create: logCreateMock },
+        });
+      }
+      return undefined;
+    });
+    deleteManyMock.mockResolvedValue({ count: 2 });
+  });
+
+  it("400 on wrong confirmation phrase", async () => {
+    const res = await POST(
+      postReq({ scopeType: "all", expectedDocumentCount: 2, confirmationPhrase: "DELETE" }),
+    );
+    expect(res.status).toBe(400);
+    expect(deleteManyMock).not.toHaveBeenCalled();
+  });
+
+  it("409 and a blocked log row when actual exceeds expected", async () => {
+    const res = await POST(
+      postReq({ scopeType: "all", expectedDocumentCount: 1, confirmationPhrase: "DELETE ALL" }),
+    );
+    expect(res.status).toBe(409);
+    expect(logCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          outcome: "blocked_scope_changed",
+          documentCount: 0,
+          expectedDocumentCount: 1,
+          actualDocumentCount: 2,
+        }),
+      }),
+    );
+    expect(deleteManyMock).not.toHaveBeenCalled();
+  });
+
+  it("deletes, writes an executed log row, and returns counts", async () => {
+    const res = await POST(
+      postReq({ scopeType: "all", expectedDocumentCount: 2, confirmationPhrase: "DELETE ALL" }),
+    );
+    expect(res.status).toBe(200);
+    expect(deleteManyMock).toHaveBeenCalledWith({
+      where: { id: { in: ["d1", "d2"] } },
+    });
+    expect(logCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ outcome: "executed", documentCount: 2 }),
+      }),
+    );
+    expect(await res.json()).toEqual(
+      expect.objectContaining({ success: true, documentCount: 2 }),
+    );
+  });
+
+  it("no-op (zero matched) still writes an executed log row with zeros", async () => {
+    documentFindManyMock.mockResolvedValue([]);
+    deleteManyMock.mockResolvedValue({ count: 0 });
+    const res = await POST(
+      postReq({ scopeType: "all", expectedDocumentCount: 0, confirmationPhrase: "DELETE ALL" }),
+    );
+    expect(res.status).toBe(200);
+    expect(logCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ outcome: "executed", documentCount: 0 }),
+      }),
+    );
   });
 });

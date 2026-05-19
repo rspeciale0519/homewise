@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   buildCrossSectionWhere,
   buildDocumentWhere,
+  CONFIRMATION_PHRASE,
   type BulkDeleteScope,
 } from "@/lib/documents/bulk-delete";
 
@@ -108,5 +109,135 @@ export async function GET(request: NextRequest) {
     favoriteCount,
     recentCount,
     crossSectionCount,
+  });
+}
+
+const executeSchema = scopeSchema.and(
+  z.object({
+    expectedDocumentCount: z.number().int().nonnegative(),
+    confirmationPhrase: z.string(),
+  }),
+);
+
+export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
+  const parsed = executeSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid request", details: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  const { expectedDocumentCount, confirmationPhrase, ...scopeInput } =
+    parsed.data;
+
+  if (confirmationPhrase !== CONFIRMATION_PHRASE) {
+    return NextResponse.json(
+      { error: `Type ${CONFIRMATION_PHRASE} to confirm`, field: "confirmationPhrase" },
+      { status: 400 },
+    );
+  }
+
+  const meta = await resolveScope(scopeInput);
+  if ("error" in meta) return meta.error;
+
+  const scope = asScope(scopeInput);
+  const where = buildDocumentWhere(scope);
+  const matched = await prisma.document.findMany({
+    where,
+    select: { id: true, storageProvider: true, storageKey: true },
+  });
+  const ids = matched.map((m) => m.id);
+  const actual = ids.length;
+
+  const logBase = {
+    adminUserId: auth.user.id,
+    adminEmail: auth.user.email ?? null,
+    scopeType: scopeInput.scopeType,
+    section: scopeInput.section ?? null,
+    categoryId: scopeInput.categoryId ?? null,
+    categoryName: meta.categoryName,
+    expectedDocumentCount,
+    actualDocumentCount: actual,
+  };
+
+  if (actual > expectedDocumentCount) {
+    await prisma.documentDeletionLog.create({
+      data: {
+        ...logBase,
+        outcome: "blocked_scope_changed",
+        documentCount: 0,
+        draftCount: 0,
+        favoriteCount: 0,
+        recentCount: 0,
+        crossSectionCount: 0,
+        storageRequested: 0,
+        storageRemoved: 0,
+        storageErrors: 0,
+        storageErrorKeys: [],
+      },
+    });
+    return NextResponse.json(
+      {
+        error: "The library changed since you reviewed it. Re-check the numbers.",
+        code: "SCOPE_CHANGED",
+        expected: expectedDocumentCount,
+        actual,
+      },
+      { status: 409 },
+    );
+  }
+
+  const crossSectionCount =
+    meta.targetSection === null
+      ? 0
+      : await prisma.document.count({
+          where: buildCrossSectionWhere(where, meta.targetSection),
+        });
+
+  const storageKeys = matched
+    .filter((m) => m.storageProvider === "supabase" && m.storageKey)
+    .map((m) => m.storageKey as string);
+
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const [draftCount, favoriteCount, recentCount] = await Promise.all([
+        tx.documentDraft.count({ where: { documentId: { in: ids } } }),
+        tx.documentFavorite.count({ where: { documentId: { in: ids } } }),
+        tx.documentRecent.count({ where: { documentId: { in: ids } } }),
+      ]);
+      const del = await tx.document.deleteMany({ where: { id: { in: ids } } });
+      const log = await tx.documentDeletionLog.create({
+        data: {
+          ...logBase,
+          outcome: "executed",
+          documentCount: del.count,
+          draftCount,
+          favoriteCount,
+          recentCount,
+          crossSectionCount,
+          storageRequested: storageKeys.length,
+          storageRemoved: 0,
+          storageErrors: 0,
+          storageErrorKeys: [],
+        },
+      });
+      return { logId: log.id, deleted: del.count, draftCount, favoriteCount, recentCount };
+    },
+    { timeout: 50_000 },
+  );
+
+  return NextResponse.json({
+    success: true,
+    documentCount: result.deleted,
+    draftCount: result.draftCount,
+    favoriteCount: result.favoriteCount,
+    recentCount: result.recentCount,
+    storageRequested: storageKeys.length,
+    storageRemoved: 0,
+    storageErrors: 0,
   });
 }
