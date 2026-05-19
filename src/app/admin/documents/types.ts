@@ -54,10 +54,26 @@ export interface AdminCategoryTree {
   documents: AdminDocumentInCategory[];
 }
 
+export type OrganizeTab = DocumentSection | "uncategorized";
+
+export interface AdminUncategorizedDoc {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  published: boolean;
+  external: boolean;
+  url: string | null;
+  storageKey: string | null;
+  storageProvider: string;
+  mimeType: string | null;
+}
+
 export interface OrganizeTree {
   sections: {
     office: { categories: AdminCategoryTree[] };
     listing: { categories: AdminCategoryTree[] };
     sales: { categories: AdminCategoryTree[] };
   };
+  uncategorized?: AdminUncategorizedDoc[];
 }
