@@ -8,6 +8,8 @@ import { adminFetch } from "@/lib/admin-fetch";
 import { DocumentDrawer } from "@/components/admin/document-drawer";
 import { DocumentCategoryDrawer } from "@/components/admin/document-category-drawer";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { BulkDeleteDialog } from "./bulk-delete-dialog";
+import type { BulkDeleteResult } from "@/lib/documents/bulk-delete";
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
@@ -56,6 +58,7 @@ export function OrganizeView() {
   const [pendingDelete, setPendingDelete] =
     useState<AdminDocumentInCategory | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const [activeDragDoc, setActiveDragDoc] =
     useState<AdminDocumentInCategory | null>(null);
@@ -273,6 +276,21 @@ export function OrganizeView() {
     }
   }, [pendingDelete, refetch, toast]);
 
+  const handleBulkDeleted = useCallback(
+    (result: BulkDeleteResult) => {
+      setBulkOpen(false);
+      toast(
+        `Deleted ${result.documentCount} document(s)` +
+          (result.storageErrors > 0
+            ? ` — ${result.storageErrors} storage object(s) failed to remove`
+            : ""),
+        result.storageErrors > 0 ? "error" : "success",
+      );
+      refetch();
+    },
+    [refetch, toast],
+  );
+
   const handleAddDocument = useCallback(() => {
     setEditingDoc(null);
     setAddDocSection(activeTab);
@@ -363,6 +381,7 @@ export function OrganizeView() {
         search={search}
         onSearchChange={setSearch}
         onAddDocument={handleAddDocument}
+        onBulkDelete={() => setBulkOpen(true)}
       />
 
       <div className="xl:hidden text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
@@ -441,6 +460,17 @@ export function OrganizeView() {
         onCancel={() => {
           if (!deleting) setPendingDelete(null);
         }}
+      />
+
+      <BulkDeleteDialog
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        onDeleted={handleBulkDeleted}
+        categories={drawerCategories.map((c) => ({
+          id: c.id,
+          title: c.title,
+          section: c.section,
+        }))}
       />
     </div>
   );
