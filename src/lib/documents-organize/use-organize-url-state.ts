@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { DocumentSection } from "@/app/admin/documents/types";
+import type { OrganizeTab } from "@/app/admin/documents/types";
 
-const VALID_TABS: ReadonlyArray<DocumentSection> = ["office", "listing", "sales"];
+const VALID_TABS: ReadonlyArray<OrganizeTab> = [
+  "office",
+  "listing",
+  "sales",
+  "uncategorized",
+];
 const SEARCH_DEBOUNCE_MS = 250;
 
-function isValidTab(value: string | null): value is DocumentSection {
+function isValidTab(value: string | null): value is OrganizeTab {
   return value !== null && (VALID_TABS as readonly string[]).includes(value);
 }
 
@@ -17,7 +22,7 @@ export function useOrganizeUrlState() {
   const searchParams = useSearchParams();
 
   const tabFromUrl = searchParams.get("tab");
-  const activeTab: DocumentSection = isValidTab(tabFromUrl)
+  const activeTab: OrganizeTab = isValidTab(tabFromUrl)
     ? tabFromUrl
     : "office";
 
@@ -40,7 +45,7 @@ export function useOrganizeUrlState() {
   }, [search, pathname, router]);
 
   const setActiveTab = useCallback(
-    (next: DocumentSection) => {
+    (next: OrganizeTab) => {
       const params = new URLSearchParams(paramsRef.current.toString());
       params.set("tab", next);
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
