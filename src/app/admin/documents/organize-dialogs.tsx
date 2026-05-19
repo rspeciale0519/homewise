@@ -4,7 +4,9 @@ import { DocumentDrawer } from "@/components/admin/document-drawer";
 import { DocumentCategoryDrawer } from "@/components/admin/document-category-drawer";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { BulkDeleteDialog } from "./bulk-delete-dialog";
+import { BulkUploadDialog } from "./bulk-upload-dialog";
 import type { BulkDeleteResult } from "@/lib/documents/bulk-delete";
+import type { BulkCreateResult } from "@/lib/documents/bulk-upload";
 import type {
   DocumentCategoryItem,
   DocumentItem,
@@ -30,6 +32,9 @@ interface OrganizeDialogsProps {
   setBulkOpen: (open: boolean) => void;
   handleBulkDeleted: (result: BulkDeleteResult) => void;
   refetch: () => void;
+  bulkUploadOpen: boolean;
+  setBulkUploadOpen: (open: boolean) => void;
+  handleBulkUploaded: (result: BulkCreateResult) => void;
 }
 
 export function OrganizeDialogs({
@@ -51,6 +56,9 @@ export function OrganizeDialogs({
   setBulkOpen,
   handleBulkDeleted,
   refetch,
+  bulkUploadOpen,
+  setBulkUploadOpen,
+  handleBulkUploaded,
 }: OrganizeDialogsProps) {
   return (
     <>
@@ -102,6 +110,12 @@ export function OrganizeDialogs({
           title: c.title,
           section: c.section,
         }))}
+      />
+
+      <BulkUploadDialog
+        open={bulkUploadOpen}
+        onClose={() => setBulkUploadOpen(false)}
+        onUploaded={handleBulkUploaded}
       />
     </>
   );
