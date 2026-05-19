@@ -70,12 +70,12 @@ export function BulkDeleteDialog({
 
   const loadPreview = useCallback(async () => {
     setLoadingPreview(true);
-    setMessage(null);
     try {
       const data = await adminFetch<BulkDeletePreview>(
         `/api/admin/documents/bulk-delete?${query}`,
       );
       setPreview(data);
+      setMessage(null);
     } catch (err) {
       setPreview(null);
       setMessage((err as Error).message);
@@ -253,6 +253,7 @@ export function BulkDeleteDialog({
               disabled={submitting}
               autoComplete="off"
               spellCheck={false}
+              autoCorrect="off"
               className={`mt-2 font-mono text-sm h-10 px-3 w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-crimson-600 ${
                 matches ? "border-crimson-300 bg-crimson-50/30" : "border-slate-200"
               }`}

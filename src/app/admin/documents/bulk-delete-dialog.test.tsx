@@ -15,6 +15,8 @@ vi.mock("@/lib/admin-fetch", () => ({
 }));
 
 import { BulkDeleteDialog } from "./bulk-delete-dialog";
+import { AdminFetchError } from "@/lib/admin-fetch";
+import { CONFIRMATION_PHRASE } from "@/lib/documents/bulk-delete";
 
 const preview = {
   documentCount: 4,
@@ -46,8 +48,8 @@ describe("BulkDeleteDialog", () => {
     await waitFor(() => screen.getByText(/4 documents/i));
     const confirm = screen.getByRole("button", { name: /delete permanently/i });
     expect(confirm).toBeDisabled();
-    fireEvent.change(screen.getByPlaceholderText("DELETE ALL"), {
-      target: { value: "DELETE ALL" },
+    fireEvent.change(screen.getByPlaceholderText(CONFIRMATION_PHRASE), {
+      target: { value: CONFIRMATION_PHRASE },
     });
     expect(confirm).toBeEnabled();
   });
@@ -61,12 +63,44 @@ describe("BulkDeleteDialog", () => {
       <BulkDeleteDialog open onClose={() => {}} onDeleted={onDeleted} categories={[]} />,
     );
     await waitFor(() => screen.getByText(/4 documents/i));
-    fireEvent.change(screen.getByPlaceholderText("DELETE ALL"), {
-      target: { value: "DELETE ALL" },
+    fireEvent.change(screen.getByPlaceholderText(CONFIRMATION_PHRASE), {
+      target: { value: CONFIRMATION_PHRASE },
     });
     fireEvent.click(screen.getByRole("button", { name: /delete permanently/i }));
     await waitFor(() =>
       expect(onDeleted).toHaveBeenCalledWith({ success: true, documentCount: 4 }),
+    );
+  });
+
+  it("clears the phrase and reloads the preview on a 409", async () => {
+    const onDeleted = vi.fn();
+    let resolveReload!: (v: typeof preview & { documentCount: number }) => void;
+    const reloadPromise = new Promise<typeof preview & { documentCount: number }>((res) => {
+      resolveReload = res;
+    });
+    adminFetchMock
+      .mockResolvedValueOnce(preview)
+      .mockRejectedValueOnce(new AdminFetchError("scope changed", 409))
+      .mockReturnValueOnce(reloadPromise);
+    render(
+      <BulkDeleteDialog open onClose={() => {}} onDeleted={onDeleted} categories={[]} />,
+    );
+    await waitFor(() => screen.getByText(/4 documents/i));
+    fireEvent.change(screen.getByPlaceholderText(CONFIRMATION_PHRASE), {
+      target: { value: CONFIRMATION_PHRASE },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /delete permanently/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/library changed/i)).toBeInTheDocument(),
+    );
+    expect(onDeleted).not.toHaveBeenCalled();
+    expect(
+      (screen.getByPlaceholderText(CONFIRMATION_PHRASE) as HTMLInputElement)
+        .value,
+    ).toBe("");
+    resolveReload({ ...preview, documentCount: 9 });
+    await waitFor(() =>
+      expect(screen.getByText(/9 documents/i)).toBeInTheDocument(),
     );
   });
 });
