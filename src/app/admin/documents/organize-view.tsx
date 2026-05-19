@@ -363,6 +363,7 @@ export function OrganizeView() {
         search={search}
         onSearchChange={setSearch}
         onAddDocument={handleAddDocument}
+        onBulkDelete={() => {}}
       />
 
       <div className="xl:hidden text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
