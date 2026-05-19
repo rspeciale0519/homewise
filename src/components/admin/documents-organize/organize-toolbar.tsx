@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { PreviewToggle } from "./preview-toggle";
 
 interface OrganizeToolbarProps {
@@ -9,6 +9,7 @@ interface OrganizeToolbarProps {
   search: string;
   onSearchChange: (next: string) => void;
   onAddDocument: () => void;
+  onBulkDelete: () => void;
 }
 
 export function OrganizeToolbar({
@@ -17,6 +18,7 @@ export function OrganizeToolbar({
   search,
   onSearchChange,
   onAddDocument,
+  onBulkDelete,
 }: OrganizeToolbarProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -35,14 +37,24 @@ export function OrganizeToolbar({
       <div className="flex items-center gap-2">
         <PreviewToggle value={preview} onChange={onPreviewChange} />
         {!preview && (
-          <button
-            type="button"
-            onClick={onAddDocument}
-            className="inline-flex items-center gap-1.5 h-9 px-3 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-crimson-600 focus-visible:ring-offset-1"
-          >
-            <Plus className="h-4 w-4" />
-            Add Document
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onBulkDelete}
+              className="inline-flex items-center gap-1.5 h-9 px-3 border border-crimson-200 text-crimson-700 rounded-lg text-sm font-semibold hover:bg-crimson-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-crimson-600 focus-visible:ring-offset-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              Bulk delete
+            </button>
+            <button
+              type="button"
+              onClick={onAddDocument}
+              className="inline-flex items-center gap-1.5 h-9 px-3 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-crimson-600 focus-visible:ring-offset-1"
+            >
+              <Plus className="h-4 w-4" />
+              Add Document
+            </button>
+          </>
         )}
       </div>
     </div>
