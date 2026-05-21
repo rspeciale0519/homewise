@@ -98,5 +98,5 @@ export function computeCrossCategoryMove(
     updatedSections[key] = { categories: updatedCategories };
   }
 
-  return { sections: updatedSections };
+  return { ...tree, sections: updatedSections };
 }

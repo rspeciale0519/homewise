@@ -68,6 +68,7 @@ export function useOrganizeDragEnd({
 
         const reordered = computeCategoryReorder(cats, fromIdx, toIdx);
         setTree({
+          ...tree,
           sections: {
             ...tree.sections,
             [activeTab]: { categories: reordered },
@@ -121,6 +122,7 @@ export function useOrganizeDragEnd({
           c.id === fromCategoryId ? { ...c, documents: reordered } : c,
         );
         setTree({
+          ...tree,
           sections: {
             ...tree.sections,
             [activeTab]: { categories: nextCats },
