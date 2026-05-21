@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireAdminApiMock, categoryFindManyMock } = vi.hoisted(() => ({
-  requireAdminApiMock: vi.fn(),
-  categoryFindManyMock: vi.fn(),
-}));
+const { requireAdminApiMock, categoryFindManyMock, documentFindManyMock } =
+  vi.hoisted(() => ({
+    requireAdminApiMock: vi.fn(),
+    categoryFindManyMock: vi.fn(),
+    documentFindManyMock: vi.fn(),
+  }));
 
 vi.mock("@/lib/admin-api", () => ({
   requireAdminApi: requireAdminApiMock,
@@ -13,6 +15,7 @@ vi.mock("@/lib/admin-api", () => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     documentCategory: { findMany: categoryFindManyMock },
+    document: { findMany: documentFindManyMock },
   },
 }));
 
@@ -25,6 +28,7 @@ describe("GET /api/admin/documents/organize", () => {
       user: { id: "admin-1" },
       profile: { role: "admin" },
     });
+    documentFindManyMock.mockResolvedValue([]);
   });
 
   it("returns 403 for non-admin users", async () => {
@@ -113,5 +117,55 @@ describe("GET /api/admin/documents/organize", () => {
       false,
     );
     expect(body.sections.sales.categories).toEqual([]);
+  });
+
+  it("returns uncategorized documents (zero memberships)", async () => {
+    documentFindManyMock.mockResolvedValue([
+      {
+        id: "u1",
+        slug: "u1",
+        name: "Loose Doc",
+        description: null,
+        published: false,
+        external: false,
+        url: null,
+        storageKey: "documents/k-u1",
+        storageProvider: "supabase",
+        mimeType: "application/pdf",
+      },
+    ]);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.uncategorized).toEqual([
+      {
+        id: "u1",
+        slug: "u1",
+        name: "Loose Doc",
+        description: null,
+        published: false,
+        external: false,
+        url: null,
+        storageKey: "documents/k-u1",
+        storageProvider: "supabase",
+        mimeType: "application/pdf",
+      },
+    ]);
+    expect(documentFindManyMock).toHaveBeenCalledWith({
+      where: { categories: { none: {} } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        published: true,
+        external: true,
+        url: true,
+        storageKey: true,
+        storageProvider: true,
+        mimeType: true,
+      },
+    });
   });
 });

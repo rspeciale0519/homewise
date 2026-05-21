@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2, UploadCloud } from "lucide-react";
 import { PreviewToggle } from "./preview-toggle";
 
 interface OrganizeToolbarProps {
@@ -10,6 +10,7 @@ interface OrganizeToolbarProps {
   onSearchChange: (next: string) => void;
   onAddDocument: () => void;
   onBulkDelete: () => void;
+  onBulkUpload: () => void;
 }
 
 export function OrganizeToolbar({
@@ -19,6 +20,7 @@ export function OrganizeToolbar({
   onSearchChange,
   onAddDocument,
   onBulkDelete,
+  onBulkUpload,
 }: OrganizeToolbarProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -38,6 +40,14 @@ export function OrganizeToolbar({
         <PreviewToggle value={preview} onChange={onPreviewChange} />
         {!preview && (
           <>
+            <button
+              type="button"
+              onClick={onBulkUpload}
+              className="inline-flex items-center gap-1.5 h-9 px-3 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 focus-visible:ring-offset-1"
+            >
+              <UploadCloud className="h-4 w-4" />
+              Bulk upload
+            </button>
             <button
               type="button"
               onClick={onBulkDelete}

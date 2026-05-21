@@ -1,6 +1,7 @@
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
+  AdminUncategorizedDoc,
   DocumentCategoryItem,
   DocumentItem,
   OrganizeTree,
@@ -53,4 +54,27 @@ export function allCategoriesOfTree(
     ...tree.sections.listing.categories,
     ...tree.sections.sales.categories,
   ];
+}
+
+export function uncategorizedToDocumentItem(
+  doc: AdminUncategorizedDoc,
+): DocumentItem {
+  return {
+    id: doc.id,
+    slug: doc.slug,
+    name: doc.name,
+    description: doc.description,
+    url: doc.url,
+    external: doc.external,
+    storageKey: doc.storageKey,
+    storageProvider: doc.storageProvider,
+    mimeType: doc.mimeType,
+    sizeBytes: null,
+    sortOrder: 0,
+    published: doc.published,
+    quickAccess: false,
+    createdAt: "",
+    updatedAt: "",
+    categories: [],
+  };
 }

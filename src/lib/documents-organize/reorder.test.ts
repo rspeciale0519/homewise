@@ -7,6 +7,7 @@ import {
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
+  AdminUncategorizedDoc,
   OrganizeTree,
 } from "@/app/admin/documents/types";
 
@@ -222,5 +223,39 @@ describe("computeCrossCategoryMove", () => {
     expect(listing.documents[0]!.membership.categoryId).toBe(
       "catListingEmpty",
     );
+  });
+
+  it("preserves tree.uncategorized when moving across categories", () => {
+    const uncatDoc: AdminUncategorizedDoc = {
+      id: "u1",
+      slug: "u1",
+      name: "Uncategorized Doc",
+      description: null,
+      published: true,
+      external: false,
+      url: null,
+      storageKey: "u1.pdf",
+      storageProvider: "supabase",
+      mimeType: "application/pdf",
+    };
+    const treeWithUncat: OrganizeTree = {
+      sections: {
+        office: {
+          categories: [
+            makeCat("catA", "office", 0, [
+              makeDoc("d1", "catA", 0),
+              makeDoc("d2", "catA", 1),
+            ]),
+            makeCat("catB", "office", 1, [makeDoc("d3", "catB", 0)]),
+          ],
+        },
+        listing: { categories: [] },
+        sales: { categories: [] },
+      },
+      uncategorized: [uncatDoc],
+    };
+
+    const out = computeCrossCategoryMove(treeWithUncat, "d1", "catA", "catB", 0);
+    expect(out.uncategorized).toEqual(treeWithUncat.uncategorized);
   });
 });
