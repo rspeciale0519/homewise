@@ -3,6 +3,7 @@ import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import type {
   AdminCategoryTree,
+  AdminUncategorizedDoc,
   DocumentSection,
   OrganizeTree,
 } from "@/app/admin/documents/types";
@@ -46,6 +47,23 @@ export async function GET() {
     })),
   }));
 
+  const uncategorized = (await prisma.document.findMany({
+    where: { categories: { none: {} } },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      published: true,
+      external: true,
+      url: true,
+      storageKey: true,
+      storageProvider: true,
+      mimeType: true,
+    },
+  })) as AdminUncategorizedDoc[];
+
   const tree: OrganizeTree = {
     sections: SECTIONS.reduce(
       (acc, s) => {
@@ -56,6 +74,7 @@ export async function GET() {
       },
       {} as OrganizeTree["sections"],
     ),
+    uncategorized,
   };
 
   return NextResponse.json(tree);

@@ -7,6 +7,7 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
   const onSearchChange = vi.fn();
   const onAddDocument = vi.fn();
   const onBulkDelete = vi.fn();
+  const onBulkUpload = vi.fn();
   render(
     <OrganizeToolbar
       preview={false}
@@ -15,10 +16,11 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
       onSearchChange={onSearchChange}
       onAddDocument={onAddDocument}
       onBulkDelete={onBulkDelete}
+      onBulkUpload={onBulkUpload}
       {...overrides}
     />,
   );
-  return { onPreviewChange, onSearchChange, onAddDocument, onBulkDelete };
+  return { onPreviewChange, onSearchChange, onAddDocument, onBulkDelete, onBulkUpload };
 }
 
 describe("OrganizeToolbar", () => {
@@ -66,6 +68,19 @@ describe("OrganizeToolbar", () => {
     setup({ preview: true });
     expect(
       screen.queryByRole("button", { name: /bulk delete/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("fires onBulkUpload when Bulk upload is clicked", () => {
+    const { onBulkUpload } = setup();
+    fireEvent.click(screen.getByRole("button", { name: /bulk upload/i }));
+    expect(onBulkUpload).toHaveBeenCalledOnce();
+  });
+
+  it("hides Bulk upload in preview mode", () => {
+    setup({ preview: true });
+    expect(
+      screen.queryByRole("button", { name: /bulk upload/i }),
     ).not.toBeInTheDocument();
   });
 });

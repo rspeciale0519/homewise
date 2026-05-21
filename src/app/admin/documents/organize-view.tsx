@@ -5,17 +5,14 @@ import { useRouter } from "next/navigation";
 import type { DragStartEvent } from "@dnd-kit/core";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
-import { DocumentDrawer } from "@/components/admin/document-drawer";
-import { DocumentCategoryDrawer } from "@/components/admin/document-category-drawer";
-import { ConfirmDialog } from "@/components/admin/confirm-dialog";
-import { BulkDeleteDialog } from "./bulk-delete-dialog";
-import type { BulkDeleteResult } from "@/lib/documents/bulk-delete";
+import { OrganizeDialogs } from "./organize-dialogs";
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
   DocumentCategoryItem,
   DocumentItem,
   DocumentSection,
+  OrganizeTab,
   OrganizeTree,
 } from "./types";
 import { fetchOrganizeTree, moveMembership } from "@/lib/documents-organize/api";
@@ -27,15 +24,19 @@ import {
 } from "@/lib/documents-organize/shapers";
 import { useOrganizeUrlState } from "@/lib/documents-organize/use-organize-url-state";
 import { DndContextProvider } from "@/components/admin/documents-organize/dnd-context";
-import { DragPreviewCard } from "@/components/admin/documents-organize/drag-preview-card";
+import { DragOverlay } from "@/components/admin/documents-organize/drag-overlay";
 import { OrganizeToolbar } from "@/components/admin/documents-organize/organize-toolbar";
 import { SectionBoard } from "@/components/admin/documents-organize/section-board";
+import { SectionTabs } from "@/components/admin/documents-organize/section-tabs";
 import { useOrganizeDragEnd } from "@/components/admin/documents-organize/use-organize-drag-end";
+import { UncategorizedList } from "./uncategorized-list";
+import { useUncategorizedActions } from "./use-uncategorized-actions";
 
-const TABS: Array<{ key: DocumentSection; label: string }> = [
+const TABS: Array<{ key: OrganizeTab; label: string }> = [
   { key: "office", label: "Office" },
   { key: "listing", label: "Listing" },
   { key: "sales", label: "Sales" },
+  { key: "uncategorized", label: "Uncategorized" },
 ];
 
 export function OrganizeView() {
@@ -56,9 +57,10 @@ export function OrganizeView() {
     null,
   );
   const [pendingDelete, setPendingDelete] =
-    useState<AdminDocumentInCategory | null>(null);
+    useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
   const [activeDragDoc, setActiveDragDoc] =
     useState<AdminDocumentInCategory | null>(null);
@@ -276,24 +278,20 @@ export function OrganizeView() {
     }
   }, [pendingDelete, refetch, toast]);
 
-  const handleBulkDeleted = useCallback(
-    (result: BulkDeleteResult) => {
-      setBulkOpen(false);
-      toast(
-        `Deleted ${result.documentCount} document(s)` +
-          (result.storageErrors > 0
-            ? ` — ${result.storageErrors} storage object(s) failed to remove`
-            : ""),
-        result.storageErrors > 0 ? "error" : "success",
-      );
-      refetch();
-    },
-    [refetch, toast],
-  );
+  const { handleEditUncategorized, handleBulkUploaded, handleBulkDeleted } =
+    useUncategorizedActions({
+      setEditingDoc,
+      setDocDrawerOpen,
+      setBulkUploadOpen,
+      setBulkOpen,
+      setActiveTab,
+      refetch,
+      toast,
+    });
 
   const handleAddDocument = useCallback(() => {
     setEditingDoc(null);
-    setAddDocSection(activeTab);
+    setAddDocSection(activeTab === "uncategorized" ? "office" : activeTab);
     setDocDrawerOpen(true);
   }, [activeTab]);
 
@@ -341,36 +339,22 @@ export function OrganizeView() {
     {} as Record<DocumentSection, number>,
   );
 
+  const uncategorizedDocs = tree.uncategorized ?? [];
+  const uncategorizedCount = uncategorizedDocs.length;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-1 p-1 bg-slate-100/80 rounded-xl overflow-x-auto w-fit">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 ${
-                isActive
-                  ? "bg-white text-navy-700 shadow-sm"
-                  : "text-slate-500 hover:text-navy-600"
-              }`}
-            >
-              {tab.label}
-              <span
-                className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full transition-colors ${
-                  isActive
-                    ? "bg-crimson-50 text-crimson-600"
-                    : "bg-slate-200/60 text-slate-400"
-                }`}
-              >
-                {sectionCounts[tab.key]}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <SectionTabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onSelect={setActiveTab}
+        counts={{
+          office: sectionCounts.office,
+          listing: sectionCounts.listing,
+          sales: sectionCounts.sales,
+          uncategorized: uncategorizedCount,
+        }}
+      />
 
       <OrganizeToolbar
         preview={preview}
@@ -382,6 +366,10 @@ export function OrganizeView() {
         onSearchChange={setSearch}
         onAddDocument={handleAddDocument}
         onBulkDelete={() => setBulkOpen(true)}
+        onBulkUpload={() => {
+          setActiveTab("uncategorized");
+          setBulkUploadOpen(true);
+        }}
       />
 
       <div className="xl:hidden text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
@@ -389,88 +377,61 @@ export function OrganizeView() {
         this page on a tablet or desktop.
       </div>
 
-      <DndContextProvider
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={clearActiveDrag}
-        overlay={
-          activeDragDoc ? (
-            <DragPreviewCard document={activeDragDoc} />
-          ) : activeDragCategory ? (
-            <div className="px-4 py-3 rounded-xl border border-crimson-200 bg-white shadow-2xl font-serif text-lg font-semibold text-navy-700 pointer-events-none">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-crimson-600 mr-2 align-middle" />
-              {activeDragCategory.title}
-            </div>
-          ) : null
-        }
-      >
-        <SectionBoard
-          section={activeTab}
-          categories={tree.sections[activeTab].categories}
-          preview={preview}
-          search={search}
-          targetCategories={targetCategories}
-          onEditCategory={handleEditCategory}
-          onAddCategory={handleAddCategory}
-          onAddDocumentToCategory={handleAddDocumentToCategory}
-          onCardClick={handleCardClick}
-          onEditDoc={handleEditDoc}
-          onTogglePublish={handleTogglePublish}
-          onToggleQuickAccess={handleToggleQuickAccess}
-          onMoveTo={handleMoveViaMenu}
-          onOpenInViewer={handleOpenInViewer}
-          onDeleteDoc={setPendingDelete}
+      {activeTab === "uncategorized" ? (
+        <UncategorizedList
+          docs={uncategorizedDocs}
+          onEdit={handleEditUncategorized}
+          onDelete={(d) => setPendingDelete({ id: d.id, name: d.name })}
         />
-      </DndContextProvider>
+      ) : (
+        <DndContextProvider
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={clearActiveDrag}
+          overlay={<DragOverlay activeDragDoc={activeDragDoc} activeDragCategory={activeDragCategory} />}
+        >
+          <SectionBoard
+            section={activeTab}
+            categories={tree.sections[activeTab].categories}
+            preview={preview}
+            search={search}
+            targetCategories={targetCategories}
+            onEditCategory={handleEditCategory}
+            onAddCategory={handleAddCategory}
+            onAddDocumentToCategory={handleAddDocumentToCategory}
+            onCardClick={handleCardClick}
+            onEditDoc={handleEditDoc}
+            onTogglePublish={handleTogglePublish}
+            onToggleQuickAccess={handleToggleQuickAccess}
+            onMoveTo={handleMoveViaMenu}
+            onOpenInViewer={handleOpenInViewer}
+            onDeleteDoc={(d) => setPendingDelete({ id: d.id, name: d.name })}
+          />
+        </DndContextProvider>
+      )}
 
-      <DocumentDrawer
-        open={docDrawerOpen}
-        onClose={() => {
-          setDocDrawerOpen(false);
-          setEditingDoc(null);
-        }}
-        item={editingDoc}
-        categories={drawerCategories}
-        onSaved={refetch}
-        defaultSection={addDocSection}
-      />
-
-      <DocumentCategoryDrawer
-        open={catDrawerOpen}
-        onClose={() => {
-          setCatDrawerOpen(false);
-          setEditingCat(null);
-        }}
-        item={editingCat}
-        onSaved={refetch}
-      />
-
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Delete Document"
-        message={
-          pendingDelete
-            ? `This will permanently delete "${pendingDelete.name}" and its file. Agent favorites and drafts that reference this document will remain but show as missing. This cannot be undone.`
-            : ""
-        }
-        confirmLabel="Delete permanently"
-        typeToConfirm="DELETE"
-        busy={deleting}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          if (!deleting) setPendingDelete(null);
-        }}
-      />
-
-      <BulkDeleteDialog
-        open={bulkOpen}
-        onClose={() => setBulkOpen(false)}
-        onDeleted={handleBulkDeleted}
-        categories={drawerCategories.map((c) => ({
-          id: c.id,
-          title: c.title,
-          section: c.section,
-        }))}
+      <OrganizeDialogs
+        docDrawerOpen={docDrawerOpen}
+        setDocDrawerOpen={setDocDrawerOpen}
+        editingDoc={editingDoc}
+        setEditingDoc={setEditingDoc}
+        drawerCategories={drawerCategories}
+        addDocSection={addDocSection}
+        catDrawerOpen={catDrawerOpen}
+        setCatDrawerOpen={setCatDrawerOpen}
+        editingCat={editingCat}
+        setEditingCat={setEditingCat}
+        pendingDelete={pendingDelete}
+        deleting={deleting}
+        confirmDelete={confirmDelete}
+        setPendingDelete={setPendingDelete}
+        bulkOpen={bulkOpen}
+        setBulkOpen={setBulkOpen}
+        handleBulkDeleted={handleBulkDeleted}
+        refetch={refetch}
+        bulkUploadOpen={bulkUploadOpen}
+        setBulkUploadOpen={setBulkUploadOpen}
+        handleBulkUploaded={handleBulkUploaded}
       />
     </div>
   );
