@@ -13,7 +13,6 @@ import {
   reorderMemberships,
 } from "@/lib/documents-organize/api";
 import type {
-  DocumentSection,
   OrganizeTab,
   OrganizeTree,
 } from "@/app/admin/documents/types";

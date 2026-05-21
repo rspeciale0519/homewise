@@ -51,7 +51,6 @@ export function BulkUploadDialog({
 
   useEffect(() => {
     if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset queue when dialog opens
       setRows([]);
       setMessage(null);
       setSubmitting(false);
