@@ -1,8 +1,8 @@
 "use client";
 
-import { FileText, FolderInput, Trash2 } from "lucide-react";
+import { useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { DraggableUncategorizedRow } from "@/components/admin/documents-organize/draggable-uncategorized-row";
 import type { AdminUncategorizedDoc } from "./types";
 import type { UseUncategorizedSelectionResult } from "./use-uncategorized-selection";
 
@@ -19,6 +19,8 @@ export function UncategorizedList({
   onEdit,
   onDelete,
 }: UncategorizedListProps) {
+  const orderedDocIds = useMemo(() => docs.map((d) => d.id), [docs]);
+
   if (docs.length === 0) {
     return (
       <div className="text-center py-16 text-sm text-slate-400">
@@ -68,58 +70,16 @@ export function UncategorizedList({
         aria-label="Loose documents pending triage"
         className="divide-y divide-slate-100"
       >
-        {docs.map((doc) => {
-          const checked = selection.isSelected(doc.id);
-          return (
-            <div
-              key={doc.id}
-              role="option"
-              aria-selected={checked}
-              className={cn(
-                "flex items-center gap-3 px-3 sm:px-4 py-3 transition-colors",
-                checked ? "bg-crimson-50/60" : "hover:bg-slate-50/40",
-              )}
-            >
-              <Checkbox
-                checked={checked}
-                aria-label={
-                  checked ? `Deselect ${doc.name}` : `Select ${doc.name}`
-                }
-                onClick={(e: React.MouseEvent) => {
-                  selection.toggleOne(doc.id, {
-                    shiftKey: e.shiftKey,
-                    ctrlKey: e.ctrlKey,
-                    metaKey: e.metaKey,
-                  });
-                }}
-                className="h-5 w-5"
-              />
-              <FileText className="h-4 w-4 text-slate-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-navy-700 truncate">
-                  {doc.name}
-                </p>
-                <p className="text-xs text-slate-400 truncate">{doc.slug}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onEdit(doc)}
-                className="inline-flex items-center gap-1.5 h-9 px-2.5 text-xs font-semibold text-navy-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600"
-              >
-                <FolderInput className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Categorize</span>
-              </button>
-              <button
-                type="button"
-                aria-label={`Delete ${doc.name}`}
-                onClick={() => onDelete(doc)}
-                className="h-9 w-9 inline-flex items-center justify-center text-slate-400 hover:text-crimson-600 rounded-lg hover:bg-crimson-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-crimson-600"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          );
-        })}
+        {docs.map((doc) => (
+          <DraggableUncategorizedRow
+            key={doc.id}
+            doc={doc}
+            orderedDocIds={orderedDocIds}
+            selection={selection}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
       </div>
     </div>
   );
