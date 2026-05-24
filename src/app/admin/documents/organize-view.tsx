@@ -33,12 +33,18 @@ import { UncategorizedList } from "./uncategorized-list";
 import { useUncategorizedActions } from "./use-uncategorized-actions";
 import { useUncategorizedSelection } from "./use-uncategorized-selection";
 import { useDocActions } from "./use-doc-actions";
+import { useUncategorizedBulkCategorize } from "./use-uncategorized-bulk-categorize";
 
 type DragIntent =
   | null
   | "in-section"
   | "category-reorder"
   | "uncategorized-bulk";
+
+interface PendingBulkAssign {
+  section: DocumentSection;
+  documentIds: string[];
+}
 
 const TABS: Array<{ key: OrganizeTab; label: string }> = [
   { key: "office", label: "Office" },
@@ -77,6 +83,8 @@ export function OrganizeView() {
   const [activeDragUncategorizedDocs, setActiveDragUncategorizedDocs] =
     useState<AdminUncategorizedDoc[]>([]);
   const [dragIntent, setDragIntent] = useState<DragIntent>(null);
+  const [pendingBulkAssign, setPendingBulkAssign] =
+    useState<PendingBulkAssign | null>(null);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -143,13 +151,45 @@ export function OrganizeView() {
     onError: (m) => toast(m, "error"),
   });
 
+  const bulkCategorize = useUncategorizedBulkCategorize({
+    tree,
+    setTree,
+    uncategorizedDocs,
+    setActiveTab,
+    clearSelection: selection.clear,
+    refetch,
+    toast,
+    autoSwitch: false, // Phase 5 wires this to a persisted toggle
+  });
+
   const handleBulkDropOnSection = useCallback(
     (section: DocumentSection, documentIds: string[]) => {
-      // Phase 4 will open the category picker dialog here. Phase 3 just confirms
-      // the wire works end-to-end and clears the selection.
-      console.info("[bulk drop -> tab]", { section, documentIds });
+      setPendingBulkAssign({ section, documentIds });
     },
     [],
+  );
+
+  const handlePickerCancel = useCallback(() => {
+    setPendingBulkAssign(null);
+  }, []);
+
+  const handlePickerConfirm = useCallback(
+    async (args: {
+      section: DocumentSection;
+      categoryId: string;
+      categoryTitle: string;
+    }) => {
+      if (!pendingBulkAssign) return;
+      const { documentIds } = pendingBulkAssign;
+      setPendingBulkAssign(null);
+      await bulkCategorize.assignFromUncategorized({
+        section: args.section,
+        categoryId: args.categoryId,
+        categoryTitle: args.categoryTitle,
+        documentIds,
+      });
+    },
+    [pendingBulkAssign, bulkCategorize],
   );
 
   const uncategorizedDragEnd = useUncategorizedDragEnd({
@@ -390,6 +430,12 @@ export function OrganizeView() {
         bulkUploadOpen={bulkUploadOpen}
         setBulkUploadOpen={setBulkUploadOpen}
         handleBulkUploaded={handleBulkUploaded}
+        pickerOpen={pendingBulkAssign !== null}
+        pickerSection={pendingBulkAssign?.section}
+        pickerDocumentCount={pendingBulkAssign?.documentIds.length ?? 0}
+        sectionsToCategories={targetCategories}
+        onPickerCancel={handlePickerCancel}
+        onPickerConfirm={handlePickerConfirm}
       />
     </div>
   );
