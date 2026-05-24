@@ -31,6 +31,7 @@ import { SectionTabs } from "@/components/admin/documents-organize/section-tabs"
 import { useOrganizeDragEnd } from "@/components/admin/documents-organize/use-organize-drag-end";
 import { UncategorizedList } from "./uncategorized-list";
 import { useUncategorizedActions } from "./use-uncategorized-actions";
+import { useUncategorizedSelection } from "./use-uncategorized-selection";
 
 const TABS: Array<{ key: OrganizeTab; label: string }> = [
   { key: "office", label: "Office" },
@@ -314,6 +315,16 @@ export function OrganizeView() {
     setCatDrawerOpen(true);
   }, []);
 
+  const uncategorizedDocs = useMemo(
+    () => tree?.uncategorized ?? [],
+    [tree?.uncategorized],
+  );
+  const uncategorizedIds = useMemo(
+    () => uncategorizedDocs.map((d) => d.id),
+    [uncategorizedDocs],
+  );
+  const selection = useUncategorizedSelection(uncategorizedIds);
+
   if (loading || !tree) {
     return (
       <div className="text-center py-16">
@@ -339,7 +350,6 @@ export function OrganizeView() {
     {} as Record<DocumentSection, number>,
   );
 
-  const uncategorizedDocs = tree.uncategorized ?? [];
   const uncategorizedCount = uncategorizedDocs.length;
 
   return (
@@ -380,6 +390,7 @@ export function OrganizeView() {
       {activeTab === "uncategorized" ? (
         <UncategorizedList
           docs={uncategorizedDocs}
+          selection={selection}
           onEdit={handleEditUncategorized}
           onDelete={(d) => setPendingDelete({ id: d.id, name: d.name })}
         />
