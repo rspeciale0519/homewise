@@ -5,6 +5,13 @@ import { Toaster, toast as sonnerToast } from "sonner";
 
 type ToastType = "success" | "error" | "info";
 
+interface ToastWithUndoOptions {
+  message: string;
+  undoLabel?: string;
+  durationMs?: number;
+  onUndo: () => void;
+}
+
 export function AdminToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
@@ -37,5 +44,23 @@ export function useToast() {
     }
   }, []);
 
-  return useMemo(() => ({ toast }), [toast]);
+  const toastWithUndo = useCallback(
+    ({
+      message,
+      undoLabel = "Undo",
+      durationMs = 5000,
+      onUndo,
+    }: ToastWithUndoOptions) => {
+      sonnerToast.success(message, {
+        duration: durationMs,
+        action: {
+          label: undoLabel,
+          onClick: onUndo,
+        },
+      });
+    },
+    [],
+  );
+
+  return useMemo(() => ({ toast, toastWithUndo }), [toast, toastWithUndo]);
 }

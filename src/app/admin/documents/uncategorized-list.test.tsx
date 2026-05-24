@@ -39,16 +39,18 @@ function setup(
 ) {
   const onEdit = vi.fn();
   const onDelete = vi.fn();
+  const onMoveSelected = vi.fn();
   render(
     <UncategorizedList
       docs={[doc]}
       selection={selection}
       onEdit={onEdit}
       onDelete={onDelete}
+      onMoveSelected={onMoveSelected}
       {...over}
     />,
   );
-  return { onEdit, onDelete, selection };
+  return { onEdit, onDelete, onMoveSelected, selection };
 }
 
 describe("UncategorizedList", () => {
@@ -74,6 +76,21 @@ describe("UncategorizedList", () => {
     fireEvent.click(screen.getByRole("button", { name: /^delete loose doc$/i }));
     expect(onEdit).toHaveBeenCalledWith(doc);
     expect(onDelete).toHaveBeenCalledWith(doc);
+  });
+
+  it("renders Move N… button + calls onMoveSelected when selection > 0", () => {
+    const { onMoveSelected } = setup(
+      {},
+      mockSelection({
+        selectedIds: new Set(["u1"]),
+        isSelected: (id) => id === "u1",
+        isIndeterminate: true,
+        selectedCount: 1,
+      }),
+    );
+    const moveBtn = screen.getByRole("button", { name: /^move 1…$/i });
+    fireEvent.click(moveBtn);
+    expect(onMoveSelected).toHaveBeenCalled();
   });
 
   it("calls toggleOne with modifier keys when row checkbox is clicked", () => {

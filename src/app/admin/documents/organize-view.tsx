@@ -34,17 +34,13 @@ import { useUncategorizedActions } from "./use-uncategorized-actions";
 import { useUncategorizedSelection } from "./use-uncategorized-selection";
 import { useDocActions } from "./use-doc-actions";
 import { useUncategorizedBulkCategorize } from "./use-uncategorized-bulk-categorize";
+import { usePersistedBoolean } from "@/hooks/use-persisted-boolean";
 
 type DragIntent =
   | null
   | "in-section"
   | "category-reorder"
   | "uncategorized-bulk";
-
-interface PendingBulkAssign {
-  section: DocumentSection;
-  documentIds: string[];
-}
 
 const TABS: Array<{ key: OrganizeTab; label: string }> = [
   { key: "office", label: "Office" },
@@ -54,8 +50,12 @@ const TABS: Array<{ key: OrganizeTab; label: string }> = [
 ];
 
 export function OrganizeView() {
-  const { toast } = useToast();
+  const { toast, toastWithUndo } = useToast();
   const router = useRouter();
+  const [autoSwitch, setAutoSwitch] = usePersistedBoolean(
+    "homewise.organize.autoSwitchOnAssign",
+    true,
+  );
 
   const [tree, setTree] = useState<OrganizeTree | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,8 +83,6 @@ export function OrganizeView() {
   const [activeDragUncategorizedDocs, setActiveDragUncategorizedDocs] =
     useState<AdminUncategorizedDoc[]>([]);
   const [dragIntent, setDragIntent] = useState<DragIntent>(null);
-  const [pendingBulkAssign, setPendingBulkAssign] =
-    useState<PendingBulkAssign | null>(null);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -155,45 +153,17 @@ export function OrganizeView() {
     tree,
     setTree,
     uncategorizedDocs,
+    uncategorizedIds,
+    selection,
     setActiveTab,
-    clearSelection: selection.clear,
     refetch,
     toast,
-    autoSwitch: false, // Phase 5 wires this to a persisted toggle
+    toastWithUndo,
+    autoSwitch,
   });
 
-  const handleBulkDropOnSection = useCallback(
-    (section: DocumentSection, documentIds: string[]) => {
-      setPendingBulkAssign({ section, documentIds });
-    },
-    [],
-  );
-
-  const handlePickerCancel = useCallback(() => {
-    setPendingBulkAssign(null);
-  }, []);
-
-  const handlePickerConfirm = useCallback(
-    async (args: {
-      section: DocumentSection;
-      categoryId: string;
-      categoryTitle: string;
-    }) => {
-      if (!pendingBulkAssign) return;
-      const { documentIds } = pendingBulkAssign;
-      setPendingBulkAssign(null);
-      await bulkCategorize.assignFromUncategorized({
-        section: args.section,
-        categoryId: args.categoryId,
-        categoryTitle: args.categoryTitle,
-        documentIds,
-      });
-    },
-    [pendingBulkAssign, bulkCategorize],
-  );
-
   const uncategorizedDragEnd = useUncategorizedDragEnd({
-    onBulkDropOnSection: handleBulkDropOnSection,
+    onBulkDropOnSection: bulkCategorize.openForSection,
   });
 
   const handleDragStart = useCallback(
@@ -372,6 +342,8 @@ export function OrganizeView() {
             setActiveTab("uncategorized");
             setBulkUploadOpen(true);
           }}
+          autoSwitch={autoSwitch}
+          onAutoSwitchChange={setAutoSwitch}
         />
 
         <div className="xl:hidden text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
@@ -386,6 +358,7 @@ export function OrganizeView() {
             selection={selection}
             onEdit={handleEditUncategorized}
             onDelete={(d) => setPendingDelete({ id: d.id, name: d.name })}
+            onMoveSelected={bulkCategorize.openForCurrentSelection}
           />
         ) : (
           <SectionBoard
@@ -430,12 +403,12 @@ export function OrganizeView() {
         bulkUploadOpen={bulkUploadOpen}
         setBulkUploadOpen={setBulkUploadOpen}
         handleBulkUploaded={handleBulkUploaded}
-        pickerOpen={pendingBulkAssign !== null}
-        pickerSection={pendingBulkAssign?.section}
-        pickerDocumentCount={pendingBulkAssign?.documentIds.length ?? 0}
+        pickerOpen={bulkCategorize.pickerOpen}
+        pickerSection={bulkCategorize.pickerSection}
+        pickerDocumentCount={bulkCategorize.pickerDocumentCount}
         sectionsToCategories={targetCategories}
-        onPickerCancel={handlePickerCancel}
-        onPickerConfirm={handlePickerConfirm}
+        onPickerCancel={bulkCategorize.cancelPicker}
+        onPickerConfirm={bulkCategorize.confirmPicker}
       />
     </div>
   );

@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
-const { bulkAssignMock } = vi.hoisted(() => ({
+const { bulkAssignMock, bulkUnassignMock } = vi.hoisted(() => ({
   bulkAssignMock: vi.fn(),
+  bulkUnassignMock: vi.fn(),
 }));
 
 vi.mock("@/lib/documents-organize/bulk-membership", () => ({
   bulkAssignMemberships: bulkAssignMock,
-  bulkUnassignMemberships: vi.fn(),
+  bulkUnassignMemberships: bulkUnassignMock,
 }));
 
 import { useUncategorizedBulkCategorize } from "./use-uncategorized-bulk-categorize";
@@ -15,6 +16,7 @@ import type {
   AdminUncategorizedDoc,
   OrganizeTree,
 } from "./types";
+import type { UseUncategorizedSelectionResult } from "./use-uncategorized-selection";
 
 function makeUncat(id: string, name: string): AdminUncategorizedDoc {
   return {
@@ -54,22 +56,43 @@ function buildTree(): OrganizeTree {
   };
 }
 
-function setupHook(overrides: { autoSwitch?: boolean } = {}) {
+function makeSelection(
+  selectedIds: Set<string> = new Set(),
+): UseUncategorizedSelectionResult {
+  return {
+    selectedIds,
+    isSelected: (id) => selectedIds.has(id),
+    isAllSelected: false,
+    isIndeterminate: selectedIds.size > 0,
+    selectedCount: selectedIds.size,
+    toggleOne: vi.fn(),
+    toggleAll: vi.fn(),
+    clear: vi.fn(),
+  };
+}
+
+function setupHook(overrides: {
+  autoSwitch?: boolean;
+  selectedIds?: Set<string>;
+} = {}) {
   const tree = buildTree();
   const setTree = vi.fn();
   const setActiveTab = vi.fn();
-  const clearSelection = vi.fn();
   const refetch = vi.fn().mockResolvedValue(undefined);
   const toast = vi.fn();
+  const toastWithUndo = vi.fn();
+  const selection = makeSelection(overrides.selectedIds);
   const { result } = renderHook(() =>
     useUncategorizedBulkCategorize({
       tree,
       setTree,
       uncategorizedDocs: tree.uncategorized!,
+      uncategorizedIds: tree.uncategorized!.map((d) => d.id),
+      selection,
       setActiveTab,
-      clearSelection,
       refetch,
       toast,
+      toastWithUndo,
       autoSwitch: overrides.autoSwitch ?? false,
     }),
   );
@@ -78,22 +101,71 @@ function setupHook(overrides: { autoSwitch?: boolean } = {}) {
     tree,
     setTree,
     setActiveTab,
-    clearSelection,
+    selection,
     refetch,
     toast,
+    toastWithUndo,
   };
 }
 
-describe("useUncategorizedBulkCategorize.assignFromUncategorized", () => {
+async function openSectionAndConfirm(
+  hookResult: ReturnType<typeof setupHook>,
+  documentIds: string[] = ["u1", "u2"],
+) {
+  act(() => {
+    hookResult.result.current.openForSection("listing", documentIds);
+  });
+  await act(async () => {
+    await hookResult.result.current.confirmPicker({
+      section: "listing",
+      categoryId: "listingCat",
+      categoryTitle: "Buyer Forms",
+    });
+  });
+}
+
+describe("useUncategorizedBulkCategorize", () => {
   beforeEach(() => {
     bulkAssignMock.mockReset();
+    bulkUnassignMock.mockReset();
   });
 
   afterEach(() => {
     bulkAssignMock.mockReset();
+    bulkUnassignMock.mockReset();
   });
 
-  it("happy path: optimistic update + API success + success toast + clearSelection", async () => {
+  it("openForSection sets picker state with that section", () => {
+    const { result } = setupHook();
+    expect(result.current.pickerOpen).toBe(false);
+    act(() => result.current.openForSection("listing", ["u1"]));
+    expect(result.current.pickerOpen).toBe(true);
+    expect(result.current.pickerSection).toBe("listing");
+    expect(result.current.pickerDocumentCount).toBe(1);
+  });
+
+  it("openForCurrentSelection only fires when there is a selection", () => {
+    const { result } = setupHook({ selectedIds: new Set() });
+    act(() => result.current.openForCurrentSelection());
+    expect(result.current.pickerOpen).toBe(false);
+  });
+
+  it("openForCurrentSelection opens with no section preset and ids from selection", () => {
+    const { result } = setupHook({ selectedIds: new Set(["u1", "u2"]) });
+    act(() => result.current.openForCurrentSelection());
+    expect(result.current.pickerOpen).toBe(true);
+    expect(result.current.pickerSection).toBeUndefined();
+    expect(result.current.pickerDocumentCount).toBe(2);
+  });
+
+  it("cancelPicker clears pending state", () => {
+    const { result } = setupHook();
+    act(() => result.current.openForSection("listing", ["u1"]));
+    act(() => result.current.cancelPicker());
+    expect(result.current.pickerOpen).toBe(false);
+  });
+
+  it("happy path: confirmPicker fires API + clears selection + undo toast", async () => {
     bulkAssignMock.mockResolvedValue({
       categoryId: "listingCat",
       assigned: [
@@ -103,20 +175,15 @@ describe("useUncategorizedBulkCategorize.assignFromUncategorized", () => {
       skipped: [],
       failed: [],
     });
-    const { result, setTree, clearSelection, toast } = setupHook();
-    await act(async () => {
-      await result.current.assignFromUncategorized({
-        section: "listing",
-        categoryId: "listingCat",
-        categoryTitle: "Buyer Forms",
-        documentIds: ["u1", "u2"],
-      });
-    });
-    expect(setTree).toHaveBeenCalledTimes(1); // optimistic only (no rollback)
-    expect(clearSelection).toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith(
-      "Assigned 2 to Buyer Forms",
-      "success",
+    const setup = setupHook();
+    await openSectionAndConfirm(setup);
+    expect(setup.setTree).toHaveBeenCalledTimes(1);
+    expect(setup.selection.clear).toHaveBeenCalled();
+    expect(setup.toastWithUndo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Assigned 2 to Buyer Forms",
+        onUndo: expect.any(Function),
+      }),
     );
   });
 
@@ -127,16 +194,9 @@ describe("useUncategorizedBulkCategorize.assignFromUncategorized", () => {
       skipped: [],
       failed: [],
     });
-    const { result, setActiveTab } = setupHook({ autoSwitch: true });
-    await act(async () => {
-      await result.current.assignFromUncategorized({
-        section: "listing",
-        categoryId: "listingCat",
-        categoryTitle: "Buyer Forms",
-        documentIds: ["u1"],
-      });
-    });
-    expect(setActiveTab).toHaveBeenCalledWith("listing");
+    const setup = setupHook({ autoSwitch: true });
+    await openSectionAndConfirm(setup, ["u1"]);
+    expect(setup.setActiveTab).toHaveBeenCalledWith("listing");
   });
 
   it("autoSwitch=false leaves the active tab alone", async () => {
@@ -146,43 +206,29 @@ describe("useUncategorizedBulkCategorize.assignFromUncategorized", () => {
       skipped: [],
       failed: [],
     });
-    const { result, setActiveTab } = setupHook({ autoSwitch: false });
-    await act(async () => {
-      await result.current.assignFromUncategorized({
-        section: "listing",
-        categoryId: "listingCat",
-        categoryTitle: "Buyer Forms",
-        documentIds: ["u1"],
-      });
-    });
-    expect(setActiveTab).not.toHaveBeenCalled();
+    const setup = setupHook({ autoSwitch: false });
+    await openSectionAndConfirm(setup, ["u1"]);
+    expect(setup.setActiveTab).not.toHaveBeenCalled();
   });
 
-  it("partial success: shows error toast with counts, refetches, keeps optimistic state", async () => {
+  it("partial success: error toast + refetch + no undo", async () => {
     bulkAssignMock.mockResolvedValue({
       categoryId: "listingCat",
       assigned: [{ documentId: "u1", sortOrder: 0 }],
       skipped: [],
       failed: [{ documentId: "u2", error: "document-not-found" }],
     });
-    const { result, setTree, refetch, toast } = setupHook();
-    await act(async () => {
-      await result.current.assignFromUncategorized({
-        section: "listing",
-        categoryId: "listingCat",
-        categoryTitle: "Buyer Forms",
-        documentIds: ["u1", "u2"],
-      });
-    });
-    expect(setTree).toHaveBeenCalledTimes(1); // no rollback
-    expect(refetch).toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith(
+    const setup = setupHook();
+    await openSectionAndConfirm(setup);
+    expect(setup.refetch).toHaveBeenCalled();
+    expect(setup.toast).toHaveBeenCalledWith(
       expect.stringMatching(/assigned 1 of 2 to buyer forms/i),
       "error",
     );
+    expect(setup.toastWithUndo).not.toHaveBeenCalled();
   });
 
-  it("full failure (zero assigned): rolls back snapshot + error toast + refetch", async () => {
+  it("full failure: rolls back + error toast + refetch", async () => {
     bulkAssignMock.mockResolvedValue({
       categoryId: "listingCat",
       assigned: [],
@@ -192,50 +238,55 @@ describe("useUncategorizedBulkCategorize.assignFromUncategorized", () => {
         { documentId: "u2", error: "document-not-found" },
       ],
     });
-    const { result, setTree, refetch, toast, tree } = setupHook();
-    await act(async () => {
-      await result.current.assignFromUncategorized({
-        section: "listing",
-        categoryId: "listingCat",
-        categoryTitle: "Buyer Forms",
-        documentIds: ["u1", "u2"],
-      });
-    });
-    expect(setTree).toHaveBeenCalledTimes(2); // optimistic + rollback
-    expect(setTree).toHaveBeenLastCalledWith(tree);
-    expect(refetch).toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith(
+    const setup = setupHook();
+    await openSectionAndConfirm(setup);
+    expect(setup.setTree).toHaveBeenCalledTimes(2);
+    expect(setup.setTree).toHaveBeenLastCalledWith(setup.tree);
+    expect(setup.refetch).toHaveBeenCalled();
+    expect(setup.toast).toHaveBeenCalledWith(
       expect.stringMatching(/could not move any documents/i),
       "error",
     );
   });
 
-  it("API throws: rolls back and surfaces error message", async () => {
+  it("API throws: rolls back + surface message", async () => {
     bulkAssignMock.mockRejectedValue(new Error("Network down"));
-    const { result, setTree, toast, tree } = setupHook();
-    await act(async () => {
-      await result.current.assignFromUncategorized({
-        section: "listing",
-        categoryId: "listingCat",
-        categoryTitle: "Buyer Forms",
-        documentIds: ["u1"],
-      });
-    });
-    expect(setTree).toHaveBeenLastCalledWith(tree);
-    expect(toast).toHaveBeenCalledWith("Network down", "error");
+    const setup = setupHook();
+    await openSectionAndConfirm(setup, ["u1"]);
+    expect(setup.setTree).toHaveBeenLastCalledWith(setup.tree);
+    expect(setup.toast).toHaveBeenCalledWith("Network down", "error");
   });
 
-  it("no-op when documentIds is empty", async () => {
-    const { result, setTree } = setupHook();
-    await act(async () => {
-      await result.current.assignFromUncategorized({
-        section: "listing",
-        categoryId: "listingCat",
-        categoryTitle: "Buyer Forms",
-        documentIds: [],
-      });
+  it("undo callback calls bulkUnassignMemberships and refetches", async () => {
+    bulkAssignMock.mockResolvedValue({
+      categoryId: "listingCat",
+      assigned: [
+        { documentId: "u1", sortOrder: 0 },
+        { documentId: "u2", sortOrder: 1 },
+      ],
+      skipped: [],
+      failed: [],
     });
-    expect(setTree).not.toHaveBeenCalled();
-    expect(bulkAssignMock).not.toHaveBeenCalled();
+    bulkUnassignMock.mockResolvedValue({
+      categoryId: "listingCat",
+      removed: ["u1", "u2"],
+      failed: [],
+    });
+    const setup = setupHook();
+    await openSectionAndConfirm(setup);
+    const undoCall = setup.toastWithUndo.mock.calls[0]?.[0] as
+      | { onUndo: () => void | Promise<void> }
+      | undefined;
+    expect(undoCall).toBeDefined();
+    setup.refetch.mockClear();
+    await act(async () => {
+      await undoCall!.onUndo();
+    });
+    expect(bulkUnassignMock).toHaveBeenCalledWith({
+      categoryId: "listingCat",
+      documentIds: ["u1", "u2"],
+    });
+    expect(setup.toast).toHaveBeenCalledWith("Undone", "success");
+    expect(setup.refetch).toHaveBeenCalled();
   });
 });

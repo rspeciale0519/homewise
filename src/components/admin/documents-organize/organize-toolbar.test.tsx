@@ -8,6 +8,7 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
   const onAddDocument = vi.fn();
   const onBulkDelete = vi.fn();
   const onBulkUpload = vi.fn();
+  const onAutoSwitchChange = vi.fn();
   render(
     <OrganizeToolbar
       preview={false}
@@ -17,10 +18,19 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
       onAddDocument={onAddDocument}
       onBulkDelete={onBulkDelete}
       onBulkUpload={onBulkUpload}
+      autoSwitch={true}
+      onAutoSwitchChange={onAutoSwitchChange}
       {...overrides}
     />,
   );
-  return { onPreviewChange, onSearchChange, onAddDocument, onBulkDelete, onBulkUpload };
+  return {
+    onPreviewChange,
+    onSearchChange,
+    onAddDocument,
+    onBulkDelete,
+    onBulkUpload,
+    onAutoSwitchChange,
+  };
 }
 
 describe("OrganizeToolbar", () => {
@@ -54,7 +64,7 @@ describe("OrganizeToolbar", () => {
 
   it("toggles preview on click", () => {
     const { onPreviewChange } = setup();
-    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole("switch", { name: /preview as agent/i }));
     expect(onPreviewChange).toHaveBeenCalledWith(true);
   });
 
@@ -81,6 +91,21 @@ describe("OrganizeToolbar", () => {
     setup({ preview: true });
     expect(
       screen.queryByRole("button", { name: /bulk upload/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the auto-switch toggle and forwards changes", () => {
+    const { onAutoSwitchChange } = setup({ autoSwitch: true });
+    const toggle = screen.getByRole("switch", { name: /auto-switch to destination tab/i });
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(toggle);
+    expect(onAutoSwitchChange).toHaveBeenCalledWith(false);
+  });
+
+  it("hides auto-switch toggle in preview mode", () => {
+    setup({ preview: true });
+    expect(
+      screen.queryByRole("switch", { name: /auto-switch to destination tab/i }),
     ).not.toBeInTheDocument();
   });
 });
