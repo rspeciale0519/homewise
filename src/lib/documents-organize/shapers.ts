@@ -56,6 +56,44 @@ export function allCategoriesOfTree(
   ];
 }
 
+export function uncategorizedToInCategory(
+  doc: AdminUncategorizedDoc,
+  categoryId: string,
+  sortOrder: number,
+): AdminDocumentInCategory {
+  return {
+    id: doc.id,
+    slug: doc.slug,
+    name: doc.name,
+    description: doc.description,
+    published: doc.published,
+    quickAccess: false,
+    external: doc.external,
+    url: doc.url,
+    storageKey: doc.storageKey,
+    storageProvider: doc.storageProvider,
+    mimeType: doc.mimeType,
+    membership: { categoryId, sortOrder },
+  };
+}
+
+export function inCategoryToUncategorized(
+  doc: AdminDocumentInCategory,
+): AdminUncategorizedDoc {
+  return {
+    id: doc.id,
+    slug: doc.slug,
+    name: doc.name,
+    description: doc.description,
+    published: doc.published,
+    external: doc.external,
+    url: doc.url,
+    storageKey: doc.storageKey,
+    storageProvider: doc.storageProvider,
+    mimeType: doc.mimeType,
+  };
+}
+
 export function uncategorizedToDocumentItem(
   doc: AdminUncategorizedDoc,
 ): DocumentItem {

@@ -4,6 +4,7 @@ import { DragOverlay } from "./drag-overlay";
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
+  AdminUncategorizedDoc,
 } from "@/app/admin/documents/types";
 
 const minimalDoc: AdminDocumentInCategory = {
@@ -31,10 +32,29 @@ const minimalCategory: AdminCategoryTree = {
   documents: [],
 };
 
+function makeUncat(id: string, name: string): AdminUncategorizedDoc {
+  return {
+    id,
+    slug: id,
+    name,
+    description: null,
+    published: false,
+    external: false,
+    url: null,
+    storageKey: `${id}.pdf`,
+    storageProvider: "supabase",
+    mimeType: "application/pdf",
+  };
+}
+
 describe("DragOverlay", () => {
-  it("renders nothing when both props are null", () => {
+  it("renders nothing when nothing is being dragged", () => {
     const { container } = render(
-      <DragOverlay activeDragDoc={null} activeDragCategory={null} />,
+      <DragOverlay
+        activeDragDoc={null}
+        activeDragCategory={null}
+        activeDragUncategorizedDocs={[]}
+      />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -44,6 +64,7 @@ describe("DragOverlay", () => {
       <DragOverlay
         activeDragDoc={null}
         activeDragCategory={minimalCategory}
+        activeDragUncategorizedDocs={[]}
       />,
     );
     expect(screen.getByText("My Category")).toBeInTheDocument();
@@ -54,19 +75,51 @@ describe("DragOverlay", () => {
       <DragOverlay
         activeDragDoc={minimalDoc}
         activeDragCategory={null}
+        activeDragUncategorizedDocs={[]}
       />,
     );
     expect(screen.getByText("Sample Doc")).toBeInTheDocument();
   });
 
-  it("prefers activeDragDoc over activeDragCategory when both are set", () => {
+  it("renders single doc name when bulk drag has exactly 1 doc", () => {
+    render(
+      <DragOverlay
+        activeDragDoc={null}
+        activeDragCategory={null}
+        activeDragUncategorizedDocs={[makeUncat("u1", "Lonely Doc")]}
+      />,
+    );
+    expect(screen.getByText("Lonely Doc")).toBeInTheDocument();
+  });
+
+  it("renders count label when bulk drag has multiple docs", () => {
+    render(
+      <DragOverlay
+        activeDragDoc={null}
+        activeDragCategory={null}
+        activeDragUncategorizedDocs={[
+          makeUncat("u1", "Doc A"),
+          makeUncat("u2", "Doc B"),
+          makeUncat("u3", "Doc C"),
+        ]}
+      />,
+    );
+    expect(screen.getByText(/3 documents/i)).toBeInTheDocument();
+  });
+
+  it("bulk preview takes precedence over single-doc and category previews", () => {
     render(
       <DragOverlay
         activeDragDoc={minimalDoc}
         activeDragCategory={minimalCategory}
+        activeDragUncategorizedDocs={[
+          makeUncat("u1", "Doc A"),
+          makeUncat("u2", "Doc B"),
+        ]}
       />,
     );
-    expect(screen.getByText("Sample Doc")).toBeInTheDocument();
+    expect(screen.getByText(/2 documents/i)).toBeInTheDocument();
+    expect(screen.queryByText("Sample Doc")).not.toBeInTheDocument();
     expect(screen.queryByText("My Category")).not.toBeInTheDocument();
   });
 });

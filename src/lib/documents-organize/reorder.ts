@@ -1,8 +1,13 @@
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
+  AdminUncategorizedDoc,
   OrganizeTree,
 } from "@/app/admin/documents/types";
+import {
+  inCategoryToUncategorized,
+  uncategorizedToInCategory,
+} from "./shapers";
 
 function moveArrayItem<T>(arr: T[], from: number, to: number): T[] {
   if (from === to) return arr.slice();
@@ -99,4 +104,109 @@ export function computeCrossCategoryMove(
   }
 
   return { ...tree, sections: updatedSections };
+}
+
+interface BulkAssignFromUncategorizedArgs {
+  tree: OrganizeTree;
+  documentIds: string[];
+  toCategoryId: string;
+  uncategorizedDocs: AdminUncategorizedDoc[];
+}
+
+export function computeBulkAssignFromUncategorized({
+  tree,
+  documentIds,
+  toCategoryId,
+  uncategorizedDocs,
+}: BulkAssignFromUncategorizedArgs): OrganizeTree {
+  if (documentIds.length === 0) return tree;
+  const idSet = new Set(documentIds);
+  const movingDocs = uncategorizedDocs.filter((d) => idSet.has(d.id));
+  if (movingDocs.length === 0) return tree;
+
+  const sectionKeys = Object.keys(tree.sections) as Array<
+    keyof OrganizeTree["sections"]
+  >;
+  const targetSection = sectionKeys.find((k) =>
+    tree.sections[k].categories.some((c) => c.id === toCategoryId),
+  );
+  if (!targetSection) return tree;
+
+  const nextUncategorized = (tree.uncategorized ?? []).filter(
+    (d) => !idSet.has(d.id),
+  );
+
+  const updatedSections = { ...tree.sections };
+  updatedSections[targetSection] = {
+    categories: tree.sections[targetSection].categories.map((cat) => {
+      if (cat.id !== toCategoryId) return cat;
+      const baseSortOrder = cat.documents.length;
+      const appended = movingDocs.map((doc, i) =>
+        uncategorizedToInCategory(doc, toCategoryId, baseSortOrder + i),
+      );
+      return { ...cat, documents: [...cat.documents, ...appended] };
+    }),
+  };
+
+  return {
+    ...tree,
+    uncategorized: nextUncategorized,
+    sections: updatedSections,
+  };
+}
+
+interface BulkUnassignArgs {
+  tree: OrganizeTree;
+  documentIds: string[];
+  fromCategoryId: string;
+}
+
+export function computeBulkUnassign({
+  tree,
+  documentIds,
+  fromCategoryId,
+}: BulkUnassignArgs): OrganizeTree {
+  if (documentIds.length === 0) return tree;
+  const idSet = new Set(documentIds);
+
+  const sectionKeys = Object.keys(tree.sections) as Array<
+    keyof OrganizeTree["sections"]
+  >;
+  const sourceSection = sectionKeys.find((k) =>
+    tree.sections[k].categories.some((c) => c.id === fromCategoryId),
+  );
+  if (!sourceSection) return tree;
+
+  const sourceCat = tree.sections[sourceSection].categories.find(
+    (c) => c.id === fromCategoryId,
+  );
+  if (!sourceCat) return tree;
+
+  const removedDocs = sourceCat.documents.filter((d) => idSet.has(d.id));
+  if (removedDocs.length === 0) return tree;
+
+  const updatedSections = { ...tree.sections };
+  updatedSections[sourceSection] = {
+    categories: tree.sections[sourceSection].categories.map((cat) => {
+      if (cat.id !== fromCategoryId) return cat;
+      const remaining = cat.documents
+        .filter((d) => !idSet.has(d.id))
+        .map((d, i) => ({
+          ...d,
+          membership: { ...d.membership, sortOrder: i },
+        }));
+      return { ...cat, documents: remaining };
+    }),
+  };
+
+  const restoredUncategorized = [
+    ...(tree.uncategorized ?? []),
+    ...removedDocs.map(inCategoryToUncategorized),
+  ];
+
+  return {
+    ...tree,
+    uncategorized: restoredUncategorized,
+    sections: updatedSections,
+  };
 }
