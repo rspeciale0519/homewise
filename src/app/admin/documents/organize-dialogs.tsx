@@ -5,9 +5,11 @@ import { DocumentCategoryDrawer } from "@/components/admin/document-category-dra
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { BulkDeleteDialog } from "./bulk-delete-dialog";
 import { BulkUploadDialog } from "./bulk-upload-dialog";
+import { CategoryPickerDialog } from "./category-picker-dialog";
 import type { BulkDeleteResult } from "@/lib/documents/bulk-delete";
 import type { BulkCreateResult } from "@/lib/documents/bulk-upload";
 import type {
+  AdminCategoryTree,
   DocumentCategoryItem,
   DocumentItem,
   DocumentSection,
@@ -35,6 +37,16 @@ interface OrganizeDialogsProps {
   bulkUploadOpen: boolean;
   setBulkUploadOpen: (open: boolean) => void;
   handleBulkUploaded: (result: BulkCreateResult) => void;
+  pickerOpen: boolean;
+  pickerSection?: DocumentSection;
+  pickerDocumentCount: number;
+  sectionsToCategories: Record<DocumentSection, AdminCategoryTree[]>;
+  onPickerCancel: () => void;
+  onPickerConfirm: (args: {
+    section: DocumentSection;
+    categoryId: string;
+    categoryTitle: string;
+  }) => void;
 }
 
 export function OrganizeDialogs({
@@ -59,6 +71,12 @@ export function OrganizeDialogs({
   bulkUploadOpen,
   setBulkUploadOpen,
   handleBulkUploaded,
+  pickerOpen,
+  pickerSection,
+  pickerDocumentCount,
+  sectionsToCategories,
+  onPickerCancel,
+  onPickerConfirm,
 }: OrganizeDialogsProps) {
   return (
     <>
@@ -116,6 +134,16 @@ export function OrganizeDialogs({
         open={bulkUploadOpen}
         onClose={() => setBulkUploadOpen(false)}
         onUploaded={handleBulkUploaded}
+      />
+
+      <CategoryPickerDialog
+        key={pickerOpen ? `${pickerSection ?? "any"}-${pickerDocumentCount}` : "closed"}
+        open={pickerOpen}
+        documentCount={pickerDocumentCount}
+        sectionsToCategories={sectionsToCategories}
+        section={pickerSection}
+        onCancel={onPickerCancel}
+        onConfirm={onPickerConfirm}
       />
     </>
   );

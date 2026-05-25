@@ -2,6 +2,7 @@
 
 import { Plus, Search, Trash2, UploadCloud } from "lucide-react";
 import { PreviewToggle } from "./preview-toggle";
+import { AutoSwitchToggle } from "./auto-switch-toggle";
 
 interface OrganizeToolbarProps {
   preview: boolean;
@@ -11,6 +12,8 @@ interface OrganizeToolbarProps {
   onAddDocument: () => void;
   onBulkDelete: () => void;
   onBulkUpload: () => void;
+  autoSwitch: boolean;
+  onAutoSwitchChange: (next: boolean) => void;
 }
 
 export function OrganizeToolbar({
@@ -21,6 +24,8 @@ export function OrganizeToolbar({
   onAddDocument,
   onBulkDelete,
   onBulkUpload,
+  autoSwitch,
+  onAutoSwitchChange,
 }: OrganizeToolbarProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -36,8 +41,14 @@ export function OrganizeToolbar({
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <PreviewToggle value={preview} onChange={onPreviewChange} />
+        {!preview && (
+          <AutoSwitchToggle
+            value={autoSwitch}
+            onChange={onAutoSwitchChange}
+          />
+        )}
         {!preview && (
           <>
             <button
