@@ -4,6 +4,7 @@ import { DndContext } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 import { DocumentCard } from "./document-card";
 import type { AdminDocumentInCategory } from "@/app/admin/documents/types";
+import type { UseDocumentSelectionResult } from "@/app/admin/documents/use-document-selection";
 
 const baseDoc: AdminDocumentInCategory = {
   id: "doc-1",
@@ -20,6 +21,22 @@ const baseDoc: AdminDocumentInCategory = {
   membership: { categoryId: "cat-a", sortOrder: 0 },
 };
 
+function stubSelection(
+  overrides: Partial<UseDocumentSelectionResult> = {},
+): UseDocumentSelectionResult {
+  return {
+    selectedIds: new Set<string>(),
+    isSelected: () => false,
+    isAllSelected: false,
+    isIndeterminate: false,
+    selectedCount: 0,
+    toggleOne: vi.fn(),
+    toggleAll: vi.fn(),
+    clear: vi.fn(),
+    ...overrides,
+  };
+}
+
 function renderCard(
   overrides: Partial<Parameters<typeof DocumentCard>[0]> = {},
 ) {
@@ -27,8 +44,11 @@ function renderCard(
   const props = {
     document: baseDoc,
     currentCategoryId: "cat-a",
+    currentSection: "office" as const,
     preview: false,
     searchMatches: true,
+    selection: stubSelection(),
+    selectionActive: false,
     targetCategories: { office: [], listing: [], sales: [] },
     onCardClick: noop,
     onEdit: noop,
@@ -77,22 +97,36 @@ describe("DocumentCard", () => {
     expect(screen.getByText("Quick")).toBeInTheDocument();
   });
 
-  it("exposes drag handle with an a11y label", () => {
+  it("exposes a select-card checkbox with an a11y label", () => {
     renderCard();
     expect(
-      screen.getByRole("button", {
-        name: "Drag to reorder Purchase Agreement",
-      }),
+      screen.getByRole("checkbox", { name: "Select Purchase Agreement" }),
     ).toBeInTheDocument();
   });
 
-  it("hides drag handle in preview mode", () => {
+  it("hides selection checkbox in preview mode", () => {
     renderCard({ preview: true });
     expect(
-      screen.queryByRole("button", {
-        name: "Drag to reorder Purchase Agreement",
-      }),
+      screen.queryByRole("checkbox", { name: /Purchase Agreement/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders card root as a button in edit mode", () => {
+    renderCard();
+    expect(
+      screen.getAllByRole("button").some(
+        (el) => el.textContent?.includes("Purchase Agreement"),
+      ),
+    ).toBe(true);
+  });
+
+  it("renders card root as a link in preview mode", () => {
+    renderCard({ preview: true });
+    expect(
+      screen.getAllByRole("link").some(
+        (el) => el.textContent?.includes("Purchase Agreement"),
+      ),
+    ).toBe(true);
   });
 
   it("hides ellipsis menu in preview mode", () => {
@@ -102,5 +136,19 @@ describe("DocumentCard", () => {
         name: "Actions for Purchase Agreement",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the Deselect label when card is selected", () => {
+    renderCard({
+      selection: stubSelection({
+        selectedIds: new Set(["doc-1"]),
+        selectedCount: 1,
+        isSelected: (id) => id === "doc-1",
+      }),
+      selectionActive: true,
+    });
+    expect(
+      screen.getByRole("checkbox", { name: "Deselect Purchase Agreement" }),
+    ).toBeInTheDocument();
   });
 });

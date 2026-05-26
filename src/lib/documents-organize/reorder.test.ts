@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computeBulkAssignFromUncategorized,
+  computeBulkMoveBetweenCategories,
   computeBulkUnassign,
   computeCategoryReorder,
   computeCrossCategoryMove,
@@ -422,5 +423,147 @@ describe("computeBulkUnassign", () => {
     });
     const restored = out.uncategorized?.find((d) => d.id === "d1");
     expect(restored?.published).toBe(false);
+  });
+});
+
+describe("computeBulkMoveBetweenCategories", () => {
+  const buildBaseTree = (): OrganizeTree => ({
+    sections: {
+      office: {
+        categories: [
+          makeCat("officeA", "office", 0, [
+            makeDoc("d1", "officeA", 0),
+            makeDoc("d2", "officeA", 1),
+          ]),
+          makeCat("officeB", "office", 1, [makeDoc("d3", "officeB", 0)]),
+        ],
+      },
+      listing: {
+        categories: [
+          makeCat("listingX", "listing", 0, [makeDoc("dExist", "listingX", 0)]),
+        ],
+      },
+      sales: { categories: [] },
+    },
+    uncategorized: [],
+  });
+
+  it("returns the tree unchanged when moves is empty", () => {
+    const tree = buildBaseTree();
+    const out = computeBulkMoveBetweenCategories({
+      tree,
+      moves: [],
+      toCategoryId: "listingX",
+    });
+    expect(out).toBe(tree);
+  });
+
+  it("moves docs from one source category to a different-section target", () => {
+    const tree = buildBaseTree();
+    const out = computeBulkMoveBetweenCategories({
+      tree,
+      moves: [
+        { documentId: "d1", fromCategoryId: "officeA" },
+        { documentId: "d2", fromCategoryId: "officeA" },
+      ],
+      toCategoryId: "listingX",
+    });
+    const officeA = out.sections.office.categories.find(
+      (c) => c.id === "officeA",
+    )!;
+    expect(officeA.documents.map((d) => d.id)).toEqual([]);
+    const listingX = out.sections.listing.categories.find(
+      (c) => c.id === "listingX",
+    )!;
+    expect(listingX.documents.map((d) => d.id)).toEqual(["dExist", "d1", "d2"]);
+    expect(listingX.documents[1]!.membership.sortOrder).toBe(1);
+    expect(listingX.documents[2]!.membership.sortOrder).toBe(2);
+    expect(listingX.documents[2]!.membership.categoryId).toBe("listingX");
+  });
+
+  it("moves docs from multiple source categories into one target", () => {
+    const tree = buildBaseTree();
+    const out = computeBulkMoveBetweenCategories({
+      tree,
+      moves: [
+        { documentId: "d1", fromCategoryId: "officeA" },
+        { documentId: "d3", fromCategoryId: "officeB" },
+      ],
+      toCategoryId: "listingX",
+    });
+    const officeA = out.sections.office.categories.find(
+      (c) => c.id === "officeA",
+    )!;
+    const officeB = out.sections.office.categories.find(
+      (c) => c.id === "officeB",
+    )!;
+    expect(officeA.documents.map((d) => d.id)).toEqual(["d2"]);
+    expect(officeA.documents[0]!.membership.sortOrder).toBe(0);
+    expect(officeB.documents).toEqual([]);
+    const listingX = out.sections.listing.categories.find(
+      (c) => c.id === "listingX",
+    )!;
+    expect(listingX.documents.map((d) => d.id)).toEqual(["dExist", "d1", "d3"]);
+  });
+
+  it("moves docs to a target category within the same section", () => {
+    const tree = buildBaseTree();
+    const out = computeBulkMoveBetweenCategories({
+      tree,
+      moves: [{ documentId: "d1", fromCategoryId: "officeA" }],
+      toCategoryId: "officeB",
+    });
+    const officeA = out.sections.office.categories.find(
+      (c) => c.id === "officeA",
+    )!;
+    const officeB = out.sections.office.categories.find(
+      (c) => c.id === "officeB",
+    )!;
+    expect(officeA.documents.map((d) => d.id)).toEqual(["d2"]);
+    expect(officeB.documents.map((d) => d.id)).toEqual(["d3", "d1"]);
+    expect(officeB.documents[1]!.membership.categoryId).toBe("officeB");
+  });
+
+  it("moves docs to Uncategorized when toCategoryId is null", () => {
+    const tree = buildBaseTree();
+    const out = computeBulkMoveBetweenCategories({
+      tree,
+      moves: [
+        { documentId: "d1", fromCategoryId: "officeA" },
+        { documentId: "d3", fromCategoryId: "officeB" },
+      ],
+      toCategoryId: null,
+    });
+    const officeA = out.sections.office.categories.find(
+      (c) => c.id === "officeA",
+    )!;
+    expect(officeA.documents.map((d) => d.id)).toEqual(["d2"]);
+    expect(out.uncategorized?.map((d) => d.id)).toEqual(["d1", "d3"]);
+  });
+
+  it("returns the tree unchanged when toCategoryId is non-null but not found", () => {
+    const tree = buildBaseTree();
+    const out = computeBulkMoveBetweenCategories({
+      tree,
+      moves: [{ documentId: "d1", fromCategoryId: "officeA" }],
+      toCategoryId: "ghost",
+    });
+    expect(out).toBe(tree);
+  });
+
+  it("ignores moves whose document is not in the named source category", () => {
+    const tree = buildBaseTree();
+    const out = computeBulkMoveBetweenCategories({
+      tree,
+      moves: [
+        { documentId: "dDoesNotExist", fromCategoryId: "officeA" },
+        { documentId: "d1", fromCategoryId: "officeA" },
+      ],
+      toCategoryId: "listingX",
+    });
+    const listingX = out.sections.listing.categories.find(
+      (c) => c.id === "listingX",
+    )!;
+    expect(listingX.documents.map((d) => d.id)).toEqual(["dExist", "d1"]);
   });
 });

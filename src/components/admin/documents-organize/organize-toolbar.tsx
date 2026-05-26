@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Trash2, UploadCloud } from "lucide-react";
+import { FolderInput, Plus, Search, Trash2, UploadCloud } from "lucide-react";
 import { PreviewToggle } from "./preview-toggle";
 import { AutoSwitchToggle } from "./auto-switch-toggle";
 
@@ -14,6 +14,9 @@ interface OrganizeToolbarProps {
   onBulkUpload: () => void;
   autoSwitch: boolean;
   onAutoSwitchChange: (next: boolean) => void;
+  selectionCount: number;
+  onMoveSelection: () => void;
+  onClearSelection: () => void;
 }
 
 export function OrganizeToolbar({
@@ -26,7 +29,11 @@ export function OrganizeToolbar({
   onBulkUpload,
   autoSwitch,
   onAutoSwitchChange,
+  selectionCount,
+  onMoveSelection,
+  onClearSelection,
 }: OrganizeToolbarProps) {
+  const hasSelection = selectionCount > 0 && !preview;
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="relative flex-1 max-w-md">
@@ -42,6 +49,25 @@ export function OrganizeToolbar({
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
+        {hasSelection && (
+          <>
+            <button
+              type="button"
+              onClick={onMoveSelection}
+              className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-crimson-600 focus-visible:ring-offset-1"
+            >
+              <FolderInput className="h-4 w-4" />
+              Move {selectionCount}…
+            </button>
+            <button
+              type="button"
+              onClick={onClearSelection}
+              className="inline-flex items-center h-11 sm:h-9 px-2 text-xs font-semibold text-slate-500 hover:text-navy-700 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded"
+            >
+              Clear
+            </button>
+          </>
+        )}
         <PreviewToggle value={preview} onChange={onPreviewChange} />
         {!preview && (
           <AutoSwitchToggle

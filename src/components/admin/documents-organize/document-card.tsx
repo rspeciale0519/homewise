@@ -2,18 +2,24 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
+  DocumentSection,
 } from "@/app/admin/documents/types";
+import type { UseDocumentSelectionResult } from "@/app/admin/documents/use-document-selection";
 import { DocumentCardMenu } from "./document-card-menu";
 
 interface DocumentCardProps {
   document: AdminDocumentInCategory;
   currentCategoryId: string;
+  currentSection: DocumentSection;
   preview: boolean;
   searchMatches: boolean;
+  selection: UseDocumentSelectionResult;
+  selectionActive: boolean;
   targetCategories: {
     office: AdminCategoryTree[];
     listing: AdminCategoryTree[];
@@ -40,8 +46,11 @@ export function DocumentCard(props: DocumentCardProps) {
   const {
     document,
     currentCategoryId,
+    currentSection,
     preview,
     searchMatches,
+    selection,
+    selectionActive,
     targetCategories,
     onCardClick,
     onEdit,
@@ -53,15 +62,30 @@ export function DocumentCard(props: DocumentCardProps) {
   } = props;
 
   const id = dragId(document.id, currentCategoryId);
+  const isChecked = selection.isSelected(document.id);
+  // When this card is part of a multi-select (size >= 2), broadcast a
+  // "section-bulk" payload so the drag-end dispatcher routes the entire
+  // selection rather than a single document. Otherwise fall back to the
+  // single-doc reorder/cross-category data.
+  const isBulkDrag = !preview && isChecked && selection.selectedCount >= 2;
+  const sortableData = isBulkDrag
+    ? {
+        type: "section-bulk" as const,
+        documentIds: Array.from(selection.selectedIds),
+        primaryDocId: document.id,
+        fromSection: currentSection,
+      }
+    : {
+        type: "document" as const,
+        documentId: document.id,
+        fromCategoryId: currentCategoryId,
+        fromSection: currentSection,
+      };
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } =
     useSortable({
       id,
       disabled: preview || !searchMatches,
-      data: {
-        type: "document",
-        documentId: document.id,
-        fromCategoryId: currentCategoryId,
-      },
+      data: sortableData,
     });
 
   const style: React.CSSProperties = {
@@ -78,19 +102,26 @@ export function DocumentCard(props: DocumentCardProps) {
     <div
       ref={setNodeRef}
       style={style}
-      role={preview ? "link" : "button"}
-      tabIndex={0}
       onClick={() => onCardClick(document)}
       onKeyDown={(e) => {
         if (e.key === "Enter") onCardClick(document);
       }}
-      className={`group relative flex items-start gap-4 p-4 pl-5 rounded-xl border bg-white transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 ${
-        isMuted
-          ? "border-slate-100 hover:border-slate-200 hover:bg-slate-50/50"
-          : "border-slate-100 hover:border-crimson-200 hover:bg-crimson-50/30"
-      } ${isDragging ? "shadow-lg ring-2 ring-navy-400/20" : ""}`}
+      {...(preview ? {} : attributes)}
+      {...(preview ? {} : listeners)}
+      role={preview ? "link" : "button"}
+      tabIndex={0}
+      className={cn(
+        "group relative flex items-start gap-4 p-4 pl-5 rounded-xl border bg-white transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600",
+        isChecked
+          ? "border-crimson-300 bg-crimson-50/60 ring-2 ring-crimson-400/60 ring-offset-1"
+          : isMuted
+            ? "border-slate-100 hover:border-slate-200 hover:bg-slate-50/50"
+            : "border-slate-100 hover:border-crimson-200 hover:bg-crimson-50/30",
+        isDragging && "shadow-lg ring-2 ring-navy-400/20",
+        "touch-none select-none",
+      )}
     >
-      {isMuted && (
+      {isMuted && !isChecked && (
         <span
           aria-hidden="true"
           className="absolute left-0 top-4 bottom-4 w-0.5 rounded-r bg-slate-200"
@@ -98,32 +129,57 @@ export function DocumentCard(props: DocumentCardProps) {
       )}
 
       {!preview && (
-        <button
-          type="button"
-          aria-label={`Drag to reorder ${document.name}`}
-          className="absolute left-1 top-1 h-6 w-5 inline-flex items-center justify-center rounded text-slate-300 opacity-0 group-hover:opacity-100 hover:text-navy-500 cursor-grab active:cursor-grabbing focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 transition-opacity"
-          {...attributes}
-          {...listeners}
-          onClick={(e) => e.stopPropagation()}
+        <span
+          className={cn(
+            "absolute left-1.5 top-1.5 z-10 transition-opacity",
+            selectionActive || isChecked
+              ? "opacity-100"
+              : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100",
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
         >
-          <GripVertical className="h-3.5 w-3.5" />
-        </button>
+          <Checkbox
+            checked={isChecked}
+            aria-label={
+              isChecked ? `Deselect ${document.name}` : `Select ${document.name}`
+            }
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              selection.toggleOne(document.id, {
+                shiftKey: e.shiftKey,
+                ctrlKey: e.ctrlKey,
+                metaKey: e.metaKey,
+              });
+            }}
+          />
+        </span>
       )}
 
       <div className="shrink-0 mt-0.5">
         <div
-          className={`h-9 w-9 rounded-lg flex items-center justify-center transition-colors ${
-            isMuted
-              ? "bg-slate-50 group-hover:bg-slate-100"
-              : "bg-navy-50 group-hover:bg-crimson-100"
-          }`}
+          className={cn(
+            "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
+            isChecked
+              ? "bg-crimson-100"
+              : isMuted
+                ? "bg-slate-50 group-hover:bg-slate-100"
+                : "bg-navy-50 group-hover:bg-crimson-100",
+          )}
         >
           <svg
-            className={`h-4 w-4 transition-colors ${
-              isMuted
-                ? "text-slate-300"
-                : "text-navy-400 group-hover:text-crimson-600"
-            }`}
+            className={cn(
+              "h-4 w-4 transition-colors",
+              isChecked
+                ? "text-crimson-600"
+                : isMuted
+                  ? "text-slate-300"
+                  : "text-navy-400 group-hover:text-crimson-600",
+            )}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -140,11 +196,14 @@ export function DocumentCard(props: DocumentCardProps) {
 
       <div className="flex-1 min-w-0">
         <p
-          className={`text-sm font-semibold transition-colors ${
-            isMuted
-              ? "text-slate-500 group-hover:text-slate-600"
-              : "text-navy-700 group-hover:text-crimson-700"
-          }`}
+          className={cn(
+            "text-sm font-semibold transition-colors",
+            isChecked
+              ? "text-crimson-700"
+              : isMuted
+                ? "text-slate-500 group-hover:text-slate-600"
+                : "text-navy-700 group-hover:text-crimson-700",
+          )}
         >
           <span className="align-middle">{document.name}</span>
           {!document.published && !preview && (
@@ -169,6 +228,7 @@ export function DocumentCard(props: DocumentCardProps) {
         <div
           className="shrink-0"
           onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <DocumentCardMenu
             document={document}

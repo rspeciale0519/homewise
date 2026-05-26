@@ -10,6 +10,7 @@ import type {
   AdminDocumentInCategory,
   DocumentSection,
 } from "@/app/admin/documents/types";
+import type { UseDocumentSelectionResult } from "@/app/admin/documents/use-document-selection";
 import { CategoryColumn } from "./category-column";
 import { categoryDragId } from "./category-header";
 
@@ -18,6 +19,8 @@ interface SectionBoardProps {
   categories: AdminCategoryTree[];
   preview: boolean;
   search: string;
+  selection: UseDocumentSelectionResult;
+  selectionActive: boolean;
   targetCategories: {
     office: AdminCategoryTree[];
     listing: AdminCategoryTree[];
@@ -44,6 +47,8 @@ export function SectionBoard(props: SectionBoardProps) {
     categories,
     preview,
     search,
+    selection,
+    selectionActive,
     targetCategories,
     onEditCategory,
     onAddCategory,
@@ -83,6 +88,8 @@ export function SectionBoard(props: SectionBoardProps) {
             category={category}
             preview={preview}
             search={search}
+            selection={selection}
+            selectionActive={selectionActive}
             targetCategories={targetCategories}
             onEditCategory={onEditCategory}
             onAddDocumentToCategory={onAddDocumentToCategory}

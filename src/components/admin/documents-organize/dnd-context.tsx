@@ -33,14 +33,13 @@ const resilientCollision: CollisionDetection = (args) => {
   return rectIntersection(args);
 };
 
-// For uncategorized-bulk drags the user grabs a small grip handle but the
-// overlay preview is a wider card — snap the overlay's center to the cursor
-// so the visual stays anchored. Other drag types (in-section card moves,
-// category header reorder) already feel right with default positioning, so
-// the modifier is a no-op for them.
+// For bulk drags (Uncategorized rows and section-board multi-select cards),
+// snap the overlay's center to the cursor. Single-card and category-header
+// drags use default positioning since their source rect already matches the
+// visual ghost.
 const snapBulkCenterToCursor: Modifier = (args) => {
   const activeType = args.active?.data.current?.type as string | undefined;
-  if (activeType === "uncategorized-bulk") {
+  if (activeType === "uncategorized-bulk" || activeType === "section-bulk") {
     return snapCenterToCursor(args);
   }
   return args.transform;
@@ -54,7 +53,11 @@ export function DndContextProvider({
   onDragCancel,
 }: DndContextProviderProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // 5px activation distance so plain card clicks (open drawer) are
+    // distinguishable from drag starts on the card body itself.
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
     useSensor(TouchSensor, {
       activationConstraint: { delay: 180, tolerance: 6 },
     }),

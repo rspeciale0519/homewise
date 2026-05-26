@@ -5,6 +5,7 @@ vi.stubGlobal("fetch", fetchMock);
 
 import {
   bulkAssignMemberships,
+  bulkMoveMemberships,
   bulkUnassignMemberships,
 } from "./bulk-membership";
 
@@ -85,5 +86,64 @@ describe("bulkUnassignMemberships", () => {
     expect(url).toBe("/api/admin/documents/memberships/bulk-unassign");
     expect(init.method).toBe("POST");
     expect(result.removed).toEqual(["d1", "d2"]);
+  });
+});
+
+describe("bulkMoveMemberships", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it("POSTs to bulk-move with moves[] payload and target categoryId", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        toCategoryId: "targetCat",
+        moved: [
+          { documentId: "d1", sortOrder: 5 },
+          { documentId: "d2", sortOrder: 6 },
+        ],
+        skipped: [],
+        failed: [],
+      }),
+    );
+
+    const result = await bulkMoveMemberships({
+      toCategoryId: "targetCat",
+      moves: [
+        { documentId: "d1", fromCategoryId: "srcA" },
+        { documentId: "d2", fromCategoryId: "srcB" },
+      ],
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/admin/documents/memberships/bulk-move");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      toCategoryId: "targetCat",
+      moves: [
+        { documentId: "d1", fromCategoryId: "srcA" },
+        { documentId: "d2", fromCategoryId: "srcB" },
+      ],
+    });
+    expect(result.moved).toHaveLength(2);
+  });
+
+  it("supports toCategoryId: null for drag-to-Uncategorized", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        toCategoryId: null,
+        moved: [{ documentId: "d1", sortOrder: null }],
+        skipped: [],
+        failed: [],
+      }),
+    );
+
+    const result = await bulkMoveMemberships({
+      toCategoryId: null,
+      moves: [{ documentId: "d1", fromCategoryId: "srcCat" }],
+    });
+
+    expect(result.toCategoryId).toBeNull();
+    expect(result.moved[0]?.sortOrder).toBeNull();
   });
 });

@@ -28,6 +28,28 @@ export interface BulkUnassignResult {
   failed: BulkAssignFailed[];
 }
 
+export interface BulkMoveMoved {
+  documentId: string;
+  sortOrder: number | null;
+}
+
+export interface BulkMoveSkipped {
+  documentId: string;
+  reason: "already-member" | "not-in-source";
+}
+
+export interface BulkMoveResult {
+  toCategoryId: string | null;
+  moved: BulkMoveMoved[];
+  skipped: BulkMoveSkipped[];
+  failed: BulkAssignFailed[];
+}
+
+export interface BulkMoveRequest {
+  toCategoryId: string | null;
+  moves: Array<{ documentId: string; fromCategoryId: string }>;
+}
+
 export function bulkAssignMemberships(args: {
   categoryId: string;
   documentIds: string[];
@@ -47,6 +69,18 @@ export function bulkUnassignMemberships(args: {
 }): Promise<BulkUnassignResult> {
   return adminFetch<BulkUnassignResult>(
     "/api/admin/documents/memberships/bulk-unassign",
+    {
+      method: "POST",
+      body: JSON.stringify(args),
+    },
+  );
+}
+
+export function bulkMoveMemberships(
+  args: BulkMoveRequest,
+): Promise<BulkMoveResult> {
+  return adminFetch<BulkMoveResult>(
+    "/api/admin/documents/memberships/bulk-move",
     {
       method: "POST",
       body: JSON.stringify(args),

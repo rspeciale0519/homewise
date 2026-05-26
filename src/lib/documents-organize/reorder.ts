@@ -155,6 +155,107 @@ export function computeBulkAssignFromUncategorized({
   };
 }
 
+interface BulkMoveBetweenCategoriesArgs {
+  tree: OrganizeTree;
+  moves: Array<{ documentId: string; fromCategoryId: string }>;
+  /** When non-null, append captured docs to that category's tail.
+   *  When null, push captured docs to tree.uncategorized. */
+  toCategoryId: string | null;
+}
+
+export function computeBulkMoveBetweenCategories({
+  tree,
+  moves,
+  toCategoryId,
+}: BulkMoveBetweenCategoriesArgs): OrganizeTree {
+  if (moves.length === 0) return tree;
+
+  const sectionKeys = Object.keys(tree.sections) as Array<
+    keyof OrganizeTree["sections"]
+  >;
+
+  const targetSection =
+    toCategoryId !== null
+      ? sectionKeys.find((k) =>
+          tree.sections[k].categories.some((c) => c.id === toCategoryId),
+        )
+      : null;
+  if (toCategoryId !== null && !targetSection) return tree;
+
+  const sourceUpdates = new Map<string, Set<string>>();
+  const captured: AdminDocumentInCategory[] = [];
+
+  for (const move of moves) {
+    let found: AdminDocumentInCategory | undefined;
+    for (const sectionKey of sectionKeys) {
+      const cat = tree.sections[sectionKey].categories.find(
+        (c) => c.id === move.fromCategoryId,
+      );
+      if (cat) {
+        found = cat.documents.find((d) => d.id === move.documentId);
+        break;
+      }
+    }
+    if (!found) continue;
+    captured.push(found);
+    const removeSet = sourceUpdates.get(move.fromCategoryId) ?? new Set();
+    removeSet.add(move.documentId);
+    sourceUpdates.set(move.fromCategoryId, removeSet);
+  }
+
+  if (captured.length === 0) return tree;
+
+  const updatedSections = { ...tree.sections };
+  for (const sectionKey of sectionKeys) {
+    const section = tree.sections[sectionKey];
+    let changed = false;
+    const updatedCategories = section.categories.map((cat) => {
+      const removeIds = sourceUpdates.get(cat.id);
+      if (removeIds && removeIds.size > 0) {
+        const remaining = cat.documents
+          .filter((d) => !removeIds.has(d.id))
+          .map((d, i) => ({
+            ...d,
+            membership: { ...d.membership, sortOrder: i },
+          }));
+        changed = true;
+        return { ...cat, documents: remaining };
+      }
+      if (
+        toCategoryId !== null &&
+        sectionKey === targetSection &&
+        cat.id === toCategoryId
+      ) {
+        const baseSortOrder = cat.documents.length;
+        const appended = captured.map((doc, i) => ({
+          ...doc,
+          membership: { categoryId: toCategoryId, sortOrder: baseSortOrder + i },
+        }));
+        changed = true;
+        return { ...cat, documents: [...cat.documents, ...appended] };
+      }
+      return cat;
+    });
+    if (changed) {
+      updatedSections[sectionKey] = { categories: updatedCategories };
+    }
+  }
+
+  const updatedUncategorized =
+    toCategoryId === null
+      ? [
+          ...(tree.uncategorized ?? []),
+          ...captured.map(inCategoryToUncategorized),
+        ]
+      : tree.uncategorized;
+
+  return {
+    ...tree,
+    uncategorized: updatedUncategorized,
+    sections: updatedSections,
+  };
+}
+
 interface BulkUnassignArgs {
   tree: OrganizeTree;
   documentIds: string[];
