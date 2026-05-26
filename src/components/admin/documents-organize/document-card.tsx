@@ -156,7 +156,6 @@ export function DocumentCard(props: DocumentCardProps) {
                 metaKey: e.metaKey,
               });
             }}
-            className="h-5 w-5"
           />
         </span>
       )}
