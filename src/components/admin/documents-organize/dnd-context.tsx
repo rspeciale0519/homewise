@@ -13,7 +13,9 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
+  type Modifier,
 } from "@dnd-kit/core";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { ReactNode } from "react";
 
@@ -29,6 +31,19 @@ const resilientCollision: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
   if (pointerCollisions.length > 0) return pointerCollisions;
   return rectIntersection(args);
+};
+
+// For uncategorized-bulk drags the user grabs a small grip handle but the
+// overlay preview is a wider card — snap the overlay's center to the cursor
+// so the visual stays anchored. Other drag types (in-section card moves,
+// category header reorder) already feel right with default positioning, so
+// the modifier is a no-op for them.
+const snapBulkCenterToCursor: Modifier = (args) => {
+  const activeType = args.active?.data.current?.type as string | undefined;
+  if (activeType === "uncategorized-bulk") {
+    return snapCenterToCursor(args);
+  }
+  return args.transform;
 };
 
 export function DndContextProvider({
@@ -64,6 +79,7 @@ export function DndContextProvider({
         }}
         adjustScale={false}
         zIndex={10000}
+        modifiers={[snapBulkCenterToCursor]}
       >
         {overlay ?? null}
       </DragOverlay>
