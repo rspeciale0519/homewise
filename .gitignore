@@ -63,6 +63,11 @@ skills-lock.json
 # temp docs
 docs/temp/
 
+# local PDFs staged for bulk-upload via the Document Library admin UI;
+# real document storage is Supabase, not the repo.
+public/documents/temp/
+public/documents/*.pdf
+
 # archived local projects and artifacts
 /archive/
 

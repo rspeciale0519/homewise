@@ -83,6 +83,15 @@ export function CategoryColumn(props: CategoryColumnProps) {
     documentDragId(d.id, category.id),
   );
 
+  // selectable docs = those currently matching the search (non-matches are
+  // rendered dimmed and excluded from "select all in category" semantics).
+  const selectableDocIds = visibleDocs
+    .filter((d) => matchesSearch(d, search))
+    .map((d) => d.id);
+  const selectedCountInCategory = selectableDocIds.filter((id) =>
+    selection.isSelected(id),
+  ).length;
+
   const { setNodeRef, isOver } = useDroppable({
     id: categoryDroppableId(category.id),
     data: { type: "category-drop", categoryId: category.id },
@@ -99,6 +108,9 @@ export function CategoryColumn(props: CategoryColumnProps) {
         category={category}
         preview={preview}
         onEdit={onEditCategory}
+        visibleDocIds={selectableDocIds}
+        selectedCountInCategory={selectedCountInCategory}
+        onToggleCategory={selection.toggleSubset}
       />
 
       <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
