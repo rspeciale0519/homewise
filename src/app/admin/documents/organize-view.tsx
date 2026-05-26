@@ -179,9 +179,15 @@ export function OrganizeView() {
         | undefined;
       if (data?.type === "uncategorized-bulk") {
         const ids = new Set(data.documentIds ?? []);
-        setActiveDragUncategorizedDocs(
-          uncategorizedDocs.filter((d) => ids.has(d.id)),
-        );
+        const primaryId = (data as { primaryDocId?: string }).primaryDocId;
+        const inOrder = uncategorizedDocs.filter((d) => ids.has(d.id));
+        const reordered = primaryId
+          ? [
+              ...inOrder.filter((d) => d.id === primaryId),
+              ...inOrder.filter((d) => d.id !== primaryId),
+            ]
+          : inOrder;
+        setActiveDragUncategorizedDocs(reordered);
         setDragIntent("uncategorized-bulk");
         return;
       }

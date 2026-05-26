@@ -92,7 +92,7 @@ describe("DragOverlay", () => {
     expect(screen.getByText("Lonely Doc")).toBeInTheDocument();
   });
 
-  it("renders count label when bulk drag has multiple docs", () => {
+  it("renders the primary doc name + count badge + '+N more' for multi-doc drag", () => {
     render(
       <DragOverlay
         activeDragDoc={null}
@@ -104,7 +104,9 @@ describe("DragOverlay", () => {
         ]}
       />,
     );
-    expect(screen.getByText(/3 documents/i)).toBeInTheDocument();
+    expect(screen.getByText("Doc A")).toBeInTheDocument();
+    expect(screen.getByText(/\+ 2 more/i)).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 
   it("bulk preview takes precedence over single-doc and category previews", () => {
@@ -118,7 +120,8 @@ describe("DragOverlay", () => {
         ]}
       />,
     );
-    expect(screen.getByText(/2 documents/i)).toBeInTheDocument();
+    expect(screen.getByText("Doc A")).toBeInTheDocument();
+    expect(screen.getByText(/\+ 1 more/i)).toBeInTheDocument();
     expect(screen.queryByText("Sample Doc")).not.toBeInTheDocument();
     expect(screen.queryByText("My Category")).not.toBeInTheDocument();
   });
