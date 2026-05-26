@@ -33,6 +33,7 @@ describe("useUncategorizedSelection alias", () => {
       selectedCount: 0,
       toggleOne: () => {},
       toggleAll: () => {},
+      toggleSubset: () => {},
       clear: () => {},
     };
     expect(sample.selectedCount).toBe(0);

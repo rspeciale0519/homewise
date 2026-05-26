@@ -28,6 +28,7 @@ function mockSelection(
     selectedCount: 0,
     toggleOne: vi.fn(),
     toggleAll: vi.fn(),
+    toggleSubset: vi.fn(),
     clear: vi.fn(),
     ...overrides,
   };

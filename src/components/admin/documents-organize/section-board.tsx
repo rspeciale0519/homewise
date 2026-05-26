@@ -13,6 +13,7 @@ import type {
 import type { UseDocumentSelectionResult } from "@/app/admin/documents/use-document-selection";
 import { CategoryColumn } from "./category-column";
 import { categoryDragId } from "./category-header";
+import { SectionSelectAllStrip } from "./section-select-all-strip";
 
 interface SectionBoardProps {
   section: DocumentSection;
@@ -42,8 +43,15 @@ interface SectionBoardProps {
   onDeleteDoc: (doc: AdminDocumentInCategory) => void;
 }
 
+function matchesSearch(name: string, slug: string, search: string): boolean {
+  if (!search.trim()) return true;
+  const q = search.trim().toLowerCase();
+  return name.toLowerCase().includes(q) || slug.toLowerCase().includes(q);
+}
+
 export function SectionBoard(props: SectionBoardProps) {
   const {
+    section,
     categories,
     preview,
     search,
@@ -68,6 +76,18 @@ export function SectionBoard(props: SectionBoardProps) {
 
   const categoryIds = visibleCategories.map((c) => categoryDragId(c.id));
 
+  // Docs eligible for "select all in section": all docs across every
+  // category on this tab that pass the current search filter. In preview
+  // mode the strip is hidden.
+  const selectableDocIds = visibleCategories.flatMap((c) =>
+    c.documents
+      .filter((d) => matchesSearch(d.name, d.slug, search))
+      .map((d) => d.id),
+  );
+  const selectedInSection = selectableDocIds.filter((id) =>
+    selection.isSelected(id),
+  ).length;
+
   if (preview && visibleCategories.length === 0) {
     return (
       <div className="text-center py-16 text-sm text-slate-400">
@@ -78,6 +98,15 @@ export function SectionBoard(props: SectionBoardProps) {
 
   return (
     <div className="space-y-10">
+      {!preview && (
+        <SectionSelectAllStrip
+          section={section}
+          totalVisible={selectableDocIds.length}
+          selectedInSection={selectedInSection}
+          onToggleAll={() => selection.toggleSubset(selectableDocIds)}
+          onClear={selection.clear}
+        />
+      )}
       <SortableContext
         items={categoryIds}
         strategy={verticalListSortingStrategy}

@@ -90,6 +90,12 @@ export interface UseDocumentSelectionResult {
     modifiers: { shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean },
   ) => void;
   toggleAll: () => void;
+  /**
+   * Toggle a subset of docs (e.g. all docs in one category). If every id in
+   * the subset is already selected, all are deselected; otherwise every id
+   * in the subset is added to the selection.
+   */
+  toggleSubset: (ids: readonly string[]) => void;
   clear: () => void;
 }
 
@@ -130,6 +136,10 @@ export function useDocumentSelection(
     dispatch({ type: "selectAllVisible", ids: orderedDocIds });
   }, [orderedDocIds]);
 
+  const toggleSubset = useCallback((ids: readonly string[]) => {
+    dispatch({ type: "selectAllVisible", ids });
+  }, []);
+
   const clear = useCallback(() => {
     dispatch({ type: "clear" });
   }, []);
@@ -147,7 +157,16 @@ export function useDocumentSelection(
       selectedCount: state.ids.size,
       toggleOne,
       toggleAll,
+      toggleSubset,
       clear,
     };
-  }, [state.ids, orderedDocIds, isSelected, toggleOne, toggleAll, clear]);
+  }, [
+    state.ids,
+    orderedDocIds,
+    isSelected,
+    toggleOne,
+    toggleAll,
+    toggleSubset,
+    clear,
+  ]);
 }

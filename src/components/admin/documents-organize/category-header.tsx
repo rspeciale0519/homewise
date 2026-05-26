@@ -3,12 +3,17 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { AdminCategoryTree } from "@/app/admin/documents/types";
 
 interface CategoryHeaderProps {
   category: AdminCategoryTree;
   preview: boolean;
   onEdit: (category: AdminCategoryTree) => void;
+  /** IDs of docs currently visible in this category (post-search). */
+  visibleDocIds?: readonly string[];
+  selectedCountInCategory?: number;
+  onToggleCategory?: (ids: readonly string[]) => void;
 }
 
 function categoryDragId(categoryId: string): string {
@@ -19,6 +24,9 @@ export function CategoryHeader({
   category,
   preview,
   onEdit,
+  visibleDocIds,
+  selectedCountInCategory = 0,
+  onToggleCategory,
 }: CategoryHeaderProps) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } =
     useSortable({
@@ -33,12 +41,42 @@ export function CategoryHeader({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const hasMasterCheckbox =
+    !preview && visibleDocIds && onToggleCategory && visibleDocIds.length > 0;
+  const allSelected =
+    hasMasterCheckbox &&
+    visibleDocIds!.length > 0 &&
+    selectedCountInCategory === visibleDocIds!.length;
+  const someSelected = hasMasterCheckbox && selectedCountInCategory > 0;
+  const checkboxState: boolean | "indeterminate" = allSelected
+    ? true
+    : someSelected
+      ? "indeterminate"
+      : false;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className="group flex items-center gap-3 mb-5 relative"
     >
+      {hasMasterCheckbox && (
+        <span
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={checkboxState}
+            aria-label={
+              allSelected
+                ? `Deselect all in ${category.title}`
+                : `Select all in ${category.title}`
+            }
+            onClick={() => onToggleCategory!(visibleDocIds!)}
+          />
+        </span>
+      )}
+
       {!preview && (
         <button
           type="button"
