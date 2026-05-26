@@ -67,6 +67,7 @@ function makeSelection(
     selectedCount: selectedIds.size,
     toggleOne: vi.fn(),
     toggleAll: vi.fn(),
+    toggleSubset: vi.fn(),
     clear: vi.fn(),
   };
 }
