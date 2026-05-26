@@ -323,6 +323,9 @@ export function OrganizeView() {
             dragState.dragIntent === "uncategorized-bulk" ||
             dragState.dragIntent === "section-bulk"
           }
+          uncategorizedAcceptsBulkDrop={
+            dragState.dragIntent === "section-bulk"
+          }
         />
 
         <OrganizeToolbar
