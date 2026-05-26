@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import { OrganizeDialogs } from "./organize-dialogs";
 import type {
   AdminCategoryTree,
-  AdminDocumentInCategory,
   DocumentCategoryItem,
   DocumentItem,
   DocumentSection,
@@ -34,14 +33,9 @@ import { useUncategorizedActions } from "./use-uncategorized-actions";
 import { useDocumentSelection } from "./use-document-selection";
 import { useDocActions } from "./use-doc-actions";
 import { useUncategorizedBulkCategorize } from "./use-uncategorized-bulk-categorize";
+import { useSectionBulkMove } from "./use-section-bulk-move";
+import { useOrganizeDragState } from "./use-organize-drag-state";
 import { usePersistedBoolean } from "@/hooks/use-persisted-boolean";
-
-type DragIntent =
-  | null
-  | "in-section"
-  | "category-reorder"
-  | "uncategorized-bulk"
-  | "section-bulk";
 
 const TABS: Array<{ key: OrganizeTab; label: string }> = [
   { key: "office", label: "Office" },
@@ -77,14 +71,6 @@ export function OrganizeView() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
-  const [activeDragDoc, setActiveDragDoc] =
-    useState<AdminDocumentInCategory | null>(null);
-  const [activeDragCategory, setActiveDragCategory] =
-    useState<AdminCategoryTree | null>(null);
-  const [activeDragBulkDocs, setActiveDragBulkDocs] = useState<
-    Array<{ id: string; name: string }>
-  >([]);
-  const [dragIntent, setDragIntent] = useState<DragIntent>(null);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -176,96 +162,51 @@ export function OrganizeView() {
     autoSwitch,
   });
 
+  const sectionBulkMove = useSectionBulkMove({
+    tree,
+    setTree,
+    selection,
+    setActiveTab,
+    refetch,
+    toast,
+    autoSwitch,
+  });
+
   const uncategorizedDragEnd = useUncategorizedDragEnd({
     onBulkDropOnSection: bulkCategorize.openForSection,
   });
 
   const sectionDragEnd = useSectionDragEnd({
     onSectionBulkDrop: (drop) => {
-      // Phase 4: log-only. Phase 5/6/6b will wire to the picker + bulk-move
-      // endpoint.
-      console.log("[section-bulk drop]", drop);
+      if (drop.kind === "tab") {
+        if (drop.toSection === "uncategorized") {
+          void sectionBulkMove.moveToUncategorized({
+            fromSection: drop.fromSection,
+            documentIds: drop.documentIds,
+          });
+        } else {
+          sectionBulkMove.openForTab({
+            fromSection: drop.fromSection,
+            toSection: drop.toSection as DocumentSection,
+            documentIds: drop.documentIds,
+          });
+        }
+      } else {
+        void sectionBulkMove.moveToCategory({
+          fromSection: drop.fromSection,
+          toCategoryId: drop.toCategoryId,
+          documentIds: drop.documentIds,
+        });
+      }
     },
   });
 
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      const data = event.active.data.current as
-        | {
-            type?:
-              | "document"
-              | "category"
-              | "uncategorized-bulk"
-              | "section-bulk";
-            documentId?: string;
-            categoryId?: string;
-            fromCategoryId?: string;
-            fromSection?: DocumentSection;
-            documentIds?: string[];
-            primaryDocId?: string;
-          }
-        | undefined;
-      if (data?.type === "uncategorized-bulk") {
-        const ids = new Set(data.documentIds ?? []);
-        const primaryId = data.primaryDocId;
-        const inOrder = uncategorizedDocs.filter((d) => ids.has(d.id));
-        const reordered = primaryId
-          ? [
-              ...inOrder.filter((d) => d.id === primaryId),
-              ...inOrder.filter((d) => d.id !== primaryId),
-            ]
-          : inOrder;
-        setActiveDragBulkDocs(reordered);
-        setDragIntent("uncategorized-bulk");
-        return;
-      }
-      if (data?.type === "section-bulk" && tree && data.fromSection) {
-        const ids = new Set(data.documentIds ?? []);
-        const primaryId = data.primaryDocId;
-        const allInSection = tree.sections[data.fromSection].categories.flatMap(
-          (c) => c.documents,
-        );
-        const inOrder = allInSection.filter((d) => ids.has(d.id));
-        const reordered = primaryId
-          ? [
-              ...inOrder.filter((d) => d.id === primaryId),
-              ...inOrder.filter((d) => d.id !== primaryId),
-            ]
-          : inOrder;
-        setActiveDragBulkDocs(reordered);
-        setDragIntent("section-bulk");
-        return;
-      }
-      if (!tree) return;
-      if (data?.type === "document" && data.documentId && data.fromCategoryId) {
-        const cat = allCategoriesOfTree(tree).find(
-          (c) => c.id === data.fromCategoryId,
-        );
-        const doc = cat?.documents.find((d) => d.id === data.documentId);
-        if (doc) setActiveDragDoc(doc);
-        setDragIntent("in-section");
-      } else if (data?.type === "category" && data.categoryId) {
-        const cat = allCategoriesOfTree(tree).find(
-          (c) => c.id === data.categoryId,
-        );
-        if (cat) setActiveDragCategory(cat);
-        setDragIntent("category-reorder");
-      }
-    },
-    [tree, uncategorizedDocs],
-  );
-
-  const clearActiveDrag = useCallback(() => {
-    setActiveDragDoc(null);
-    setActiveDragCategory(null);
-    setActiveDragBulkDocs([]);
-    setDragIntent(null);
-  }, []);
+  const dragState = useOrganizeDragState({ tree, uncategorizedDocs });
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const activeType = event.active.data.current?.type as string | undefined;
-      clearActiveDrag();
+      dragState.clearActiveDrag();
       if (activeType === "uncategorized-bulk") {
         uncategorizedDragEnd(event);
       } else if (activeType === "section-bulk") {
@@ -274,7 +215,7 @@ export function OrganizeView() {
         await rawHandleDragEnd(event);
       }
     },
-    [clearActiveDrag, uncategorizedDragEnd, sectionDragEnd, rawHandleDragEnd],
+    [dragState, uncategorizedDragEnd, sectionDragEnd, rawHandleDragEnd],
   );
 
   const confirmDelete = useCallback(async () => {
@@ -357,14 +298,14 @@ export function OrganizeView() {
   return (
     <div className="space-y-6">
       <DndContextProvider
-        onDragStart={handleDragStart}
+        onDragStart={dragState.handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragCancel={clearActiveDrag}
+        onDragCancel={dragState.clearActiveDrag}
         overlay={
           <DragOverlay
-            activeDragDoc={activeDragDoc}
-            activeDragCategory={activeDragCategory}
-            activeDragBulkDocs={activeDragBulkDocs}
+            activeDragDoc={dragState.activeDragDoc}
+            activeDragCategory={dragState.activeDragCategory}
+            activeDragBulkDocs={dragState.activeDragBulkDocs}
           />
         }
       >
@@ -379,7 +320,8 @@ export function OrganizeView() {
             uncategorized: uncategorizedCount,
           }}
           acceptsBulkDrop={
-            dragIntent === "uncategorized-bulk" || dragIntent === "section-bulk"
+            dragState.dragIntent === "uncategorized-bulk" ||
+            dragState.dragIntent === "section-bulk"
           }
         />
 
@@ -466,6 +408,11 @@ export function OrganizeView() {
         sectionsToCategories={targetCategories}
         onPickerCancel={bulkCategorize.cancelPicker}
         onPickerConfirm={bulkCategorize.confirmPicker}
+        sectionBulkPickerOpen={sectionBulkMove.pickerOpen}
+        sectionBulkPickerSection={sectionBulkMove.pickerSection}
+        sectionBulkPickerDocumentCount={sectionBulkMove.pickerDocumentCount}
+        onSectionBulkPickerCancel={sectionBulkMove.cancelPicker}
+        onSectionBulkPickerConfirm={sectionBulkMove.confirmPicker}
       />
     </div>
   );
