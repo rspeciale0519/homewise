@@ -31,7 +31,7 @@ import { useOrganizeDragEnd } from "@/components/admin/documents-organize/use-or
 import { useUncategorizedDragEnd } from "@/components/admin/documents-organize/use-uncategorized-drag-end";
 import { UncategorizedList } from "./uncategorized-list";
 import { useUncategorizedActions } from "./use-uncategorized-actions";
-import { useUncategorizedSelection } from "./use-uncategorized-selection";
+import { useDocumentSelection } from "./use-document-selection";
 import { useDocActions } from "./use-doc-actions";
 import { useUncategorizedBulkCategorize } from "./use-uncategorized-bulk-categorize";
 import { usePersistedBoolean } from "@/hooks/use-persisted-boolean";
@@ -40,7 +40,8 @@ type DragIntent =
   | null
   | "in-section"
   | "category-reorder"
-  | "uncategorized-bulk";
+  | "uncategorized-bulk"
+  | "section-bulk";
 
 const TABS: Array<{ key: OrganizeTab; label: string }> = [
   { key: "office", label: "Office" },
@@ -127,7 +128,19 @@ export function OrganizeView() {
     () => uncategorizedDocs.map((d) => d.id),
     [uncategorizedDocs],
   );
-  const selection = useUncategorizedSelection(uncategorizedIds);
+
+  // The selection hook operates on the active tab's flat doc-ID list. When
+  // activeTab changes, the list changes and selection auto-prunes — so
+  // switching tabs effectively clears selection (a doc visible only on the
+  // prior tab is no longer in orderedIds).
+  const activeTabDocIds = useMemo(() => {
+    if (activeTab === "uncategorized") return uncategorizedIds;
+    if (!tree) return [] as string[];
+    return tree.sections[activeTab].categories.flatMap((c) =>
+      c.documents.map((d) => d.id),
+    );
+  }, [activeTab, uncategorizedIds, tree]);
+  const selection = useDocumentSelection(activeTabDocIds);
 
   const docActions = useDocActions({
     tree,
@@ -372,6 +385,8 @@ export function OrganizeView() {
             categories={tree.sections[activeTab].categories}
             preview={preview}
             search={search}
+            selection={selection}
+            selectionActive={selection.selectedCount > 0}
             targetCategories={targetCategories}
             onEditCategory={handleEditCategory}
             onAddCategory={handleAddCategory}

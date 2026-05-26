@@ -9,6 +9,7 @@ import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
 } from "@/app/admin/documents/types";
+import type { UseDocumentSelectionResult } from "@/app/admin/documents/use-document-selection";
 import { CategoryHeader } from "./category-header";
 import { DocumentCard, documentDragId } from "./document-card";
 import { EmptyCategoryPlaceholder } from "./empty-category-placeholder";
@@ -17,6 +18,8 @@ interface CategoryColumnProps {
   category: AdminCategoryTree;
   preview: boolean;
   search: string;
+  selection: UseDocumentSelectionResult;
+  selectionActive: boolean;
   targetCategories: {
     office: AdminCategoryTree[];
     listing: AdminCategoryTree[];
@@ -58,6 +61,8 @@ export function CategoryColumn(props: CategoryColumnProps) {
     category,
     preview,
     search,
+    selection,
+    selectionActive,
     targetCategories,
     onEditCategory,
     onAddDocumentToCategory,
@@ -119,6 +124,8 @@ export function CategoryColumn(props: CategoryColumnProps) {
                   currentCategoryId={category.id}
                   preview={preview}
                   searchMatches={matchesSearch(doc, search)}
+                  selection={selection}
+                  selectionActive={selectionActive}
                   targetCategories={targetCategories}
                   onCardClick={onCardClick}
                   onEdit={onEditDoc}
