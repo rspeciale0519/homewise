@@ -1,99 +1,40 @@
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useUncategorizedSelection } from "./use-uncategorized-selection";
+import {
+  useUncategorizedSelection,
+  type UseUncategorizedSelectionResult,
+} from "./use-uncategorized-selection";
+import { useDocumentSelection } from "./use-document-selection";
 
-const ORDER: readonly string[] = ["a", "b", "c", "d", "e"];
+// This file remains to verify the backward-compatible alias still resolves to
+// the canonical hook. Full behavior is covered by use-document-selection.test.ts.
 
-describe("useUncategorizedSelection", () => {
-  it("starts empty with isAllSelected=false and isIndeterminate=false", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    expect(result.current.selectedCount).toBe(0);
-    expect(result.current.isAllSelected).toBe(false);
-    expect(result.current.isIndeterminate).toBe(false);
+describe("useUncategorizedSelection alias", () => {
+  it("re-exports the same hook as useDocumentSelection", () => {
+    expect(useUncategorizedSelection).toBe(useDocumentSelection);
   });
 
-  it("plain click toggles a single id and sets anchor", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    act(() => result.current.toggleOne("b", {}));
-    expect(result.current.isSelected("b")).toBe(true);
-    expect(result.current.selectedCount).toBe(1);
-    expect(result.current.isIndeterminate).toBe(true);
-    act(() => result.current.toggleOne("b", {}));
-    expect(result.current.isSelected("b")).toBe(false);
-    expect(result.current.selectedCount).toBe(0);
-  });
-
-  it("shift-click extends inclusive range from anchor down", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    act(() => result.current.toggleOne("b", {}));
-    act(() => result.current.toggleOne("d", { shiftKey: true }));
-    expect(Array.from(result.current.selectedIds).sort()).toEqual([
-      "b",
-      "c",
-      "d",
-    ]);
-  });
-
-  it("shift-click extends inclusive range from anchor up", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    act(() => result.current.toggleOne("d", {}));
-    act(() => result.current.toggleOne("a", { shiftKey: true }));
-    expect(Array.from(result.current.selectedIds).sort()).toEqual([
-      "a",
-      "b",
-      "c",
-      "d",
-    ]);
-  });
-
-  it("ctrl-click toggles like plain click (preserves prior selection)", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    act(() => result.current.toggleOne("a", {}));
-    act(() => result.current.toggleOne("c", { ctrlKey: true }));
-    expect(Array.from(result.current.selectedIds).sort()).toEqual(["a", "c"]);
-  });
-
-  it("toggleAll selects every visible id then deselects on second call", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    act(() => result.current.toggleAll());
-    expect(result.current.isAllSelected).toBe(true);
-    expect(result.current.isIndeterminate).toBe(false);
-    expect(result.current.selectedCount).toBe(5);
-    act(() => result.current.toggleAll());
-    expect(result.current.selectedCount).toBe(0);
-  });
-
-  it("isIndeterminate is true when some but not all are selected", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    act(() => result.current.toggleOne("a", {}));
-    act(() => result.current.toggleOne("b", { ctrlKey: true }));
-    expect(result.current.isIndeterminate).toBe(true);
-    expect(result.current.isAllSelected).toBe(false);
-  });
-
-  it("clear removes all selected ids and anchor", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    act(() => result.current.toggleAll());
-    act(() => result.current.clear());
-    expect(result.current.selectedCount).toBe(0);
-  });
-
-  it("prunes selected ids when orderedDocIds changes (doc deleted)", () => {
-    const { result, rerender } = renderHook(
-      ({ ids }: { ids: readonly string[] }) => useUncategorizedSelection(ids),
-      { initialProps: { ids: ORDER } },
+  it("returns a working selection state through the alias", () => {
+    const { result } = renderHook(() =>
+      useUncategorizedSelection(["a", "b", "c"]),
     );
-    act(() => result.current.toggleAll());
-    expect(result.current.selectedCount).toBe(5);
-    rerender({ ids: ["a", "b", "c"] });
-    expect(result.current.selectedCount).toBe(3);
-    expect(result.current.isSelected("d")).toBe(false);
-    expect(result.current.isSelected("e")).toBe(false);
+    act(() => result.current.toggleOne("a", {}));
+    expect(result.current.selectedCount).toBe(1);
+    expect(result.current.isSelected("a")).toBe(true);
   });
 
-  it("shift-click without prior anchor falls back to single toggle", () => {
-    const { result } = renderHook(() => useUncategorizedSelection(ORDER));
-    act(() => result.current.toggleOne("c", { shiftKey: true }));
-    expect(Array.from(result.current.selectedIds)).toEqual(["c"]);
+  it("UseUncategorizedSelectionResult type matches the alias", () => {
+    // Compile-time check via assignment
+    const sample: UseUncategorizedSelectionResult = {
+      selectedIds: new Set(),
+      isSelected: () => false,
+      isAllSelected: false,
+      isIndeterminate: false,
+      selectedCount: 0,
+      toggleOne: () => {},
+      toggleAll: () => {},
+      clear: () => {},
+    };
+    expect(sample.selectedCount).toBe(0);
   });
 });

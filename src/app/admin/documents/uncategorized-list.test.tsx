@@ -39,18 +39,16 @@ function setup(
 ) {
   const onEdit = vi.fn();
   const onDelete = vi.fn();
-  const onMoveSelected = vi.fn();
   render(
     <UncategorizedList
       docs={[doc]}
       selection={selection}
       onEdit={onEdit}
       onDelete={onDelete}
-      onMoveSelected={onMoveSelected}
       {...over}
     />,
   );
-  return { onEdit, onDelete, onMoveSelected, selection };
+  return { onEdit, onDelete, selection };
 }
 
 describe("UncategorizedList", () => {
@@ -78,21 +76,6 @@ describe("UncategorizedList", () => {
     expect(onDelete).toHaveBeenCalledWith(doc);
   });
 
-  it("renders Move N… button + calls onMoveSelected when selection > 0", () => {
-    const { onMoveSelected } = setup(
-      {},
-      mockSelection({
-        selectedIds: new Set(["u1"]),
-        isSelected: (id) => id === "u1",
-        isIndeterminate: true,
-        selectedCount: 1,
-      }),
-    );
-    const moveBtn = screen.getByRole("button", { name: /^move 1…$/i });
-    fireEvent.click(moveBtn);
-    expect(onMoveSelected).toHaveBeenCalled();
-  });
-
   it("calls toggleOne with modifier keys when row checkbox is clicked", () => {
     const { selection } = setup();
     const toggle = screen.getByRole("checkbox", {
@@ -115,8 +98,8 @@ describe("UncategorizedList", () => {
     expect(selection.toggleAll).toHaveBeenCalled();
   });
 
-  it("renders Clear button and selection count when some are selected", () => {
-    const { selection } = setup(
+  it("shows the selection count text when some are selected", () => {
+    setup(
       {},
       mockSelection({
         selectedIds: new Set(["u1"]),
@@ -126,8 +109,6 @@ describe("UncategorizedList", () => {
       }),
     );
     expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^clear$/i }));
-    expect(selection.clear).toHaveBeenCalled();
   });
 
   it("marks the row aria-selected=true when its id is in selection", () => {

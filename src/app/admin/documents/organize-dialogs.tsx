@@ -47,6 +47,18 @@ interface OrganizeDialogsProps {
     categoryId: string;
     categoryTitle: string;
   }) => void;
+  // Section-bulk picker is shown when an admin drags a multi-selection
+  // from one section tab onto a different section tab. Wired identically
+  // to the uncategorized picker but driven by useSectionBulkMove.
+  sectionBulkPickerOpen: boolean;
+  sectionBulkPickerSection?: DocumentSection;
+  sectionBulkPickerDocumentCount: number;
+  onSectionBulkPickerCancel: () => void;
+  onSectionBulkPickerConfirm: (args: {
+    section: DocumentSection;
+    categoryId: string;
+    categoryTitle: string;
+  }) => void;
 }
 
 export function OrganizeDialogs({
@@ -77,6 +89,11 @@ export function OrganizeDialogs({
   sectionsToCategories,
   onPickerCancel,
   onPickerConfirm,
+  sectionBulkPickerOpen,
+  sectionBulkPickerSection,
+  sectionBulkPickerDocumentCount,
+  onSectionBulkPickerCancel,
+  onSectionBulkPickerConfirm,
 }: OrganizeDialogsProps) {
   return (
     <>
@@ -144,6 +161,20 @@ export function OrganizeDialogs({
         section={pickerSection}
         onCancel={onPickerCancel}
         onConfirm={onPickerConfirm}
+      />
+
+      <CategoryPickerDialog
+        key={
+          sectionBulkPickerOpen
+            ? `sb-${sectionBulkPickerSection ?? "any"}-${sectionBulkPickerDocumentCount}`
+            : "sb-closed"
+        }
+        open={sectionBulkPickerOpen}
+        documentCount={sectionBulkPickerDocumentCount}
+        sectionsToCategories={sectionsToCategories}
+        section={sectionBulkPickerSection}
+        onCancel={onSectionBulkPickerCancel}
+        onConfirm={onSectionBulkPickerConfirm}
       />
     </>
   );

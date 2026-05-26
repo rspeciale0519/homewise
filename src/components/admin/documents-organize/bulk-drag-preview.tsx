@@ -1,10 +1,9 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import type { AdminUncategorizedDoc } from "@/app/admin/documents/types";
 
 interface BulkDragPreviewProps {
-  docs: AdminUncategorizedDoc[];
+  docs: ReadonlyArray<{ name: string }>;
 }
 
 export function BulkDragPreview({ docs }: BulkDragPreviewProps) {
