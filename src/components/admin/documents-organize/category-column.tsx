@@ -122,6 +122,7 @@ export function CategoryColumn(props: CategoryColumnProps) {
                   key={doc.id}
                   document={doc}
                   currentCategoryId={category.id}
+                  currentSection={category.section}
                   preview={preview}
                   searchMatches={matchesSearch(doc, search)}
                   selection={selection}

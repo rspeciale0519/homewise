@@ -5,22 +5,21 @@ import { BulkDragPreview } from "./bulk-drag-preview";
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
-  AdminUncategorizedDoc,
 } from "@/app/admin/documents/types";
 
 interface DragOverlayProps {
   activeDragDoc: AdminDocumentInCategory | null;
   activeDragCategory: AdminCategoryTree | null;
-  activeDragUncategorizedDocs: AdminUncategorizedDoc[];
+  activeDragBulkDocs: ReadonlyArray<{ name: string }>;
 }
 
 export function DragOverlay({
   activeDragDoc,
   activeDragCategory,
-  activeDragUncategorizedDocs,
+  activeDragBulkDocs,
 }: DragOverlayProps) {
-  if (activeDragUncategorizedDocs.length > 0) {
-    return <BulkDragPreview docs={activeDragUncategorizedDocs} />;
+  if (activeDragBulkDocs.length > 0) {
+    return <BulkDragPreview docs={activeDragBulkDocs} />;
   }
   if (activeDragDoc) {
     return <DragPreviewCard document={activeDragDoc} />;

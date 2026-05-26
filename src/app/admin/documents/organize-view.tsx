@@ -9,7 +9,6 @@ import { OrganizeDialogs } from "./organize-dialogs";
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
-  AdminUncategorizedDoc,
   DocumentCategoryItem,
   DocumentItem,
   DocumentSection,
@@ -29,6 +28,7 @@ import { SectionBoard } from "@/components/admin/documents-organize/section-boar
 import { SectionTabs } from "@/components/admin/documents-organize/section-tabs";
 import { useOrganizeDragEnd } from "@/components/admin/documents-organize/use-organize-drag-end";
 import { useUncategorizedDragEnd } from "@/components/admin/documents-organize/use-uncategorized-drag-end";
+import { useSectionDragEnd } from "@/components/admin/documents-organize/use-section-drag-end";
 import { UncategorizedList } from "./uncategorized-list";
 import { useUncategorizedActions } from "./use-uncategorized-actions";
 import { useDocumentSelection } from "./use-document-selection";
@@ -81,8 +81,9 @@ export function OrganizeView() {
     useState<AdminDocumentInCategory | null>(null);
   const [activeDragCategory, setActiveDragCategory] =
     useState<AdminCategoryTree | null>(null);
-  const [activeDragUncategorizedDocs, setActiveDragUncategorizedDocs] =
-    useState<AdminUncategorizedDoc[]>([]);
+  const [activeDragBulkDocs, setActiveDragBulkDocs] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
   const [dragIntent, setDragIntent] = useState<DragIntent>(null);
 
   const refetch = useCallback(async () => {
@@ -179,20 +180,34 @@ export function OrganizeView() {
     onBulkDropOnSection: bulkCategorize.openForSection,
   });
 
+  const sectionDragEnd = useSectionDragEnd({
+    onSectionBulkDrop: (drop) => {
+      // Phase 4: log-only. Phase 5/6/6b will wire to the picker + bulk-move
+      // endpoint.
+      console.log("[section-bulk drop]", drop);
+    },
+  });
+
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const data = event.active.data.current as
         | {
-            type?: "document" | "category" | "uncategorized-bulk";
+            type?:
+              | "document"
+              | "category"
+              | "uncategorized-bulk"
+              | "section-bulk";
             documentId?: string;
             categoryId?: string;
             fromCategoryId?: string;
+            fromSection?: DocumentSection;
             documentIds?: string[];
+            primaryDocId?: string;
           }
         | undefined;
       if (data?.type === "uncategorized-bulk") {
         const ids = new Set(data.documentIds ?? []);
-        const primaryId = (data as { primaryDocId?: string }).primaryDocId;
+        const primaryId = data.primaryDocId;
         const inOrder = uncategorizedDocs.filter((d) => ids.has(d.id));
         const reordered = primaryId
           ? [
@@ -200,8 +215,25 @@ export function OrganizeView() {
               ...inOrder.filter((d) => d.id !== primaryId),
             ]
           : inOrder;
-        setActiveDragUncategorizedDocs(reordered);
+        setActiveDragBulkDocs(reordered);
         setDragIntent("uncategorized-bulk");
+        return;
+      }
+      if (data?.type === "section-bulk" && tree && data.fromSection) {
+        const ids = new Set(data.documentIds ?? []);
+        const primaryId = data.primaryDocId;
+        const allInSection = tree.sections[data.fromSection].categories.flatMap(
+          (c) => c.documents,
+        );
+        const inOrder = allInSection.filter((d) => ids.has(d.id));
+        const reordered = primaryId
+          ? [
+              ...inOrder.filter((d) => d.id === primaryId),
+              ...inOrder.filter((d) => d.id !== primaryId),
+            ]
+          : inOrder;
+        setActiveDragBulkDocs(reordered);
+        setDragIntent("section-bulk");
         return;
       }
       if (!tree) return;
@@ -226,7 +258,7 @@ export function OrganizeView() {
   const clearActiveDrag = useCallback(() => {
     setActiveDragDoc(null);
     setActiveDragCategory(null);
-    setActiveDragUncategorizedDocs([]);
+    setActiveDragBulkDocs([]);
     setDragIntent(null);
   }, []);
 
@@ -236,11 +268,13 @@ export function OrganizeView() {
       clearActiveDrag();
       if (activeType === "uncategorized-bulk") {
         uncategorizedDragEnd(event);
+      } else if (activeType === "section-bulk") {
+        sectionDragEnd(event);
       } else {
         await rawHandleDragEnd(event);
       }
     },
-    [clearActiveDrag, uncategorizedDragEnd, rawHandleDragEnd],
+    [clearActiveDrag, uncategorizedDragEnd, sectionDragEnd, rawHandleDragEnd],
   );
 
   const confirmDelete = useCallback(async () => {
@@ -330,7 +364,7 @@ export function OrganizeView() {
           <DragOverlay
             activeDragDoc={activeDragDoc}
             activeDragCategory={activeDragCategory}
-            activeDragUncategorizedDocs={activeDragUncategorizedDocs}
+            activeDragBulkDocs={activeDragBulkDocs}
           />
         }
       >
@@ -344,7 +378,9 @@ export function OrganizeView() {
             sales: sectionCounts.sales,
             uncategorized: uncategorizedCount,
           }}
-          acceptsBulkDrop={dragIntent === "uncategorized-bulk"}
+          acceptsBulkDrop={
+            dragIntent === "uncategorized-bulk" || dragIntent === "section-bulk"
+          }
         />
 
         <OrganizeToolbar

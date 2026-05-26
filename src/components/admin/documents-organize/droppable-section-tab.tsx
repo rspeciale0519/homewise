@@ -25,16 +25,15 @@ export function DroppableSectionTab({
   acceptsDrop,
   onSelect,
 }: DroppableSectionTabProps) {
-  const isSection = tab.key !== "uncategorized";
   const { setNodeRef, isOver } = useDroppable({
     id: tabDroppableId(tab.key as DocumentSection),
     data: { type: "section-tab-drop", section: tab.key },
-    disabled: !acceptsDrop || !isSection,
+    disabled: !acceptsDrop,
   });
 
   return (
     <button
-      ref={isSection ? setNodeRef : undefined}
+      ref={setNodeRef}
       type="button"
       onClick={() => onSelect(tab.key)}
       className={cn(

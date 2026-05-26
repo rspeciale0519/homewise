@@ -53,7 +53,7 @@ describe("DragOverlay", () => {
       <DragOverlay
         activeDragDoc={null}
         activeDragCategory={null}
-        activeDragUncategorizedDocs={[]}
+        activeDragBulkDocs={[]}
       />,
     );
     expect(container.firstChild).toBeNull();
@@ -64,7 +64,7 @@ describe("DragOverlay", () => {
       <DragOverlay
         activeDragDoc={null}
         activeDragCategory={minimalCategory}
-        activeDragUncategorizedDocs={[]}
+        activeDragBulkDocs={[]}
       />,
     );
     expect(screen.getByText("My Category")).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("DragOverlay", () => {
       <DragOverlay
         activeDragDoc={minimalDoc}
         activeDragCategory={null}
-        activeDragUncategorizedDocs={[]}
+        activeDragBulkDocs={[]}
       />,
     );
     expect(screen.getByText("Sample Doc")).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe("DragOverlay", () => {
       <DragOverlay
         activeDragDoc={null}
         activeDragCategory={null}
-        activeDragUncategorizedDocs={[makeUncat("u1", "Lonely Doc")]}
+        activeDragBulkDocs={[makeUncat("u1", "Lonely Doc")]}
       />,
     );
     expect(screen.getByText("Lonely Doc")).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe("DragOverlay", () => {
       <DragOverlay
         activeDragDoc={null}
         activeDragCategory={null}
-        activeDragUncategorizedDocs={[
+        activeDragBulkDocs={[
           makeUncat("u1", "Doc A"),
           makeUncat("u2", "Doc B"),
           makeUncat("u3", "Doc C"),
@@ -114,7 +114,7 @@ describe("DragOverlay", () => {
       <DragOverlay
         activeDragDoc={minimalDoc}
         activeDragCategory={minimalCategory}
-        activeDragUncategorizedDocs={[
+        activeDragBulkDocs={[
           makeUncat("u1", "Doc A"),
           makeUncat("u2", "Doc B"),
         ]}

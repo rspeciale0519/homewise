@@ -44,6 +44,7 @@ function renderCard(
   const props = {
     document: baseDoc,
     currentCategoryId: "cat-a",
+    currentSection: "office" as const,
     preview: false,
     searchMatches: true,
     selection: stubSelection(),

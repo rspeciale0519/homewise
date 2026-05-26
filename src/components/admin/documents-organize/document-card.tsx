@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type {
   AdminCategoryTree,
   AdminDocumentInCategory,
+  DocumentSection,
 } from "@/app/admin/documents/types";
 import type { UseDocumentSelectionResult } from "@/app/admin/documents/use-document-selection";
 import { DocumentCardMenu } from "./document-card-menu";
@@ -14,6 +15,7 @@ import { DocumentCardMenu } from "./document-card-menu";
 interface DocumentCardProps {
   document: AdminDocumentInCategory;
   currentCategoryId: string;
+  currentSection: DocumentSection;
   preview: boolean;
   searchMatches: boolean;
   selection: UseDocumentSelectionResult;
@@ -44,6 +46,7 @@ export function DocumentCard(props: DocumentCardProps) {
   const {
     document,
     currentCategoryId,
+    currentSection,
     preview,
     searchMatches,
     selection,
@@ -60,15 +63,28 @@ export function DocumentCard(props: DocumentCardProps) {
 
   const id = dragId(document.id, currentCategoryId);
   const isChecked = selection.isSelected(document.id);
+  // When this card is part of a multi-select (size >= 2), broadcast a
+  // "section-bulk" payload so the drag-end dispatcher routes the entire
+  // selection rather than a single document. Otherwise fall back to the
+  // single-doc reorder/cross-category data.
+  const isBulkDrag = !preview && isChecked && selection.selectedCount >= 2;
+  const sortableData = isBulkDrag
+    ? {
+        type: "section-bulk" as const,
+        documentIds: Array.from(selection.selectedIds),
+        primaryDocId: document.id,
+        fromSection: currentSection,
+      }
+    : {
+        type: "document" as const,
+        documentId: document.id,
+        fromCategoryId: currentCategoryId,
+      };
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } =
     useSortable({
       id,
       disabled: preview || !searchMatches,
-      data: {
-        type: "document",
-        documentId: document.id,
-        fromCategoryId: currentCategoryId,
-      },
+      data: sortableData,
     });
 
   const style: React.CSSProperties = {
