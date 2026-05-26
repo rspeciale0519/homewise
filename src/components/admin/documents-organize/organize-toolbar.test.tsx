@@ -9,6 +9,8 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
   const onBulkDelete = vi.fn();
   const onBulkUpload = vi.fn();
   const onAutoSwitchChange = vi.fn();
+  const onMoveSelection = vi.fn();
+  const onClearSelection = vi.fn();
   render(
     <OrganizeToolbar
       preview={false}
@@ -20,6 +22,9 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
       onBulkUpload={onBulkUpload}
       autoSwitch={true}
       onAutoSwitchChange={onAutoSwitchChange}
+      selectionCount={0}
+      onMoveSelection={onMoveSelection}
+      onClearSelection={onClearSelection}
       {...overrides}
     />,
   );
@@ -30,6 +35,8 @@ function setup(overrides: Partial<Parameters<typeof OrganizeToolbar>[0]> = {}) {
     onBulkDelete,
     onBulkUpload,
     onAutoSwitchChange,
+    onMoveSelection,
+    onClearSelection,
   };
 }
 
@@ -106,6 +113,37 @@ describe("OrganizeToolbar", () => {
     setup({ preview: true });
     expect(
       screen.queryByRole("switch", { name: /auto-switch to destination tab/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the Move button when selectionCount is 0", () => {
+    setup({ selectionCount: 0 });
+    expect(
+      screen.queryByRole("button", { name: /^move /i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^clear$/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows Move N… and Clear when selectionCount > 0", () => {
+    setup({ selectionCount: 3 });
+    expect(screen.getByRole("button", { name: /^move 3…$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^clear$/i })).toBeInTheDocument();
+  });
+
+  it("fires onMoveSelection and onClearSelection from those buttons", () => {
+    const { onMoveSelection, onClearSelection } = setup({ selectionCount: 2 });
+    fireEvent.click(screen.getByRole("button", { name: /^move 2…$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^clear$/i }));
+    expect(onMoveSelection).toHaveBeenCalledOnce();
+    expect(onClearSelection).toHaveBeenCalledOnce();
+  });
+
+  it("hides the Move button in preview mode even with a selection", () => {
+    setup({ preview: true, selectionCount: 5 });
+    expect(
+      screen.queryByRole("button", { name: /^move /i }),
     ).not.toBeInTheDocument();
   });
 });

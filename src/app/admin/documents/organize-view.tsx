@@ -344,6 +344,21 @@ export function OrganizeView() {
           }}
           autoSwitch={autoSwitch}
           onAutoSwitchChange={setAutoSwitch}
+          selectionCount={selection.selectedCount}
+          onMoveSelection={() => {
+            if (activeTab === "uncategorized") {
+              bulkCategorize.openForCurrentSelection();
+              return;
+            }
+            const ids = activeTabDocIds.filter((id) =>
+              selection.selectedIds.has(id),
+            );
+            sectionBulkMove.openForCurrentSelection({
+              fromSection: activeTab,
+              documentIds: ids,
+            });
+          }}
+          onClearSelection={selection.clear}
         />
 
         <div className="xl:hidden text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
@@ -358,7 +373,6 @@ export function OrganizeView() {
             selection={selection}
             onEdit={handleEditUncategorized}
             onDelete={(d) => setPendingDelete({ id: d.id, name: d.name })}
-            onMoveSelected={bulkCategorize.openForCurrentSelection}
           />
         ) : (
           <SectionBoard

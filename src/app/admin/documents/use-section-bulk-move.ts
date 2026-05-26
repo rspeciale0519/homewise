@@ -17,7 +17,8 @@ type ToastFn = (
 
 interface PendingPicker {
   fromSection: DocumentSection;
-  toSection: DocumentSection;
+  /** Undefined when the user must pick a section first (toolbar button path). */
+  toSection?: DocumentSection;
   documentIds: string[];
 }
 
@@ -38,6 +39,11 @@ export interface UseSectionBulkMoveResult {
   openForTab: (args: {
     fromSection: DocumentSection;
     toSection: DocumentSection;
+    documentIds: string[];
+  }) => void;
+  /** Toolbar/menu button path — picker shows section step first. */
+  openForCurrentSelection: (args: {
+    fromSection: DocumentSection;
     documentIds: string[];
   }) => void;
   moveToCategory: (args: {
@@ -237,6 +243,14 @@ export function useSectionBulkMove({
     [],
   );
 
+  const openForCurrentSelection = useCallback(
+    (args: { fromSection: DocumentSection; documentIds: string[] }) => {
+      if (args.documentIds.length === 0) return;
+      setPending({ ...args, toSection: undefined });
+    },
+    [],
+  );
+
   const cancelPicker = useCallback(() => setPending(null), []);
 
   const confirmPicker = useCallback(
@@ -262,6 +276,7 @@ export function useSectionBulkMove({
     pickerSection: pending?.toSection,
     pickerDocumentCount: pending?.documentIds.length ?? 0,
     openForTab,
+    openForCurrentSelection,
     moveToCategory,
     moveToUncategorized,
     cancelPicker,
