@@ -79,6 +79,7 @@ export function DocumentCard(props: DocumentCardProps) {
         type: "document" as const,
         documentId: document.id,
         fromCategoryId: currentCategoryId,
+        fromSection: currentSection,
       };
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } =
     useSortable({

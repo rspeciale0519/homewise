@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DragEndEvent } from "@dnd-kit/core";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import { OrganizeDialogs } from "./organize-dialogs";
@@ -35,6 +34,7 @@ import { useDocActions } from "./use-doc-actions";
 import { useUncategorizedBulkCategorize } from "./use-uncategorized-bulk-categorize";
 import { useSectionBulkMove } from "./use-section-bulk-move";
 import { useOrganizeDragState } from "./use-organize-drag-state";
+import { useOrganizeDragEndDispatch } from "./use-organize-drag-end-dispatch";
 import { usePersistedBoolean } from "@/hooks/use-persisted-boolean";
 
 const TABS: Array<{ key: OrganizeTab; label: string }> = [
@@ -203,20 +203,13 @@ export function OrganizeView() {
 
   const dragState = useOrganizeDragState({ tree, uncategorizedDocs });
 
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const activeType = event.active.data.current?.type as string | undefined;
-      dragState.clearActiveDrag();
-      if (activeType === "uncategorized-bulk") {
-        uncategorizedDragEnd(event);
-      } else if (activeType === "section-bulk") {
-        sectionDragEnd(event);
-      } else {
-        await rawHandleDragEnd(event);
-      }
-    },
-    [dragState, uncategorizedDragEnd, sectionDragEnd, rawHandleDragEnd],
-  );
+  const handleDragEnd = useOrganizeDragEndDispatch({
+    clearActiveDrag: dragState.clearActiveDrag,
+    uncategorizedDragEnd,
+    sectionDragEnd,
+    sectionBulkMove,
+    rawHandleDragEnd,
+  });
 
   const confirmDelete = useCallback(async () => {
     if (!pendingDelete) return;
@@ -321,10 +314,12 @@ export function OrganizeView() {
           }}
           acceptsBulkDrop={
             dragState.dragIntent === "uncategorized-bulk" ||
-            dragState.dragIntent === "section-bulk"
+            dragState.dragIntent === "section-bulk" ||
+            dragState.dragIntent === "in-section"
           }
           uncategorizedAcceptsBulkDrop={
-            dragState.dragIntent === "section-bulk"
+            dragState.dragIntent === "section-bulk" ||
+            dragState.dragIntent === "in-section"
           }
         />
 
