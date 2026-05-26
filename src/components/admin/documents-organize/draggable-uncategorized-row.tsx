@@ -49,7 +49,6 @@ export function DraggableUncategorizedRow({
 
   return (
     <div
-      ref={setNodeRef}
       role="option"
       aria-selected={checked}
       className={cn(
@@ -92,6 +91,7 @@ export function DraggableUncategorizedRow({
         <Trash2 className="h-4 w-4" />
       </button>
       <button
+        ref={setNodeRef}
         type="button"
         aria-label={`Drag ${doc.name}`}
         {...attributes}
