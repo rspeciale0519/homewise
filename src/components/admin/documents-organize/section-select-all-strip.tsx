@@ -39,7 +39,7 @@ export function SectionSelectAllStrip({
     <div
       role="toolbar"
       aria-label={`${label} selection`}
-      className="flex items-center gap-3 px-3 sm:px-4 py-2.5 mb-4 rounded-xl border border-slate-100 bg-slate-50/60"
+      className="flex items-center gap-3 px-3 sm:px-4 h-10 mb-4 rounded-xl border border-slate-100 bg-slate-50/60"
     >
       <Checkbox
         checked={state}
@@ -59,7 +59,7 @@ export function SectionSelectAllStrip({
         <button
           type="button"
           onClick={onClear}
-          className="inline-flex items-center h-9 px-2 text-xs font-semibold text-slate-500 hover:text-navy-700 underline-offset-2 hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600"
+          className="inline-flex items-center px-2 py-0.5 text-xs font-semibold text-slate-500 hover:text-navy-700 underline-offset-2 hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600"
         >
           Clear
         </button>
