@@ -47,7 +47,6 @@ export function UncategorizedList({
           checked={headerChecked}
           aria-label={headerLabel}
           onClick={selection.toggleAll}
-          className="h-5 w-5"
         />
         <p className="text-xs font-semibold text-slate-600 flex-1 min-w-0 truncate">
           {selection.selectedCount > 0

@@ -67,7 +67,6 @@ export function DraggableUncategorizedRow({
             metaKey: e.metaKey,
           });
         }}
-        className="h-5 w-5"
       />
       <FileText className="h-4 w-4 text-slate-400 shrink-0" />
       <div className="flex-1 min-w-0">
