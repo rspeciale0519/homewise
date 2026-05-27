@@ -24,7 +24,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const content = await prisma.trainingContent.findMany({
     where: {
       published: true,
-      audience: { in: ["public", "both"] },
+      audience: { in: ["public_only", "both"] },
       category: { contains: slug, mode: "insensitive" },
     },
     orderBy: { sortOrder: "asc" },

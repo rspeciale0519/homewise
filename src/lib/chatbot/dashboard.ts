@@ -154,7 +154,7 @@ export function createDashboardChatbot(sessionId: string, userId: string, agentI
     const content = await prisma.trainingContent.findMany({
       where: {
         published: true,
-        audience: { in: ["agent", "both"] },
+        audience: { in: ["agent_only", "both"] },
         OR: [
           { title: { contains: query, mode: "insensitive" } },
           { description: { contains: query, mode: "insensitive" } },

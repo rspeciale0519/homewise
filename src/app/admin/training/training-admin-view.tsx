@@ -166,8 +166,8 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
               className="h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600"
             >
               <option value="all">All Audiences</option>
-              <option value="agent">Agent Only</option>
-              <option value="public">Public</option>
+              <option value="agent_only">Agent Only</option>
+              <option value="public_only">Public</option>
               <option value="both">Both</option>
             </select>
           </div>

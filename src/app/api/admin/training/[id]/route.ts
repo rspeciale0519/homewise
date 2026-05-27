@@ -14,7 +14,7 @@ const updateSchema = z.object({
   description: z.string().optional(),
   body: z.string().optional(),
   category: z.string().min(1).optional(),
-  audience: z.enum(["agent", "public", "both"]).optional(),
+  audience: z.enum(["agent_only", "public_only", "both"]).optional(),
   type: z.enum(["video", "document", "quiz", "article"]).optional(),
   url: z.string().url().optional(),
   fileKey: z.string().optional(),

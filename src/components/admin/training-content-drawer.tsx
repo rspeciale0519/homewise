@@ -48,7 +48,7 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
   const [slugError, setSlugError] = useState<string | null>(null);
   const [category, setCategory] = useState(categories[0] ?? "");
   const [type, setType] = useState("video");
-  const [audience, setAudience] = useState("agent");
+  const [audience, setAudience] = useState("agent_only");
   const [body, setBody] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [duration, setDuration] = useState("");
@@ -83,7 +83,7 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
     } else {
       setTitle(""); setSlug(""); setSlugAutoSync(true);
       setCategory(categories[0] ?? ""); setType("video");
-      setAudience("agent"); setBody(""); setVideoUrl(""); setDuration("");
+      setAudience("agent_only"); setBody(""); setVideoUrl(""); setDuration("");
       setTagsStr(""); setPublished(false); setUploadedFile(null);
       setThumbnailUrl(null);
     }
@@ -261,8 +261,8 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Audience</label>
                 <select value={audience} onChange={(e) => setAudience(e.target.value)} className={INPUT_CLASS}>
-                  <option value="agent">Agent Only</option>
-                  <option value="public">Public</option>
+                  <option value="agent_only">Agent Only</option>
+                  <option value="public_only">Public</option>
                   <option value="both">Both</option>
                 </select>
               </div>

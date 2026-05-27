@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default async function LearnPage() {
   const content = await prisma.trainingContent.findMany({
-    where: { published: true, audience: { in: ["public", "both"] } },
+    where: { published: true, audience: { in: ["public_only", "both"] } },
     orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
   });
 
