@@ -1,5 +1,5 @@
 export const SITE_NAME = "Home Wise Realty Group";
-export const SITE_URL = "https://www.homewisefl.com";
+export const SITE_URL = "https://app.homewisefl.com";
 export const TAGLINE = "Your Home. Your Future.";
 export const DESCRIPTION =
   "Central Florida's trusted real estate brokerage with 186+ agents serving Orange, Seminole, Osceola, Volusia, and Lake counties.";
