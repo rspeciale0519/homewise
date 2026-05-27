@@ -424,6 +424,28 @@ export function TrainingAdminView({ tracks }: TrainingAdminViewProps) {
           if (!bulkBusy) setConfirmBulkDelete(false);
         }}
       />
+
+      <TrainingCategoriesModal
+        open={categoriesModalOpen}
+        onClose={() => setCategoriesModalOpen(false)}
+        onChanged={() => {
+          void fetchCategoryOptions();
+          void fetchContent();
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={`Delete ${selection.selectedCount} training items?`}
+        message="This will permanently remove the selected content. Course items that reference any of these will be removed too. This cannot be undone."
+        confirmLabel="Delete permanently"
+        typeToConfirm="DELETE"
+        busy={bulkBusy}
+        onConfirm={runBulkDelete}
+        onCancel={() => {
+          if (!bulkBusy) setConfirmBulkDelete(false);
+        }}
+      />
     </div>
   );
 }
