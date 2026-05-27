@@ -126,12 +126,12 @@ model PropertyAlert {
 }
 
 model UserProfile {
-  id             String   @id
-  email          String   @unique
-  firstName      String
-  lastName       String
-  phone          String?
-  avatarUrl      String?
+  id                   String   @id
+  email                String   @unique
+  firstName            String
+  lastName             String
+  phone                String?
+  avatarUrl            String?
   role                 String   @default("user")
   preferredAgent       String?
   /// Deprecated 2026-04-21. Admins now always log in to /admin; column kept to avoid a migration. Safe to drop in a future cleanup.
@@ -496,31 +496,75 @@ model LeadRoutingRule {
 // Agent Training Hub (K1)
 // =============================================================================
 
-model TrainingContent {
-  id           String   @id @default(cuid())
-  title        String
-  slug         String?  @unique
-  description  String?
-  category     String
-  audience     String   @default("agent")
-  type         String   @default("video")
-  url          String?
-  body         String?
-  fileKey      String?
-  thumbnailUrl String?
-  duration     Int?
-  tags         String[]
-  sortOrder    Int      @default(0)
-  published    Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+enum TrainingContentStatus {
+  draft
+  scheduled
+  published
+  archived
+}
 
+enum TrainingAudience {
+  agent_only
+  public_only
+  both
+}
+
+model TrainingContent {
+  id              String                @id @default(cuid())
+  title           String
+  slug            String?               @unique
+  description     String?
+  /// Legacy free-form category — kept for one release as a safety net.
+  /// New code reads/writes via `categoryId` → TrainingCategory.
+  category        String
+  /// Canonical category FK. Backfilled from `category` during the v1
+  /// migration. Will become required once the legacy column is dropped.
+  categoryId      String?
+  audience        TrainingAudience      @default(agent_only)
+  type            String                @default("video")
+  status          TrainingContentStatus @default(draft)
+  publishedAt     DateTime?
+  url             String?
+  body            String?
+  fileKey         String?
+  thumbnailUrl    String?
+  duration        Int?
+  tags            String[]
+  sortOrder       Int                   @default(0)
+  /// Legacy boolean — `status` is now the source of truth. Kept in sync by
+  /// API writes for one release; will be dropped in v2 alongside `category`.
+  published       Boolean               @default(true)
+  seoTitle        String?
+  seoDescription  String?
+  ogImageUrl      String?
+  readTimeMinutes Int?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  categoryRef TrainingCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   progress    TrainingProgress[]
   courseItems TrainingCourseItem[]
 
   @@index([category])
+  @@index([categoryId])
   @@index([audience])
   @@index([published])
+  @@index([status])
+}
+
+model TrainingCategory {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  description  String?
+  heroImageUrl String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  content TrainingContent[]
+
+  @@index([sortOrder])
 }
 
 model SlugHistory {
@@ -536,34 +580,67 @@ model SlugHistory {
 }
 
 model TrainingCourse {
-  id             String   @id @default(cuid())
+  id             String           @id @default(cuid())
   name           String
+  slug           String?          @unique
   description    String?
   thumbnailUrl   String?
-  required       Boolean  @default(false)
-  autoEnroll     Boolean  @default(false)
+  audience       TrainingAudience @default(agent_only)
+  required       Boolean          @default(false)
+  autoEnroll     Boolean          @default(false)
+  /// Days from enrollment that the course is due. v1 ships the column;
+  /// v2 will enforce due-date logic + reminders against it.
+  dueDays        Int?
+  /// Recurring re-enrollment cadence in days (e.g. 365 for annual
+  /// compliance). v1 ships the column; v2 will enforce it.
+  recurDays      Int?
+  /// Pass threshold (percent) for quiz-bearing courses. v2 (quizzes).
+  passThreshold  Int              @default(80)
   reminderDays   Int?
   reminderRepeat Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
+  sections    TrainingSection[]
   items       TrainingCourseItem[]
   enrollments TrainingEnrollment[]
 
   @@map("TrainingTrack")
 }
 
-model TrainingCourseItem {
-  id        String @id @default(cuid())
-  courseId  String @map("trackId")
-  contentId String
-  sortOrder Int    @default(0)
+model TrainingSection {
+  id        String   @id @default(cuid())
+  courseId  String
+  title     String
+  sortOrder Int      @default(0)
+  /// Days from enrollment until this section unlocks. v2 enforces.
+  dripDays  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  course  TrainingCourse  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  content TrainingContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  course TrainingCourse       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items  TrainingCourseItem[]
+
+  @@index([courseId])
+}
+
+model TrainingCourseItem {
+  id        String  @id @default(cuid())
+  courseId  String  @map("trackId")
+  /// Owning Section. Backfilled to a per-course "Lessons" Section during
+  /// the v1 migration. Will become required (NOT NULL) in v2 once all
+  /// callers always supply it.
+  sectionId String?
+  contentId String
+  sortOrder Int     @default(0)
+
+  course  TrainingCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  section TrainingSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  content TrainingContent  @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, contentId], map: "TrainingTrackItem_trackId_contentId_key")
   @@index([courseId], map: "TrainingTrackItem_trackId_idx")
+  @@index([sectionId])
   @@map("TrainingTrackItem")
 }
 
@@ -1172,13 +1249,13 @@ model MailOrder {
   id     String @id @default(cuid())
   userId String
 
-  status              String    @default("draft")
-  emailStatus         String    @default("none")
-  currentStep         Int       @default(1)
-  submittedAt         DateTime?
-  lastDispatchedAt    DateTime?
-  dispatchAttempts    Int       @default(0)
-  emailMessageId      String?
+  status           String    @default("draft")
+  emailStatus      String    @default("none")
+  currentStep      Int       @default(1)
+  submittedAt      DateTime?
+  lastDispatchedAt DateTime?
+  dispatchAttempts Int       @default(0)
+  emailMessageId   String?
 
   workflow               String
   subjectPropertyAddress String?
@@ -1193,13 +1270,13 @@ model MailOrder {
 
   returnAddress Json?
 
-  artworkFiles   Json     @default("[]")
-  listFiles      Json     @default("[]")
-  summaryPdfKey  String?
+  artworkFiles  Json    @default("[]")
+  listFiles     Json    @default("[]")
+  summaryPdfKey String?
 
   /// When the daily purge ran for this order (files removed from storage).
   /// Null until purged. Submitted orders are purged after 30 days.
-  purgedAt       DateTime?
+  purgedAt DateTime?
 
   complianceConfirmed Boolean @default(false)
 

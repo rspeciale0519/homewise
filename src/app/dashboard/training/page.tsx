@@ -14,7 +14,7 @@ export default async function AgentTrainingPage() {
 
   const [content, courses, completedRows] = await Promise.all([
     prisma.trainingContent.findMany({
-      where: { published: true, audience: { in: ["agent", "public", "both"] } },
+      where: { published: true, audience: { in: ["agent_only", "public_only", "both"] } },
       orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
     }),
     prisma.trainingCourse.findMany({

@@ -1,12 +1,23 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { Folder } from "lucide-react";
 import { useToast } from "@/components/admin/admin-toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { adminFetch } from "@/lib/admin-fetch";
 import { TrainingContentDrawer } from "@/components/admin/training-content-drawer";
 import { TrainingCourseDrawer } from "@/components/admin/training-course-drawer";
 import { TrainingProgressView } from "@/components/admin/training-progress-view";
 import type { TrainingItem, CourseData } from "./types";
+import { useTrainingSelection } from "./use-training-selection";
+import { TrainingBulkBar } from "./training-bulk-bar";
+import { TrainingCategoriesModal } from "./training-categories-modal";
+import { TrainingContentTable } from "./training-content-table";
+
+interface CategoryOption {
+  id: string;
+  name: string;
+}
 
 interface TrainingAdminViewProps {
   tracks: CourseData[];
@@ -26,6 +37,10 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
   const [coursesData, setCoursesData] = useState<CourseData[]>(tracks);
   const [courseDrawerOpen, setCourseDrawerOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<CourseData | null>(null);
+  const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchContent = useCallback(async () => {
     setLoading(true);
@@ -40,15 +55,26 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
 
   const fetchCourses = useCallback(async () => {
     try {
-      const data = await adminFetch<CourseData[]>("/api/admin/training/courses");
+      const data = await adminFetch<CourseData[]>("/api/admin/training/tracks");
       setCoursesData(data);
     } catch (err) {
       toast((err as Error).message, "error");
     }
   }, [toast]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching effect
+  const fetchCategoryOptions = useCallback(async () => {
+    try {
+      const data = await adminFetch<CategoryOption[]>(
+        "/api/admin/training/categories",
+      );
+      setCategoryOptions(data);
+    } catch (err) {
+      toast((err as Error).message, "error");
+    }
+  }, [toast]);
+
   useEffect(() => { fetchContent(); }, [fetchContent]);
+  useEffect(() => { fetchCategoryOptions(); }, [fetchCategoryOptions]);
 
   const filtered = useMemo(() => {
     let list = content;
@@ -69,13 +95,84 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
     return list;
   }, [content, categoryFilter, audienceFilter, search]);
 
-  const handleTogglePublished = async (item: TrainingItem) => {
+  const filteredIds = useMemo(() => filtered.map((i) => i.id), [filtered]);
+  const selection = useTrainingSelection(filteredIds);
+
+  const runBulkStatus = useCallback(
+    async (status: "draft" | "published" | "archived") => {
+      const ids = filteredIds.filter((id) => selection.selectedIds.has(id));
+      if (ids.length === 0) return;
+      setBulkBusy(true);
+      try {
+        await adminFetch("/api/admin/training/bulk-status", {
+          method: "POST",
+          body: JSON.stringify({ contentIds: ids, status }),
+        });
+        toast(`Updated ${ids.length} to ${status}`, "success");
+        selection.clear();
+        await fetchContent();
+      } catch (err) {
+        toast((err as Error).message, "error");
+      } finally {
+        setBulkBusy(false);
+      }
+    },
+    [filteredIds, selection, toast, fetchContent],
+  );
+
+  const runBulkCategory = useCallback(
+    async (toCategoryId: string | null) => {
+      const ids = filteredIds.filter((id) => selection.selectedIds.has(id));
+      if (ids.length === 0) return;
+      setBulkBusy(true);
+      try {
+        await adminFetch("/api/admin/training/bulk-category", {
+          method: "POST",
+          body: JSON.stringify({ contentIds: ids, toCategoryId }),
+        });
+        toast(`Re-categorized ${ids.length}`, "success");
+        selection.clear();
+        await fetchContent();
+      } catch (err) {
+        toast((err as Error).message, "error");
+      } finally {
+        setBulkBusy(false);
+      }
+    },
+    [filteredIds, selection, toast, fetchContent],
+  );
+
+  const runBulkDelete = useCallback(async () => {
+    const ids = filteredIds.filter((id) => selection.selectedIds.has(id));
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    try {
+      await adminFetch("/api/admin/training/bulk-delete", {
+        method: "POST",
+        body: JSON.stringify({ contentIds: ids }),
+      });
+      toast(`Deleted ${ids.length}`, "success");
+      selection.clear();
+      setConfirmBulkDelete(false);
+      await fetchContent();
+    } catch (err) {
+      toast((err as Error).message, "error");
+    } finally {
+      setBulkBusy(false);
+    }
+  }, [filteredIds, selection, toast, fetchContent]);
+
+  const handleChangeStatus = async (
+    item: TrainingItem,
+    status: "draft" | "scheduled" | "published" | "archived",
+  ) => {
+    if (item.status === status) return;
     try {
       await adminFetch(`/api/admin/training/${item.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ published: !item.published }),
+        body: JSON.stringify({ status }),
       });
-      toast(item.published ? "Content unpublished" : "Content published", "success");
+      toast(`Marked ${status}`, "success");
       fetchContent();
     } catch (err) {
       toast((err as Error).message, "error");
@@ -121,12 +218,22 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
           Progress
         </button>
         {activeTab === "content" && (
-          <button
-            onClick={() => openDrawer(null)}
-            className="ml-auto px-4 py-2 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 transition-colors"
-          >
-            + Add Content
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCategoriesModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-navy-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <Folder className="h-4 w-4" />
+              Categories
+            </button>
+            <button
+              onClick={() => openDrawer(null)}
+              className="px-4 py-2 bg-crimson-600 text-white rounded-lg text-sm font-semibold hover:bg-crimson-700 transition-colors"
+            >
+              + Add Content
+            </button>
+          </div>
         )}
         {activeTab === "tracks" && (
           <button
@@ -166,8 +273,8 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
               className="h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600"
             >
               <option value="all">All Audiences</option>
-              <option value="agent">Agent Only</option>
-              <option value="public">Public</option>
+              <option value="agent_only">Agent Only</option>
+              <option value="public_only">Public</option>
               <option value="both">Both</option>
             </select>
           </div>
@@ -178,62 +285,24 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
             </div>
           )}
 
+          <TrainingBulkBar
+            selectedCount={selection.selectedCount}
+            categories={categoryOptions}
+            onClear={selection.clear}
+            onChangeStatus={runBulkStatus}
+            onChangeCategory={runBulkCategory}
+            onDelete={() => setConfirmBulkDelete(true)}
+            busy={bulkBusy}
+          />
+
           {!loading && (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50">
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Title</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Category</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Type</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Audience</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Status</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((item) => (
-                      <tr
-                        key={item.id}
-                        onClick={() => openDrawer(item)}
-                        className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer"
-                      >
-                        <td className="py-3 px-4 font-medium text-navy-700 max-w-[200px] truncate">{item.title}</td>
-                        <td className="py-3 px-4 text-slate-600 capitalize">{item.category.replace("_", " ")}</td>
-                        <td className="py-3 px-4 text-slate-600 capitalize">{item.type}</td>
-                        <td className="py-3 px-4 text-slate-600 capitalize">{item.audience}</td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTogglePublished(item);
-                            }}
-                            className={`px-2 py-0.5 rounded-full text-xs font-semibold transition-colors ${
-                              item.published
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                            }`}
-                          >
-                            {item.published ? "Published" : "Draft"}
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 text-slate-400 text-xs whitespace-nowrap">
-                          {new Date(item.updatedAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                    {filtered.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="text-center py-8 text-sm text-slate-400">
-                          {content.length === 0 ? "No content yet" : "No results match your filters"}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <TrainingContentTable
+              items={filtered}
+              selection={selection}
+              totalCount={content.length}
+              onRowClick={openDrawer}
+              onChangeStatus={handleChangeStatus}
+            />
           )}
         </>
       )}
@@ -297,6 +366,28 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
         course={editingCourse}
         allContent={content}
         onSaved={fetchCourses}
+      />
+
+      <TrainingCategoriesModal
+        open={categoriesModalOpen}
+        onClose={() => setCategoriesModalOpen(false)}
+        onChanged={() => {
+          void fetchCategoryOptions();
+          void fetchContent();
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={`Delete ${selection.selectedCount} training items?`}
+        message="This will permanently remove the selected content. Course items that reference any of these will be removed too. This cannot be undone."
+        confirmLabel="Delete permanently"
+        typeToConfirm="DELETE"
+        busy={bulkBusy}
+        onConfirm={runBulkDelete}
+        onCancel={() => {
+          if (!bulkBusy) setConfirmBulkDelete(false);
+        }}
       />
     </div>
   );
