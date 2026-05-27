@@ -162,13 +162,17 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
     }
   }, [filteredIds, selection, toast, fetchContent]);
 
-  const handleTogglePublished = async (item: TrainingItem) => {
+  const handleChangeStatus = async (
+    item: TrainingItem,
+    status: "draft" | "scheduled" | "published" | "archived",
+  ) => {
+    if (item.status === status) return;
     try {
       await adminFetch(`/api/admin/training/${item.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ published: !item.published }),
+        body: JSON.stringify({ status }),
       });
-      toast(item.published ? "Content unpublished" : "Content published", "success");
+      toast(`Marked ${status}`, "success");
       fetchContent();
     } catch (err) {
       toast((err as Error).message, "error");
@@ -297,7 +301,7 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
               selection={selection}
               totalCount={content.length}
               onRowClick={openDrawer}
-              onTogglePublished={handleTogglePublished}
+              onChangeStatus={handleChangeStatus}
             />
           )}
         </>

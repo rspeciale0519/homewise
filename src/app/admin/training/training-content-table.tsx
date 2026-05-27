@@ -1,15 +1,16 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import type { TrainingItem } from "./types";
+import type { TrainingItem, TrainingStatus } from "./types";
 import type { UseTrainingSelectionResult } from "./use-training-selection";
+import { StatusDropdown } from "./status-dropdown";
 
 interface TrainingContentTableProps {
   items: TrainingItem[];
   selection: UseTrainingSelectionResult;
   totalCount: number;
   onRowClick: (item: TrainingItem) => void;
-  onTogglePublished: (item: TrainingItem) => void;
+  onChangeStatus: (item: TrainingItem, next: TrainingStatus) => void;
 }
 
 export function TrainingContentTable({
@@ -17,7 +18,7 @@ export function TrainingContentTable({
   selection,
   totalCount,
   onRowClick,
-  onTogglePublished,
+  onChangeStatus,
 }: TrainingContentTableProps) {
   const masterState: boolean | "indeterminate" = selection.isAllSelected
     ? true
@@ -107,19 +108,11 @@ export function TrainingContentTable({
                     {item.audience.replace("_", " ")}
                   </td>
                   <td className="py-3 px-4">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTogglePublished(item);
-                      }}
-                      className={`px-2 py-0.5 rounded-full text-xs font-semibold transition-colors ${
-                        item.published
-                          ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                      }`}
-                    >
-                      {item.published ? "Published" : "Draft"}
-                    </button>
+                    <StatusDropdown
+                      current={item.status}
+                      onChange={(next) => onChangeStatus(item, next)}
+                      stopPropagation
+                    />
                   </td>
                   <td className="py-3 px-4 text-slate-400 text-xs whitespace-nowrap">
                     {new Date(item.updatedAt).toLocaleDateString()}

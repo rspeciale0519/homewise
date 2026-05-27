@@ -1,3 +1,5 @@
+export type TrainingStatus = "draft" | "scheduled" | "published" | "archived";
+
 export interface TrainingItem {
   id: string;
   title: string;
@@ -5,8 +7,11 @@ export interface TrainingItem {
   description: string | null;
   body: string | null;
   category: string;
+  categoryId: string | null;
   audience: string;
   type: string;
+  status: TrainingStatus;
+  publishedAt: string | null;
   url: string | null;
   fileKey: string | null;
   thumbnailUrl: string | null;
@@ -14,6 +19,10 @@ export interface TrainingItem {
   tags: string[];
   published: boolean;
   sortOrder: number;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  ogImageUrl: string | null;
+  readTimeMinutes: number | null;
   createdAt: string;
   updatedAt: string;
 }
