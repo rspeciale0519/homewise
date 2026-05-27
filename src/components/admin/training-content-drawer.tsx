@@ -12,11 +12,18 @@ import { slugify } from "@/lib/slug/slugify";
 import { extractYouTubeId, getYouTubeThumbnailUrl } from "@/lib/training/youtube";
 import type { TrainingItem, UploadedFile } from "@/app/admin/training/types";
 
+type Status = "draft" | "scheduled" | "published" | "archived";
+
+interface CategoryOption {
+  id: string;
+  name: string;
+}
+
 interface TrainingContentDrawerProps {
   open: boolean;
   onClose: () => void;
   item: TrainingItem | null;
-  categories: string[];
+  categoryOptions: CategoryOption[];
   onSaved: () => void;
 }
 
@@ -38,7 +45,7 @@ function getFileExtension(name: string): string {
 
 const INPUT_CLASS = "w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600";
 
-export function TrainingContentDrawer({ open, onClose, item, categories, onSaved }: TrainingContentDrawerProps) {
+export function TrainingContentDrawer({ open, onClose, item, categoryOptions, onSaved }: TrainingContentDrawerProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,14 +53,14 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
   const [slug, setSlug] = useState("");
   const [slugAutoSync, setSlugAutoSync] = useState(true);
   const [slugError, setSlugError] = useState<string | null>(null);
-  const [category, setCategory] = useState(categories[0] ?? "");
+  const [categoryId, setCategoryId] = useState<string>("");
   const [type, setType] = useState("video");
   const [audience, setAudience] = useState("agent_only");
+  const [status, setStatus] = useState<Status>("draft");
   const [body, setBody] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [duration, setDuration] = useState("");
   const [tagsStr, setTagsStr] = useState("");
-  const [published, setPublished] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,26 +75,29 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
       setTitle(item.title);
       setSlug(item.slug ?? "");
       setSlugAutoSync(!item.slug);
-      setCategory(item.category);
+      setCategoryId(item.categoryId ?? "");
       setType(item.type);
       setAudience(item.audience);
+      setStatus(item.status);
       setBody(item.body ?? "");
       setVideoUrl(item.url ?? "");
       setDuration(item.duration != null ? String(item.duration) : "");
       setTagsStr(item.tags.join(", "));
-      setPublished(item.published);
       setUploadedFile(
         item.fileKey ? { name: item.fileKey.split("/").pop() ?? item.fileKey, size: 0, fileKey: item.fileKey } : null,
       );
       setThumbnailUrl(item.thumbnailUrl ?? null);
     } else {
       setTitle(""); setSlug(""); setSlugAutoSync(true);
-      setCategory(categories[0] ?? ""); setType("video");
-      setAudience("agent_only"); setBody(""); setVideoUrl(""); setDuration("");
-      setTagsStr(""); setPublished(false); setUploadedFile(null);
+      setCategoryId(categoryOptions[0]?.id ?? "");
+      setType("video");
+      setAudience("agent_only");
+      setStatus("draft");
+      setBody(""); setVideoUrl(""); setDuration("");
+      setTagsStr(""); setUploadedFile(null);
       setThumbnailUrl(null);
     }
-  }, [open, item, categories]);
+  }, [open, item, categoryOptions]);
 
   useEffect(() => {
     if (!slugAutoSync) return;
@@ -158,19 +168,25 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
 
   const handleSave = async () => {
     if (!title.trim()) { toast("Title is required", "error"); return; }
+    if (!categoryId) { toast("Category is required", "error"); return; }
     setSaving(true);
     setSlugError(null);
     try {
+      const categoryName =
+        categoryOptions.find((c) => c.id === categoryId)?.name ?? "";
       const payload = {
         title: title.trim(),
         slug: slug || undefined,
-        category, type, audience,
+        category: categoryName,
+        categoryId,
+        type,
+        audience,
+        status,
         body: body || undefined, url: videoUrl || undefined,
         fileKey: uploadedFile?.fileKey ?? undefined,
         thumbnailUrl: thumbnailUrl ?? undefined,
         duration: duration ? Number(duration) : undefined,
         tags: tagsStr.split(",").map((t) => t.trim()).filter(Boolean),
-        published,
       };
       if (item) {
         await adminFetch(`/api/admin/training/${item.id}`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -243,8 +259,19 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
 
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Category</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className={INPUT_CLASS}>
-                  {categories.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className={INPUT_CLASS}
+                >
+                  {categoryOptions.length === 0 && (
+                    <option value="">No categories — create one first</option>
+                  )}
+                  {categoryOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -356,15 +383,18 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
                 <input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} className={INPUT_CLASS} placeholder="Tags (comma-separated)" />
               </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  type="button" role="switch" aria-checked={published}
-                  onClick={() => setPublished(!published)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${published ? "bg-navy-600" : "bg-slate-200"}`}
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block">Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as Status)}
+                  className={INPUT_CLASS}
                 >
-                  <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform ${published ? "translate-x-5" : "translate-x-0"}`} />
-                </button>
-                <span className="text-sm text-slate-600">{published ? "Published" : "Draft"}</span>
+                  <option value="draft">Draft</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
+                </select>
               </div>
             </div>
 

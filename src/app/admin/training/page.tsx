@@ -4,14 +4,6 @@ import { TrainingAdminView } from "./training-admin-view";
 
 export const metadata: Metadata = { title: "Training Hub — Admin" };
 
-const CATEGORIES = [
-  "onboarding",
-  "contracts",
-  "compliance",
-  "platform",
-  "market_knowledge",
-] as const;
-
 export default async function TrainingAdminPage() {
   const tracks = await prisma.trainingCourse.findMany({
     include: {
@@ -41,10 +33,7 @@ export default async function TrainingAdminPage() {
       <p className="text-slate-500 text-sm mb-8">
         Manage training content, courses, and agent progress
       </p>
-      <TrainingAdminView
-        tracks={tracks}
-        categories={[...CATEGORIES]}
-      />
+      <TrainingAdminView tracks={tracks} />
     </div>
   );
 }
