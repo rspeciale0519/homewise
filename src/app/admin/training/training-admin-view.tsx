@@ -21,10 +21,9 @@ interface CategoryOption {
 
 interface TrainingAdminViewProps {
   tracks: CourseData[];
-  categories: string[];
 }
 
-export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps) {
+export function TrainingAdminView({ tracks }: TrainingAdminViewProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"content" | "tracks" | "progress">("content");
   const [content, setContent] = useState<TrainingItem[]>([]);
@@ -79,7 +78,7 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
   const filtered = useMemo(() => {
     let list = content;
     if (categoryFilter !== "all") {
-      list = list.filter((i) => i.category === categoryFilter);
+      list = list.filter((i) => i.categoryId === categoryFilter);
     }
     if (audienceFilter !== "all") {
       list = list.filter((i) => i.audience === audienceFilter);
@@ -263,8 +262,10 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
               className="h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600"
             >
               <option value="all">All Categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c.replace("_", " ")}</option>
+              {categoryOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
             <select
@@ -331,14 +332,43 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
                   <span className="text-xs text-slate-400">{t._count.enrollments} enrolled</span>
                 </div>
               </div>
-              <div className="space-y-1">
-                {t.items.map((ti, i) => (
-                  <div key={ti.content.id} className="flex items-center gap-2 text-sm text-slate-600">
-                    <span className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500">{i + 1}</span>
-                    {ti.content.title}
-                  </div>
-                ))}
-              </div>
+              {t.sections && t.sections.length > 0 ? (
+                <div className="space-y-3">
+                  {t.sections.map((sec) => (
+                    <div key={sec.id}>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                        {sec.title}
+                        <span className="ml-2 text-slate-300 normal-case font-normal">
+                          {sec.items.length} {sec.items.length === 1 ? "item" : "items"}
+                        </span>
+                      </p>
+                      {sec.items.length === 0 ? (
+                        <p className="text-xs text-slate-300 pl-2 italic">
+                          Empty section
+                        </p>
+                      ) : (
+                        <div className="space-y-1">
+                          {sec.items.map((ti, i) => (
+                            <div
+                              key={ti.content.id}
+                              className="flex items-center gap-2 text-sm text-slate-600"
+                            >
+                              <span className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500">
+                                {i + 1}
+                              </span>
+                              {ti.content.title}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-300 italic">
+                  No sections yet — open to add curriculum
+                </p>
+              )}
             </div>
           ))}
           {coursesData.length === 0 && (
@@ -355,8 +385,11 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
         open={drawerOpen}
         onClose={closeDrawer}
         item={editing}
-        categories={categories}
-        onSaved={fetchContent}
+        categoryOptions={categoryOptions}
+        onSaved={() => {
+          void fetchContent();
+          void fetchCategoryOptions();
+        }}
       />
 
       {/* Training course drawer */}
@@ -365,7 +398,9 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
         onClose={() => { setCourseDrawerOpen(false); setEditingCourse(null); }}
         course={editingCourse}
         allContent={content}
-        onSaved={fetchCourses}
+        onSaved={async () => {
+          await fetchCourses();
+        }}
       />
 
       <TrainingCategoriesModal
