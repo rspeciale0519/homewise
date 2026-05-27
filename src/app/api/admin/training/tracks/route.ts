@@ -28,6 +28,15 @@ export async function GET() {
         include: { content: true },
         orderBy: { sortOrder: "asc" },
       },
+      sections: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          items: {
+            orderBy: { sortOrder: "asc" },
+            include: { content: true },
+          },
+        },
+      },
       _count: { select: { enrollments: true } },
     },
     orderBy: { createdAt: "desc" },

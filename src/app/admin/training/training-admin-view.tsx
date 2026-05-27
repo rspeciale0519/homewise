@@ -55,7 +55,7 @@ export function TrainingAdminView({ tracks, categories }: TrainingAdminViewProps
 
   const fetchCourses = useCallback(async () => {
     try {
-      const data = await adminFetch<CourseData[]>("/api/admin/training/courses");
+      const data = await adminFetch<CourseData[]>("/api/admin/training/tracks");
       setCoursesData(data);
     } catch (err) {
       toast((err as Error).message, "error");

@@ -19,6 +19,17 @@ export default async function TrainingAdminPage() {
         include: { content: { select: { id: true, title: true, type: true } } },
         orderBy: { sortOrder: "asc" },
       },
+      sections: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          items: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              content: { select: { id: true, title: true, type: true } },
+            },
+          },
+        },
+      },
       _count: { select: { enrollments: true } },
     },
     orderBy: { createdAt: "desc" },
