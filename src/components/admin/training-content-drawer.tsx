@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { TiptapEditor } from "@/components/admin/tiptap-editor";
+import { BlockEditor } from "@/components/admin/block-editor";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { FileUploadZone, formatFileSize } from "@/components/admin/file-upload-zone";
 import { SlugField } from "@/components/admin/slug-field";
@@ -297,7 +297,12 @@ export function TrainingContentDrawer({ open, onClose, item, categories, onSaved
 
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Body</label>
-                <TiptapEditor key={item?.id ?? "new"} content={body} onChange={setBody} size="md" />
+                <BlockEditor
+                  key={item?.id ?? "new"}
+                  value={body}
+                  onChange={setBody}
+                  ariaLabel="Training content body"
+                />
               </div>
 
               {type === "video" && (
