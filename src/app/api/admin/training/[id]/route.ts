@@ -14,8 +14,12 @@ const updateSchema = z.object({
   description: z.string().optional(),
   body: z.string().optional(),
   category: z.string().min(1).optional(),
+  categoryId: z.string().nullable().optional(),
   audience: z.enum(["agent_only", "public_only", "both"]).optional(),
   type: z.enum(["video", "document", "quiz", "article"]).optional(),
+  status: z
+    .enum(["draft", "scheduled", "published", "archived"])
+    .optional(),
   url: z.string().url().optional(),
   fileKey: z.string().optional(),
   thumbnailUrl: z.string().optional(),
@@ -23,6 +27,10 @@ const updateSchema = z.object({
   tags: z.array(z.string()).optional(),
   published: z.boolean().optional(),
   sortOrder: z.number().optional(),
+  seoTitle: z.string().nullable().optional(),
+  seoDescription: z.string().nullable().optional(),
+  ogImageUrl: z.string().url().nullable().optional(),
+  readTimeMinutes: z.number().int().nullable().optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -46,6 +54,23 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const data: Record<string, unknown> = { ...parsed.data };
   let previousSlug: string | null = null;
+
+  // Keep the legacy `published` boolean in sync with `status` until v2
+  // drops the column. Either field may be supplied; status wins.
+  if (parsed.data.status !== undefined) {
+    data.published = parsed.data.status === "published";
+    if (parsed.data.status === "published" && !existing.publishedAt) {
+      data.publishedAt = new Date();
+    }
+  } else if (parsed.data.published !== undefined) {
+    if (parsed.data.published) {
+      data.status = "published";
+      if (!existing.publishedAt) data.publishedAt = new Date();
+    } else if (existing.status === "published") {
+      // Demote published → draft when the boolean flips off.
+      data.status = "draft";
+    }
+  }
 
   if (parsed.data.slug !== undefined) {
     const nextSlug = parsed.data.slug.trim();

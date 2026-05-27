@@ -15,13 +15,21 @@ const createSchema = z.object({
   description: z.string().optional(),
   body: z.string().optional(),
   category: z.string().min(1),
+  categoryId: z.string().optional(),
   audience: z.enum(["agent_only", "public_only", "both"]).optional(),
   type: z.enum(["video", "document", "quiz", "article"]).optional(),
+  status: z
+    .enum(["draft", "scheduled", "published", "archived"])
+    .optional(),
   url: z.string().url().optional(),
   fileKey: z.string().optional(),
   thumbnailUrl: z.string().optional(),
   duration: z.number().optional(),
   tags: z.array(z.string()).optional(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+  ogImageUrl: z.string().url().optional(),
+  readTimeMinutes: z.number().int().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -80,6 +88,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const status = parsed.data.status ?? "draft";
   const content = await prisma.trainingContent.create({
     data: {
       title: parsed.data.title,
@@ -87,13 +96,21 @@ export async function POST(request: NextRequest) {
       description: parsed.data.description,
       body: parsed.data.body,
       category: parsed.data.category,
+      categoryId: parsed.data.categoryId,
       audience: parsed.data.audience ?? "agent_only",
       type: parsed.data.type ?? "video",
+      status,
+      published: status === "published",
+      publishedAt: status === "published" ? new Date() : null,
       url: parsed.data.url,
       fileKey: parsed.data.fileKey,
       thumbnailUrl: parsed.data.thumbnailUrl,
       duration: parsed.data.duration,
       tags: parsed.data.tags ?? [],
+      seoTitle: parsed.data.seoTitle,
+      seoDescription: parsed.data.seoDescription,
+      ogImageUrl: parsed.data.ogImageUrl,
+      readTimeMinutes: parsed.data.readTimeMinutes,
     },
   });
 
