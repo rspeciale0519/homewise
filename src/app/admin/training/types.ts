@@ -1,3 +1,5 @@
+export type TrainingStatus = "draft" | "scheduled" | "published" | "archived";
+
 export interface TrainingItem {
   id: string;
   title: string;
@@ -5,8 +7,11 @@ export interface TrainingItem {
   description: string | null;
   body: string | null;
   category: string;
+  categoryId: string | null;
   audience: string;
   type: string;
+  status: TrainingStatus;
+  publishedAt: string | null;
   url: string | null;
   fileKey: string | null;
   thumbnailUrl: string | null;
@@ -14,19 +19,43 @@ export interface TrainingItem {
   tags: string[];
   published: boolean;
   sortOrder: number;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  ogImageUrl: string | null;
+  readTimeMinutes: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CourseSectionData {
+  id: string;
+  title: string;
+  sortOrder: number;
+  dripDays: number | null;
+  items: {
+    contentId: string;
+    sortOrder: number;
+    content: { id: string; title: string; type: string };
+  }[];
 }
 
 export interface CourseData {
   id: string;
   name: string;
+  slug: string | null;
   description: string | null;
+  audience: "agent_only" | "public_only" | "both";
   required: boolean;
   autoEnroll: boolean;
+  dueDays: number | null;
+  recurDays: number | null;
+  passThreshold: number;
   reminderDays: number | null;
   reminderRepeat: number | null;
+  /** Legacy flat list — kept for backwards compat while curriculum
+   * builder rolls out. New code should iterate `sections`. */
   items: { content: { id: string; title: string; type: string } }[];
+  sections?: CourseSectionData[];
   _count: { enrollments: number };
 }
 

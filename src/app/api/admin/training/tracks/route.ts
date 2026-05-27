@@ -5,9 +5,14 @@ import { z } from "zod";
 
 const createTrackSchema = z.object({
   name: z.string().min(1),
+  slug: z.string().optional(),
   description: z.string().optional(),
+  audience: z.enum(["agent_only", "public_only", "both"]).optional(),
   required: z.boolean().optional(),
   autoEnroll: z.boolean().optional(),
+  dueDays: z.number().int().nullable().optional(),
+  recurDays: z.number().int().nullable().optional(),
+  passThreshold: z.number().int().min(0).max(100).optional(),
   reminderDays: z.number().nullable().optional(),
   reminderRepeat: z.number().nullable().optional(),
   contentIds: z.array(z.string()).optional(),
@@ -22,6 +27,15 @@ export async function GET() {
       items: {
         include: { content: true },
         orderBy: { sortOrder: "asc" },
+      },
+      sections: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          items: {
+            orderBy: { sortOrder: "asc" },
+            include: { content: true },
+          },
+        },
       },
       _count: { select: { enrollments: true } },
     },
@@ -43,9 +57,14 @@ export async function POST(request: NextRequest) {
   const track = await prisma.trainingCourse.create({
     data: {
       name: parsed.data.name,
+      slug: parsed.data.slug,
       description: parsed.data.description,
+      audience: parsed.data.audience ?? "agent_only",
       required: parsed.data.required ?? false,
       autoEnroll: parsed.data.autoEnroll ?? false,
+      dueDays: parsed.data.dueDays ?? null,
+      recurDays: parsed.data.recurDays ?? null,
+      passThreshold: parsed.data.passThreshold ?? 80,
       reminderDays: parsed.data.reminderDays ?? null,
       reminderRepeat: parsed.data.reminderRepeat ?? null,
       ...(parsed.data.contentIds?.length

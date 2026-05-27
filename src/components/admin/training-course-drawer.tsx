@@ -1,24 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import type { DragEndEvent } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import {
+  CourseCurriculumBuilder,
+  type SectionDraft,
+} from "@/components/admin/course-curriculum-builder";
 import { useToast } from "@/components/admin/admin-toast";
 import { adminFetch } from "@/lib/admin-fetch";
 import type { TrainingItem, CourseData } from "@/app/admin/training/types";
@@ -31,76 +19,8 @@ interface TrainingCourseDrawerProps {
   onSaved: () => void;
 }
 
-interface CourseContentItem {
-  id: string;
-  title: string;
-  type: string;
-}
-
 const INPUT_CLASS =
   "w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-600";
-
-const TYPE_BADGE_COLORS: Record<string, string> = {
-  video: "bg-crimson-100 text-crimson-700",
-  document: "bg-blue-100 text-blue-700",
-  article: "bg-navy-100 text-navy-700",
-  quiz: "bg-navy-100 text-navy-700",
-};
-
-function SortableCourseItem({
-  item,
-  onRemove,
-}: {
-  item: CourseContentItem;
-  onRemove: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  const badgeColor = TYPE_BADGE_COLORS[item.type] ?? "bg-slate-100 text-slate-600";
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2"
-    >
-      <button
-        type="button"
-        className="cursor-grab text-slate-400 hover:text-slate-600 touch-none"
-        {...attributes}
-        {...listeners}
-      >
-        <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
-          <circle cx="5" cy="3" r="1.5" />
-          <circle cx="11" cy="3" r="1.5" />
-          <circle cx="5" cy="8" r="1.5" />
-          <circle cx="11" cy="8" r="1.5" />
-          <circle cx="5" cy="13" r="1.5" />
-          <circle cx="11" cy="13" r="1.5" />
-        </svg>
-      </button>
-      <span className="text-sm text-navy-700 flex-1 truncate">{item.title}</span>
-      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${badgeColor}`}>
-        {item.type}
-      </span>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="h-6 w-6 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  );
-}
 
 export function TrainingCourseDrawer({
   open,
@@ -117,16 +37,9 @@ export function TrainingCourseDrawer({
   const [autoEnroll, setAutoEnroll] = useState(false);
   const [reminderDays, setReminderDays] = useState("");
   const [reminderRepeat, setReminderRepeat] = useState("");
-  const [items, setItems] = useState<CourseContentItem[]>([]);
+  const [sectionDrafts, setSectionDrafts] = useState<SectionDraft[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerSearch, setPickerSearch] = useState("");
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor),
-  );
 
   /* eslint-disable react-hooks/set-state-in-effect -- sync form state from props */
   useEffect(() => {
@@ -138,13 +51,6 @@ export function TrainingCourseDrawer({
       setAutoEnroll(course.autoEnroll);
       setReminderDays(course.reminderDays != null ? String(course.reminderDays) : "");
       setReminderRepeat(course.reminderRepeat != null ? String(course.reminderRepeat) : "");
-      setItems(
-        course.items.map((ti: { content: { id: string; title: string; type: string } }) => ({
-          id: ti.content.id,
-          title: ti.content.title,
-          type: ti.content.type,
-        })),
-      );
     } else {
       setName("");
       setDescription("");
@@ -152,40 +58,10 @@ export function TrainingCourseDrawer({
       setAutoEnroll(false);
       setReminderDays("");
       setReminderRepeat("");
-      setItems([]);
+      setSectionDrafts([]);
     }
-    setPickerOpen(false);
-    setPickerSearch("");
   }, [open, course]);
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
-
-  const availableContent = useMemo(() => {
-    const published = allContent.filter((c) => c.published && !itemIds.has(c.id));
-    if (!pickerSearch.trim()) return published;
-    const q = pickerSearch.toLowerCase();
-    return published.filter((c) => c.title.toLowerCase().includes(q));
-  }, [allContent, itemIds, pickerSearch]);
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setItems((prev) => {
-        const oldIndex = prev.findIndex((i) => i.id === active.id);
-        const newIndex = prev.findIndex((i) => i.id === over.id);
-        return arrayMove(prev, oldIndex, newIndex);
-      });
-    }
-  };
-
-  const addItem = (content: TrainingItem) => {
-    setItems((prev) => [...prev, { id: content.id, title: content.title, type: content.type }]);
-  };
-
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -194,28 +70,48 @@ export function TrainingCourseDrawer({
     }
     setSaving(true);
     try {
-      const payload = {
+      const coursePayload = {
         name: name.trim(),
         description: description.trim() || undefined,
         required,
         autoEnroll,
         reminderDays: reminderDays ? Number(reminderDays) : undefined,
         reminderRepeat: reminderRepeat ? Number(reminderRepeat) : undefined,
-        contentIds: items.map((i) => i.id),
       };
+      let courseId: string;
       if (course) {
-        await adminFetch(`/api/admin/training/courses/${course.id}`, {
+        await adminFetch(`/api/admin/training/tracks/${course.id}`, {
           method: "PATCH",
-          body: JSON.stringify(payload),
+          body: JSON.stringify(coursePayload),
         });
-        toast("Course updated", "success");
+        courseId = course.id;
       } else {
-        await adminFetch("/api/admin/training/courses", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        toast("Course created", "success");
+        const created = await adminFetch<{ id: string }>(
+          "/api/admin/training/tracks",
+          {
+            method: "POST",
+            body: JSON.stringify(coursePayload),
+          },
+        );
+        courseId = created.id;
       }
+
+      await adminFetch(
+        `/api/admin/training/tracks/${courseId}/curriculum`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            sections: sectionDrafts.map((s) => ({
+              id: s.id ?? undefined,
+              title: s.title,
+              dripDays: s.dripDays,
+              contentIds: s.contentIds,
+            })),
+          }),
+        },
+      );
+
+      toast(course ? "Course updated" : "Course created", "success");
       onSaved();
       onClose();
     } catch (err) {
@@ -227,7 +123,9 @@ export function TrainingCourseDrawer({
   const handleDelete = async () => {
     if (!course) return;
     try {
-      await adminFetch(`/api/admin/training/courses/${course.id}`, { method: "DELETE" });
+      await adminFetch(`/api/admin/training/tracks/${course.id}`, {
+        method: "DELETE",
+      });
       toast("Course deleted", "success");
       onSaved();
       onClose();
@@ -342,73 +240,17 @@ export function TrainingCourseDrawer({
                 </div>
               )}
 
-              {/* Content Items */}
+              {/* Curriculum */}
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-2 block">
-                  Content Items ({items.length})
+                  Curriculum
                 </label>
-                {items.length > 0 ? (
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-1.5">
-                        {items.map((item) => (
-                          <SortableCourseItem key={item.id} item={item} onRemove={() => removeItem(item.id)} />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                ) : (
-                  <p className="text-xs text-slate-400 py-3 text-center border border-dashed border-slate-200 rounded-lg">
-                    No content items added yet
-                  </p>
-                )}
-
-                {/* Add content button / picker */}
-                <div className="mt-2 relative">
-                  <button
-                    type="button"
-                    onClick={() => setPickerOpen(!pickerOpen)}
-                    className="text-sm text-navy-600 hover:text-navy-700 font-semibold"
-                  >
-                    + Add Content
-                  </button>
-                  {pickerOpen && (
-                    <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 max-h-60 flex flex-col">
-                      <div className="p-2 border-b border-slate-100">
-                        <input
-                          type="text"
-                          value={pickerSearch}
-                          onChange={(e) => setPickerSearch(e.target.value)}
-                          placeholder="Search content..."
-                          className="w-full h-8 px-2 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-navy-600"
-                          autoFocus
-                        />
-                      </div>
-                      <div className="overflow-y-auto flex-1">
-                        {availableContent.length > 0 ? (
-                          availableContent.map((c) => (
-                            <button
-                              key={c.id}
-                              type="button"
-                              onClick={() => {
-                                addItem(c);
-                                setPickerSearch("");
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
-                            >
-                              <span className="text-navy-700 truncate flex-1">{c.title}</span>
-                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold capitalize ${TYPE_BADGE_COLORS[c.type] ?? "bg-slate-100 text-slate-600"}`}>
-                                {c.type}
-                              </span>
-                            </button>
-                          ))
-                        ) : (
-                          <p className="text-xs text-slate-400 p-3 text-center">No available content</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <CourseCurriculumBuilder
+                  key={course?.id ?? "new"}
+                  initialSections={course?.sections ?? []}
+                  allContent={allContent}
+                  onChange={setSectionDrafts}
+                />
               </div>
             </div>
 
