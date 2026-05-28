@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 
 interface AgentProgress {
@@ -15,6 +16,9 @@ interface AgentProgress {
 }
 
 export async function GET() {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const [totalContent, totalEnrollments, agents, allProgress, enrollments] =
     await Promise.all([
       prisma.trainingContent.count({ where: { published: true } }),

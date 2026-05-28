@@ -1,3 +1,5 @@
+import DOMPurify from "isomorphic-dompurify";
+
 interface AdminAuthoredHtmlProps {
   html: string;
   className?: string;
@@ -6,15 +8,14 @@ interface AdminAuthoredHtmlProps {
 const INNER_HTML_KEY = "dangerouslySet" + "InnerHTML";
 
 /**
- * Renders HTML authored by admins via the TipTap editor. Content originates
- * only from authenticated admin writes; server-side sanitization was removed
- * because jsdom-based sanitizers fail on Vercel's serverless runtime (commit
- * 0e61f3b). Keep this boundary narrow so the trust assumption is explicit.
+ * Renders admin-authored TipTap HTML. The body is sanitized with DOMPurify at
+ * render time: training content can be edited via the PATCH API, so the stored
+ * HTML is treated as untrusted here (mirrors the public /learn sanitize path).
  */
 export function AdminAuthoredHtml({ html, className }: AdminAuthoredHtmlProps) {
   const props: Record<string, unknown> = {
     className,
-    [INNER_HTML_KEY]: { __html: html },
+    [INNER_HTML_KEY]: { __html: DOMPurify.sanitize(html) },
   };
   return <div {...props} />;
 }

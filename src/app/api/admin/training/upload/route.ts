@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const ALLOWED_EXTENSIONS = [
@@ -39,6 +40,9 @@ function sanitizeFilename(filename: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const body: unknown = await request.json();
   const parsed = uploadSchema.safeParse(body);
 
