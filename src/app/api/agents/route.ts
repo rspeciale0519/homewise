@@ -44,6 +44,19 @@ export async function GET(request: NextRequest) {
     const [agents, total] = await Promise.all([
       prisma.agent.findMany({
         where,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          slug: true,
+          email: true,
+          phone: true,
+          photoUrl: true,
+          languages: true,
+          designations: true,
+          bio: true,
+          active: true,
+        },
         orderBy: { lastName: "asc" },
         skip: (page - 1) * perPage,
         take: perPage,

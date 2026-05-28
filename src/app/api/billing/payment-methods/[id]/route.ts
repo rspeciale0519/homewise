@@ -22,6 +22,13 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    const pm = await stripe.paymentMethods.retrieve(id);
+    const pmCustomer =
+      typeof pm.customer === "string" ? pm.customer : pm.customer?.id;
+    if (pmCustomer !== agent.stripeCustomer.stripeCustomerId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     await stripe.paymentMethods.detach(id);
     return NextResponse.json({ success: true });
   } catch (err) {

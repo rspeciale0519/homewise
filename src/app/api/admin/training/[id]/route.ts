@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
@@ -36,6 +37,9 @@ const updateSchema = z.object({
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const { id } = await context.params;
 
   const rawBody = await request.json();
@@ -108,6 +112,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const { id } = await context.params;
 
   const record = await prisma.trainingContent.findUnique({ where: { id } });

@@ -22,6 +22,15 @@ export async function POST(
   const { id } = await params;
 
   try {
+    const target = await stripe.invoices.retrieve(id);
+    const invoiceCustomer =
+      typeof target.customer === "string"
+        ? target.customer
+        : target.customer?.id;
+    if (invoiceCustomer !== agent.stripeCustomer.stripeCustomerId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const invoice = await stripe.invoices.pay(id);
 
     return NextResponse.json({ success: true, status: invoice.status });

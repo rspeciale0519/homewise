@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -21,6 +22,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const { id } = await params;
   const body = await request.json();
   const parsed = updateTrackSchema.safeParse(body);
@@ -64,6 +68,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAdminApi();
+  if (isError(auth)) return auth.error;
+
   const { id } = await params;
   await prisma.trainingCourse.delete({ where: { id } });
   return NextResponse.json({ success: true });
