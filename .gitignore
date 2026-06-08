@@ -76,3 +76,9 @@ public/documents/*.pdf
 /*.jpg
 
 .vercel
+
+# >>> brain (managed) >>>
+homewisebrain/.brainstate/
+homewisebrain/.obsidian/
+# <<< brain (managed) <<<
+

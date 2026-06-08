@@ -451,3 +451,13 @@ This CLAUDE.md file is intentionally concise to maximize instruction-following q
 ### Context Preservation
 
 When working on complex tasks, use the TodoWrite tool frequently to track progress and maintain context across tool calls.
+
+<!-- brain:pointer -->
+## homewise Brain (homewisebrain/) — mandatory protocol
+
+A self-improving engineering memory lives in `homewisebrain/`. Hooks enforce it
+(SessionStart injects state; Stop gates a per-task journal entry). State what we
+last did before new work; on task completion append a journal entry per
+`homewisebrain/CLAUDE.md`. NO secrets/PII. Consolidation after the user task only.
+<!-- /brain:pointer -->
+
