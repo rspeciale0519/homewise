@@ -7,7 +7,7 @@ const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
-    ignores: ["archive/", ".next/", "node_modules/", ".playwright-mcp/"],
+    ignores: ["archive/", ".next/", "node_modules/", ".playwright-mcp/", ".claude/hooks/"],
   },
   {
     rules: {

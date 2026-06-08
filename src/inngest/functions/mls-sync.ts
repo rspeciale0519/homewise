@@ -98,6 +98,7 @@ async function upsertListing(reso: ResoProperty): Promise<void> {
   }));
 
   const data = {
+    listingId: reso.ListingId,
     status: mapStatus(reso.StandardStatus),
     price: reso.ListPrice,
     closePrice: reso.ClosePrice ?? null,
@@ -119,6 +120,10 @@ async function upsertListing(reso: ResoProperty): Promise<void> {
     propertySubType: reso.PropertySubType ?? null,
     description: reso.PublicRemarks ?? null,
     photos,
+    photoSources: photos,
+    photosChangeTimestamp: reso.PhotosChangeTimestamp
+      ? new Date(reso.PhotosChangeTimestamp)
+      : null,
     imageUrl: photos[0] ?? null,
     latitude: reso.Latitude ?? null,
     longitude: reso.Longitude ?? null,
@@ -138,7 +143,14 @@ async function upsertListing(reso: ResoProperty): Promise<void> {
     listDate: reso.ListingContractDate ? new Date(reso.ListingContractDate) : null,
     closeDate: reso.CloseDate ? new Date(reso.CloseDate) : null,
     openHouseSchedule: openHouse ?? undefined,
-    schoolDistrict: reso.SchoolDistrict ?? null,
+    schoolDistrict:
+      reso.ElementarySchoolDistrict ??
+      reso.MiddleOrJuniorSchoolDistrict ??
+      reso.HighSchoolDistrict ??
+      null,
+    elementarySchoolDistrict: reso.ElementarySchoolDistrict ?? null,
+    middleSchoolDistrict: reso.MiddleOrJuniorSchoolDistrict ?? null,
+    highSchoolDistrict: reso.HighSchoolDistrict ?? null,
     elementarySchool: reso.ElementarySchool ?? null,
     middleSchool: reso.MiddleOrJuniorSchool ?? null,
     highSchool: reso.HighSchool ?? null,
@@ -149,6 +161,7 @@ async function upsertListing(reso: ResoProperty): Promise<void> {
     listingOfficeName: reso.ListOfficeName ?? null,
     listingOfficeMlsId: reso.ListOfficeMlsId ?? null,
     virtualTourUrl: reso.VirtualTourURLUnbranded ?? null,
+    mlgCanUse: reso.MlgCanUse ?? [],
     mlsLastModified: new Date(reso.ModificationTimestamp),
     syncedAt: new Date(),
   };
