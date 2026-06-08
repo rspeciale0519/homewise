@@ -311,7 +311,7 @@ Stellar Articles 19.22/19.23/19.09 + MLS GRID source/disclaimer.
 - [ ] **Step 2 — pgvector:** enable extension + index via raw SQL in a one-time setup step: `CREATE EXTENSION IF NOT EXISTS vector;`, change `Listing.embedding` to `Unsupported("vector(1536)")` in schema (or keep `Float[]` + a parallel `vector` column), `db:push`, then `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops);`. Rewrite `semanticSearch` to `ORDER BY embedding <=> $query LIMIT k` via `$queryRaw` with the IDX clause — **stop** `SELECT`ing `embedding` on list reads (`select`/`omit` it in `stellar-mls-provider` and widgets).
 - [x] **Step 3 — embedding backfill:** on `mls/listing.backfilled`, enqueue embeddings in bounded batches (respect provider rate/cost); incremental `mls/listing.synced` embeds single rows.
 - [x] **Step 4 — media budget:** in the proxy + sync, add a daily-records / 4GB-hr guard and concurrency cap so on-demand downloads + sync stay within `2 req/s, 7200/hr, 4GB/hr, 40k/24h`.
-- [ ] **Step 5:** type-check, lint, vitest, commit.
+- [x] **Step 5:** type-check, lint, vitest, commit.
 
 > Phase 9 pgvector code/schema/SQL are prepared in `prisma/mls-pgvector.sql`, but the shared/prod SQL execution and `db:push` are pending explicit approval for this specific production schema change.
 
@@ -319,10 +319,10 @@ Stellar Articles 19.22/19.23/19.09 + MLS GRID source/disclaimer.
 
 ## Phase 10 — Backfill + go-live verification (fixes Gaps #15, #17, #18)
 
-- [ ] **Step 1 — typing (Gap #18):** add Inngest `EventSchemas` for `mls-sync`, `mls/listing.price-changed`, `mls/listing.synced`, `mls/listing.backfilled`; normalize `listingAgentMlsId` vs `Agent.mlsAgentId` (trim/upper) + a backfill check that warns on agents with zero matched listings.
+- [x] **Step 1 — typing (Gap #18):** add Inngest `EventSchemas` for `mls-sync`, `mls/listing.price-changed`, `mls/listing.synced`, `mls/listing.backfilled`; normalize `listingAgentMlsId` vs `Agent.mlsAgentId` (trim/upper) + a backfill check that warns on agents with zero matched listings.
 - [ ] **Step 2 — prod env:** set all vars in Vercel Production (`MLS_OFFICE_ID` unset, `ANALYTICS_BO_ENABLED=false`); confirm Inngest prod app registered.
 - [ ] **Step 3 — safe dry-run (Gap #17):** run the sample/branch import first (Supabase branch or temporary `MLS_OFFICE_ID` scope); snapshot before the full backfill; keep public reads behind a launch flag until counts verify.
-- [ ] **Step 4 — alert suppression (Gap #15):** suppress `daily-listing-alerts` + price-change alerts for the backfill window (don't notify on `createdAt≈now` whole-feed); make alert email image URLs absolute.
+- [x] **Step 4 — alert suppression (Gap #15):** suppress `daily-listing-alerts` + price-change alerts for the backfill window (don't notify on `createdAt≈now` whole-feed); make alert email image URLs absolute.
 - [ ] **Step 5 — full backfill:** trigger `POST /api/admin/sync` (route + `sync-dashboard.tsx` already exist); watch `SyncState` syncing→idle, `cursor` advancing.
 - [ ] **Step 6 — verify counts:** total>0, `mlgCanUse has IDX`>0, featured = HomeWise count, agent portfolios populated.
 - [ ] **Step 7 — E2E smoke (chrome-devtools, Rule 4):** search/map/polygon/filters; detail photos+attribution+disclaimer; homepage featured = HomeWise only; agent listings; a non-IDX row is invisible everywhere; analytics surfaces show the BO-gated state. Monitor Vercel deploy green per `[[skill-build-vercel-monitor]]`.

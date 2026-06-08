@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { ChatbotEngine, type ContextBundle } from "./engine";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { prisma } from "@/lib/prisma";
 import { withIdx } from "@/lib/mls-visibility";
 
@@ -86,11 +87,12 @@ Always represent ${config.agentName} professionally and encourage visitors to co
       select: { mlsAgentId: true },
     });
 
-    if (!agent?.mlsAgentId) return { listings: [] };
+    const agentMlsId = normalizeMlsAgentId(agent?.mlsAgentId);
+    if (!agentMlsId) return { listings: [] };
 
     const listings = await prisma.listing.findMany({
       where: withIdx({
-        listingAgentMlsId: agent.mlsAgentId,
+        listingAgentMlsId: agentMlsId,
         status: (input.status as string) ?? "Active",
       }),
       select: {

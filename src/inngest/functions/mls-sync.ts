@@ -2,6 +2,8 @@ import type { Prisma, SyncState } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildPropertyUrl, fetchPage, hasCredentials } from "@/lib/mls-grid";
 import { storageKeyFor } from "@/lib/mls-image";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
+import { withIdx } from "@/lib/mls-visibility";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ResoProperty } from "@/types/reso";
 import { inngest } from "../client";
@@ -27,7 +29,7 @@ type SyncEventData = {
 
 type BeginSyncResult =
   | { skipped: true; state: SyncState }
-  | { skipped: false; state: SyncState };
+  | { initialImport: boolean; skipped: false; state: SyncState };
 
 type ProcessPageResult = {
   processed: number;
@@ -58,13 +60,17 @@ export const mlsSync = inngest.createFunction(
         return { skipped: true, state: current };
       }
 
+      const continuation = Boolean(eventData.nextLink);
+      const initialImport =
+        eventData.initialImport ?? (!current?.cursor && !continuation);
+      const metadata = syncRunMetadata(initialImport);
       const state = await prisma.syncState.upsert({
         where: { provider: PROVIDER },
-        update: { status: "syncing", updatedAt: new Date() },
-        create: { provider: PROVIDER, status: "syncing" },
+        update: { metadata, status: "syncing", updatedAt: new Date() },
+        create: { metadata, provider: PROVIDER, status: "syncing" },
       });
 
-      return { skipped: false, state };
+      return { initialImport, skipped: false, state };
     });
 
     if (begin.skipped) {
@@ -73,8 +79,7 @@ export const mlsSync = inngest.createFunction(
 
     try {
       const continuation = Boolean(eventData.nextLink);
-      const initialImport =
-        eventData.initialImport ?? (!begin.state.cursor && !continuation);
+      const initialImport = begin.initialImport;
       const modifiedAfter = eventData.cursor ?? begin.state.cursor ?? undefined;
       let maxCursor = modifiedAfter;
       let nextLink = eventData.nextLink;
@@ -136,6 +141,9 @@ export const mlsSync = inngest.createFunction(
       }
 
       const openHouses = await syncOpenHouses(step);
+      const agentMatches = initialImport
+        ? await step.run("warn-agent-listing-matches", warnAgentsWithoutListingMatches)
+        : undefined;
 
       await step.run("update-sync-success", async () => {
         return prisma.syncState.update({
@@ -145,6 +153,11 @@ export const mlsSync = inngest.createFunction(
             lastSyncAt: new Date(),
             cursor: maxCursor,
             lastError: null,
+            metadata: {
+              backfillAlertsSuppressed: false,
+              completedAt: new Date().toISOString(),
+              initialImport,
+            },
           },
         });
       });
@@ -161,6 +174,7 @@ export const mlsSync = inngest.createFunction(
         processed: totalProcessed,
         upserted: totalUpserted,
         deleted: totalDeleted,
+        agentMatches,
         openHouses,
         cursor: maxCursor,
       };
@@ -202,6 +216,14 @@ function maxIsoTimestamp(left?: string, right?: string): string | undefined {
   if (!left) return right;
   if (!right) return left;
   return new Date(left).getTime() >= new Date(right).getTime() ? left : right;
+}
+
+function syncRunMetadata(initialImport: boolean): Prisma.InputJsonObject {
+  return {
+    backfillAlertsSuppressed: initialImport,
+    initialImport,
+    startedAt: new Date().toISOString(),
+  };
 }
 
 function updateDataFor(mapped: ListingSyncData): Prisma.ListingUncheckedUpdateInput {
@@ -296,4 +318,32 @@ async function upsertListing(
     name: "mls/listing.synced",
     data: { listingId: mapped.mlsId, mlsId: mapped.mlsId, id: saved.id },
   });
+}
+
+async function warnAgentsWithoutListingMatches(): Promise<{
+  checked: number;
+  unmatched: Array<{ agentId: string; mlsAgentId: string; name: string }>;
+}> {
+  const agents = await prisma.agent.findMany({
+    where: { active: true, mlsAgentId: { not: null } },
+    select: { id: true, firstName: true, lastName: true, mlsAgentId: true },
+  });
+  const unmatched: Array<{ agentId: string; mlsAgentId: string; name: string }> = [];
+
+  for (const agent of agents) {
+    const mlsAgentId = normalizeMlsAgentId(agent.mlsAgentId);
+    if (!mlsAgentId) continue;
+
+    const listingCount = await prisma.listing.count({
+      where: withIdx({ listingAgentMlsId: mlsAgentId }),
+    });
+
+    if (listingCount === 0) {
+      const name = `${agent.firstName} ${agent.lastName}`;
+      console.warn(`[mls-sync] Agent ${name} (${mlsAgentId}) has zero matched IDX listings`);
+      unmatched.push({ agentId: agent.id, mlsAgentId, name });
+    }
+  }
+
+  return { checked: agents.length, unmatched };
 }

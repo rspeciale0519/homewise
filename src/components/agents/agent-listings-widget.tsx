@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { withIdx } from "@/lib/mls-visibility";
 import { ListingAttribution } from "@/components/properties/listing-attribution";
 import { LISTING_CARD_SELECT, type ListingCardRow } from "@/lib/listing-selects";
@@ -14,12 +15,15 @@ interface AgentListingsWidgetProps {
 }
 
 export async function AgentListingsWidget({ mlsAgentId, agentSlug, limit = 6 }: AgentListingsWidgetProps) {
+  const normalizedAgentMlsId = normalizeMlsAgentId(mlsAgentId);
+  if (!normalizedAgentMlsId) return null;
+
   const activeWhere: Prisma.ListingWhereInput = withIdx({
-    listingAgentMlsId: mlsAgentId,
+    listingAgentMlsId: normalizedAgentMlsId,
     status: { in: ["Active", "Pending"] },
   });
   const soldWhere: Prisma.ListingWhereInput = withIdx({
-    listingAgentMlsId: mlsAgentId,
+    listingAgentMlsId: normalizedAgentMlsId,
     status: "Sold",
   });
   const [activeListings, soldListings, activeTotal, soldTotal] = await Promise.all([

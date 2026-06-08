@@ -2,21 +2,22 @@ import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate } from "@/lib/email";
 import { priceChangeAlertEmail } from "@/lib/email/templates";
+import { areMlsBackfillAlertsSuppressed } from "@/lib/mls-alert-suppression";
 import { withIdx } from "@/lib/mls-visibility";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const priceChangeAlert = inngest.createFunction(
   { id: "price-change-alert" },
   { event: "mls/listing.price-changed" },
   async ({ event, step }) => {
-    const { mlsId, oldPrice, newPrice, address, city } = event.data as {
-      mlsId: string;
-      oldPrice: number;
-      newPrice: number;
-      address: string;
-      city: string;
-    };
+    const suppressed = await step.run("check-mls-backfill-alert-suppression", () => {
+      return areMlsBackfillAlertsSuppressed();
+    });
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://homewisefl.com";
+    if (suppressed) return { sent: 0, skipped: "mls-backfill-in-flight" };
+
+    const { mlsId, oldPrice, newPrice, address, city } = event.data;
+    const siteUrl = getSiteUrl();
 
     // Find users who favorited this listing
     const favorites = await step.run("find-favorites", async () => {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { withIdx } from "@/lib/mls-visibility";
 import { ListingAttribution } from "@/components/properties/listing-attribution";
 import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
@@ -21,13 +22,14 @@ export async function FeaturedListingsWidget({
   limit = 6,
   title = "Featured Listings",
 }: FeaturedListingsWidgetProps) {
+  const normalizedAgentMlsId = normalizeMlsAgentId(agentMlsId);
   const where: Prisma.ListingWhereInput = withIdx({
     status: { in: ["Active", "Pending"] },
   });
 
-  if (agentMlsId) where.listingAgentMlsId = agentMlsId;
+  if (normalizedAgentMlsId) where.listingAgentMlsId = normalizedAgentMlsId;
   if (officeMlsId) where.listingOfficeMlsId = officeMlsId;
-  if (!agentMlsId && !officeMlsId) where.featured = true;
+  if (!normalizedAgentMlsId && !officeMlsId) where.featured = true;
 
   const listings = await prisma.listing.findMany({
     where,

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { withIdx } from "@/lib/mls-visibility";
 import {
   LISTING_PROPERTY_SELECT,
@@ -67,7 +68,8 @@ export class StellarMlsProvider implements PropertyProvider {
     if (propertyType) where.propertyType = propertyType;
     if (status) where.status = status;
     if (featured !== undefined) where.featured = featured;
-    if (listingAgentMlsId) where.listingAgentMlsId = listingAgentMlsId;
+    const normalizedAgentMlsId = normalizeMlsAgentId(listingAgentMlsId);
+    if (normalizedAgentMlsId) where.listingAgentMlsId = normalizedAgentMlsId;
     if (listingOfficeMlsId) where.listingOfficeMlsId = listingOfficeMlsId;
 
     if (bounds) {

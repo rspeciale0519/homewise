@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { isHomewiseOffice } from "@/lib/mls-featured";
 import { proxyPhotoUrl } from "@/lib/mls-image";
 import { limitMlsPhotoSources } from "@/lib/mls-media-budget";
@@ -112,7 +113,7 @@ export function mapResoToListingData(reso: ResoProperty): ListingSyncData {
     middleSchool: reso.MiddleOrJuniorSchool ?? null,
     highSchool: reso.HighSchool ?? null,
     listingAgentName: reso.ListAgentFullName ?? null,
-    listingAgentMlsId: reso.ListAgentMlsId ?? null,
+    listingAgentMlsId: normalizeMlsAgentId(reso.ListAgentMlsId),
     listingAgentPhone: reso.ListAgentDirectPhone ?? null,
     listingAgentEmail: reso.ListAgentEmail ?? null,
     listingOfficeName: reso.ListOfficeName ?? null,

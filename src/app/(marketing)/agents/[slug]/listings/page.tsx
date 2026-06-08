@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { createMetadata } from "@/lib/metadata";
 import { BackButton } from "@/components/ui/back-button";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { withIdx } from "@/lib/mls-visibility";
 import { LISTING_CARD_SELECT } from "@/lib/listing-selects";
 
@@ -50,7 +51,9 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
     select: { id: true, firstName: true, lastName: true, mlsAgentId: true, slug: true },
   });
 
-  if (!agent || !agent.mlsAgentId) {
+  const agentMlsId = normalizeMlsAgentId(agent?.mlsAgentId);
+
+  if (!agent || !agentMlsId) {
     notFound();
   }
 
@@ -62,7 +65,7 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
     statusFilter === "all" ? ["Active", "Pending", "Sold"] :
     ["Active"];
 
-  const where = withIdx({ listingAgentMlsId: agent.mlsAgentId, status: { in: statusValues } });
+  const where = withIdx({ listingAgentMlsId: agentMlsId, status: { in: statusValues } });
 
   const [listings, total, activeCt, pendingCt, soldCt] = await Promise.all([
     prisma.listing.findMany({
@@ -73,9 +76,9 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
       take: PER_PAGE,
     }),
     prisma.listing.count({ where }),
-    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agent.mlsAgentId, status: "Active" }) }),
-    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agent.mlsAgentId, status: "Pending" }) }),
-    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agent.mlsAgentId, status: "Sold" }) }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agentMlsId, status: "Active" }) }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agentMlsId, status: "Pending" }) }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agentMlsId, status: "Sold" }) }),
   ]);
 
   const fullName = `${agent.firstName} ${agent.lastName}`;
