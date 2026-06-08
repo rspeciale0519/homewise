@@ -48,12 +48,19 @@ Supabase and then ran `npx dotenv -e .env.local -- npm run db:push` successfully
 plain `npm run db:push` attempt failed before connecting because Prisma did not see
 `DIRECT_DATABASE_URL`; rerunning through dotenv succeeded and generated Prisma Client.
 
+## Production Env Update
+
+After explicit command approvals:
+- Added Vercel Production `ANALYTICS_BO_ENABLED=false`.
+- Added Vercel Production `MLS_PUBLIC_SEARCH_ENABLED=false`.
+- Removed Vercel Production `MLS_OFFICE_ID`.
+- Generated a 32-byte random value and added it as Vercel Production `MLS_IMAGE_SIGNING_SECRET`
+  without printing the secret.
+
 ## Remaining Blockers
 
-- Vercel Production has legacy `MLS_GRID_CLIENT_ID`/`MLS_GRID_CLIENT_SECRET` and `MLS_OFFICE_ID`,
-  but is missing required `MLS_GRID_TOKEN`, `MLS_GRID_ORIGINATING_SYSTEM_NAME`,
-  `MLS_IMAGE_SIGNING_SECRET`, `ANALYTICS_BO_ENABLED=false`, and
-  `MLS_PUBLIC_SEARCH_ENABLED=false`. `MLS_OFFICE_ID` must be unset for full site-wide IDX launch.
+- Vercel Production still has legacy `MLS_GRID_CLIENT_ID`/`MLS_GRID_CLIENT_SECRET`, but is missing
+  required static-token vars `MLS_GRID_TOKEN` and exact `MLS_GRID_ORIGINATING_SYSTEM_NAME`.
 - Live MLS token, exact `OriginatingSystemName`, and sample data are required before safe dry-run,
   full backfill, count verification, E2E smoke, deploy monitoring, and freshness checks can be
   marked complete.

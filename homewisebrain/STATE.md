@@ -26,11 +26,11 @@ email image URLs. Latest pushed commits: `1decbfc` (Phase 10 safety checks) and 
 
 Remaining true blockers are production/live-state, not ordinary code: Phase 9 pgvector
 SQL + `db:push` completed successfully against shared/prod Supabase on 2026-06-08 after
-explicit command approval. Vercel Production currently has legacy MLS Grid client id/secret
-and `MLS_OFFICE_ID`, but is missing required `MLS_GRID_TOKEN`,
-`MLS_GRID_ORIGINATING_SYSTEM_NAME`, `MLS_IMAGE_SIGNING_SECRET`, `ANALYTICS_BO_ENABLED=false`, and
-`MLS_PUBLIC_SEARCH_ENABLED=false`; live token/sample data are needed for safe dry-run,
-full backfill, counts, E2E smoke, and freshness verification.
+explicit command approval. Vercel Production has `MLS_OFFICE_ID` removed and now includes
+`ANALYTICS_BO_ENABLED=false`, `MLS_PUBLIC_SEARCH_ENABLED=false`, and a generated
+`MLS_IMAGE_SIGNING_SECRET`; it still has legacy MLS Grid client id/secret and is missing
+required `MLS_GRID_TOKEN` plus exact `MLS_GRID_ORIGINATING_SYSTEM_NAME`. Live token/sample
+data are needed for safe dry-run, full backfill, counts, E2E smoke, and freshness verification.
 
 ## Open threads
 - **MLS go-live:** branch `feature/mls-go-live` is clean/pushed at `5fa7fc3` before the
