@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -25,17 +26,21 @@ export async function GET(request: NextRequest) {
   const city = input.data.city ?? "Orlando";
 
   try {
+    if (!analyticsBoEnabled()) {
+      return NextResponse.json(analyticsUnavailable("market_insights"), { status: 503 });
+    }
+
     const [activeListings, soldListings, avgPrice, medianDom] = await Promise.all([
-      prisma.listing.count({ where: { city: { equals: city, mode: "insensitive" }, status: "Active" } }),
+      prisma.listing.count({ where: withBo({ city: { equals: city, mode: "insensitive" }, status: "Active" }) }),
       prisma.listing.count({
-        where: { city: { equals: city, mode: "insensitive" }, status: "Sold", closeDate: { gte: new Date(Date.now() - 90 * 86400000) } },
+        where: withBo({ city: { equals: city, mode: "insensitive" }, status: "Sold", closeDate: { gte: new Date(Date.now() - 90 * 86400000) } }),
       }),
       prisma.listing.aggregate({
-        where: { city: { equals: city, mode: "insensitive" }, status: "Active" },
+        where: withBo({ city: { equals: city, mode: "insensitive" }, status: "Active" }),
         _avg: { price: true },
       }),
       prisma.listing.aggregate({
-        where: { city: { equals: city, mode: "insensitive" }, status: "Active" },
+        where: withBo({ city: { equals: city, mode: "insensitive" }, status: "Active" }),
         _avg: { daysOnMarket: true },
       }),
     ]);

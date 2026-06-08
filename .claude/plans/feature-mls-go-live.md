@@ -298,10 +298,10 @@ Stellar Articles 19.22/19.23/19.09 + MLS GRID source/disclaimer.
 
 ## Phase 8 — Sold-analytics BO-gating (fixes BLOCKING Gap #2)
 
-- [ ] **Step 1:** `src/lib/analytics-flags.ts` → `analyticsBoEnabled()` reads `ANALYTICS_BO_ENABLED === "true"`. Unit test both states.
-- [ ] **Step 2:** Gate every sold-comp/analytics consumer so that when BO is **off** it returns a clear "market analytics unavailable" state instead of computing over IDX data: `src/app/api/ai/cma/route.ts`, `src/app/api/ai/home-valuation/route.ts`, `src/app/api/ai/market-insights/route.ts`, `src/app/api/ai/meeting-prep/route.ts`, `src/inngest/functions/market-stats-aggregation.ts`, and the public `src/app/(marketing)/market/[city]/page.tsx` + `home-evaluation/page.tsx`.
-- [ ] **Step 3:** When BO is later licensed, these route their reads to `{ mlgCanUse: { has: "BO" } }` (a `withBo()` sibling helper) and public pages must keep BO-derived sold output **behind login** (VOW/BO rule). Document this in each gated file.
-- [ ] **Step 4:** type-check, lint, commit: `feat(mls): gate sold-data analytics behind Back Office license flag`.
+- [x] **Step 1:** `src/lib/analytics-flags.ts` → `analyticsBoEnabled()` reads `ANALYTICS_BO_ENABLED === "true"`. Unit test both states.
+- [x] **Step 2:** Gate every sold-comp/analytics consumer so that when BO is **off** it returns a clear "market analytics unavailable" state instead of computing over IDX data: `src/app/api/ai/cma/route.ts`, `src/app/api/ai/home-valuation/route.ts`, `src/app/api/ai/market-insights/route.ts`, `src/app/api/ai/meeting-prep/route.ts`, `src/inngest/functions/market-stats-aggregation.ts`, and the public `src/app/(marketing)/market/[city]/page.tsx` + `home-evaluation/page.tsx`.
+- [x] **Step 3:** When BO is later licensed, these route their reads to `{ mlgCanUse: { has: "BO" } }` (a `withBo()` sibling helper) and public pages must keep BO-derived sold output **behind login** (VOW/BO rule). Document this in each gated file.
+- [x] **Step 4:** type-check, lint, commit: `feat(mls): gate sold-data analytics behind Back Office license flag`.
 
 ---
 

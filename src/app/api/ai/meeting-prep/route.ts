@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -26,6 +27,10 @@ export async function POST(request: NextRequest) {
     }
     const body = input.data;
 
+    if (!analyticsBoEnabled()) {
+      return NextResponse.json(analyticsUnavailable("meeting_prep"), { status: 503 });
+    }
+
     const contact = await prisma.contact.findFirst({
       where: auth.isAdmin
         ? { id: body.contactId }
@@ -40,8 +45,8 @@ export async function POST(request: NextRequest) {
 
     let propertyInfo = "";
     if (body.propertyId) {
-      const listing = await prisma.listing.findUnique({
-        where: { id: body.propertyId },
+      const listing = await prisma.listing.findFirst({
+        where: withBo({ id: body.propertyId }),
         select: {
           address: true, city: true, price: true, beds: true, baths: true,
           sqft: true, yearBuilt: true, propertyType: true, daysOnMarket: true,
@@ -58,7 +63,7 @@ Walk Score: ${listing.walkScore ?? "N/A"} | School District: ${listing.schoolDis
 
     // Get comparable listings for talking points
     const comps = body.propertyId ? await prisma.listing.findMany({
-      where: { status: { in: ["Active", "Sold"] }, city: { equals: contact.activities[0]?.description?.split(",")[1]?.trim() ?? "" } },
+      where: withBo({ status: { in: ["Active", "Sold"] }, city: { equals: contact.activities[0]?.description?.split(",")[1]?.trim() ?? "" } }),
       select: { address: true, price: true, beds: true, baths: true, sqft: true, status: true },
       take: 5,
     }) : [];

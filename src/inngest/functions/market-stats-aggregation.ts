@@ -1,5 +1,6 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
+import { analyticsBoEnabled, withBo } from "@/lib/analytics-flags";
 
 const TRACKED_CITIES = [
   "Orlando", "Winter Park", "Oviedo", "Sanford", "Kissimmee",
@@ -11,6 +12,10 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
   { id: "daily-market-stats", concurrency: { limit: 1 } },
   { cron: "0 4 * * *" }, // Daily at 4 AM
   async ({ step }) => {
+    if (!analyticsBoEnabled()) {
+      return { skipped: "back-office-analytics-disabled" };
+    }
+
     const now = new Date();
     const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     let upserted = 0;
@@ -19,25 +24,25 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
       await step.run(`stats-${city}`, async () => {
         const [activeStats, soldStats, newListings] = await Promise.all([
           prisma.listing.aggregate({
-            where: { city: { equals: city, mode: "insensitive" }, status: "Active" },
+            where: withBo({ city: { equals: city, mode: "insensitive" }, status: "Active" }),
             _count: true,
             _avg: { price: true, daysOnMarket: true, sqft: true },
           }),
           prisma.listing.aggregate({
-            where: {
+            where: withBo({
               city: { equals: city, mode: "insensitive" },
               status: "Sold",
               closeDate: { gte: new Date(now.getFullYear(), now.getMonth(), 1) },
-            },
+            }),
             _count: true,
             _avg: { price: true, closePrice: true },
           }),
           prisma.listing.count({
-            where: {
+            where: withBo({
               city: { equals: city, mode: "insensitive" },
               status: "Active",
               createdAt: { gte: new Date(now.getTime() - 30 * 86400000) },
-            },
+            }),
           }),
         ]);
 
@@ -53,7 +58,7 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
 
         // Compute median price
         const prices = await prisma.listing.findMany({
-          where: { city: { equals: city, mode: "insensitive" }, status: "Active" },
+          where: withBo({ city: { equals: city, mode: "insensitive" }, status: "Active" }),
           select: { price: true },
           orderBy: { price: "asc" },
         });

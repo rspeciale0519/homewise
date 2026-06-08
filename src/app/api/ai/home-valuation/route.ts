@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -47,14 +48,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!analyticsBoEnabled()) {
+      return NextResponse.json(analyticsUnavailable("home_valuation"), { status: 503 });
+    }
+
     // Pull comparable sold listings
     const comps = await prisma.listing.findMany({
-      where: {
+      where: withBo({
         status: "Sold",
         zip: evaluation.zip,
         ...(evaluation.bedrooms ? { beds: { gte: evaluation.bedrooms - 1, lte: evaluation.bedrooms + 1 } } : {}),
         ...(evaluation.sqft ? { sqft: { gte: evaluation.sqft - 500, lte: evaluation.sqft + 500 } } : {}),
-      },
+      }),
       orderBy: { closeDate: "desc" },
       take: 8,
       select: {

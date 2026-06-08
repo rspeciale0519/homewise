@@ -4,6 +4,7 @@ import { Container } from "@/components/ui/container";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { HomeEvalForm } from "@/components/forms/home-eval-form";
 import { createMetadata } from "@/lib/metadata";
+import { analyticsBoEnabled } from "@/lib/analytics-flags";
 
 export const metadata: Metadata = createMetadata({
   title: "Free Home Evaluation",
@@ -38,7 +39,36 @@ const INCLUDES = [
   "Expert recommendations for maximizing your sale price",
 ];
 
+const GATED_WHAT_TO_EXPECT = [
+  {
+    step: "01",
+    title: "Tell Us About Your Home",
+    body: "Fill out a brief form with your property details, address, and selling timeline.",
+  },
+  {
+    step: "02",
+    title: "An Agent Reviews Your Request",
+    body: "A local Home Wise agent follows up with the next practical steps for your property.",
+  },
+  {
+    step: "03",
+    title: "Prepare for a Full CMA",
+    body: "Once Back Office analytics are enabled, sold-comp research can support a complete CMA.",
+  },
+];
+
+const GATED_INCLUDES = [
+  "A local Home Wise agent reviews your property request",
+  "Private follow-up for pricing questions and selling timeline",
+  "Guidance on what information is needed for a full CMA",
+  "A clear next step once Back Office sold-data analytics are enabled",
+];
+
 export default function HomeEvaluationPage() {
+  const boAnalyticsEnabled = analyticsBoEnabled();
+  const steps = boAnalyticsEnabled ? WHAT_TO_EXPECT : GATED_WHAT_TO_EXPECT;
+  const includes = boAnalyticsEnabled ? INCLUDES : GATED_INCLUDES;
+
   return (
     <>
       {/* Hero */}
@@ -74,8 +104,9 @@ export default function HomeEvaluationPage() {
             What Is Your Home Worth?
           </h1>
           <p className="text-slate-300 text-lg max-w-2xl leading-relaxed mb-2">
-            Get a free, data-driven Comparative Market Analysis from a local expert — with no obligation to list.
-            Know your number before you decide.
+            {boAnalyticsEnabled
+              ? "Get a free, data-driven Comparative Market Analysis from a local expert - with no obligation to list. Know your number before you decide."
+              : "Request a local pricing consultation from a Home Wise agent. Automated sold-data analytics are paused until the Back Office MLS feed is enabled."}
           </p>
         </Container>
       </div>
@@ -87,7 +118,17 @@ export default function HomeEvaluationPage() {
             {/* Left: Form placeholder */}
             <div>
               <p className="text-xs font-semibold tracking-[0.2em] uppercase text-crimson-600 mb-3">Get Started</p>
-              <h2 className="font-serif text-display-md font-semibold text-navy-700 mb-6">Request Your Free CMA</h2>
+              <h2 className="font-serif text-display-md font-semibold text-navy-700 mb-6">
+                {boAnalyticsEnabled ? "Request Your Free CMA" : "Request a Pricing Consultation"}
+              </h2>
+
+              {!boAnalyticsEnabled && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+                  Market analytics are unavailable until the Back Office MLS
+                  feed is licensed and enabled. An agent can still follow up
+                  with next steps and a private market review.
+                </div>
+              )}
 
               <HomeEvalForm />
             </div>
@@ -97,7 +138,7 @@ export default function HomeEvaluationPage() {
               <div>
                 <p className="text-xs font-semibold tracking-[0.2em] uppercase text-navy-500 mb-3">How It Works</p>
                 <div className="space-y-5">
-                  {WHAT_TO_EXPECT.map((item) => (
+                  {steps.map((item) => (
                     <div key={item.step} className="flex gap-4">
                       <div className="shrink-0 font-serif text-4xl font-bold text-navy-100 leading-none w-12 text-right">
                         {item.step}
@@ -112,9 +153,11 @@ export default function HomeEvaluationPage() {
               </div>
 
               <div className="bg-navy-700 rounded-2xl p-6 text-white">
-                <h3 className="font-serif text-lg font-semibold mb-4">Your CMA Includes</h3>
+                <h3 className="font-serif text-lg font-semibold mb-4">
+                  {boAnalyticsEnabled ? "Your CMA Includes" : "Your Request Includes"}
+                </h3>
                 <ul className="space-y-2.5">
-                  {INCLUDES.map((item) => (
+                  {includes.map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-sm text-slate-300">
                       <svg className="h-4 w-4 text-crimson-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
