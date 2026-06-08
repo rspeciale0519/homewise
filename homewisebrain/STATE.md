@@ -3,12 +3,11 @@ Updated: 2026-06-08
 
 ## Current focus
 **MLS go-live implementation on `feature/mls-go-live`.** The audit-corrected v2 plan at
-`.claude/plans/feature-mls-go-live.md` is the source of truth. Code phases 1-10's
-unblocked local work are implemented and pushed through `5fa7fc3`; verification passed
-for type-check, lint, full Vitest, and production build. A follow-up launch gate has now
-been verified locally and is ready to commit/push: public property reads use Stellar only
-when `PROPERTY_PROVIDER=stellar` and `MLS_PUBLIC_SEARCH_ENABLED=true`, allowing sync/backfill
-to run while public MLS search remains off until counts/E2E pass.
+`.claude/plans/feature-mls-go-live.md` is the source of truth. All unblocked local code,
+DB, and Vercel env setup work is implemented and pushed through `449274c`; verification
+passed for type-check, lint, full Vitest, and production build. Public property reads use
+Stellar only when `PROPERTY_PROVIDER=stellar` and `MLS_PUBLIC_SEARCH_ENABLED=true`, allowing
+sync/backfill to run while public MLS search remains off until counts/E2E pass.
 Confirmed decision: skip the Back Office feed for launch → CMA/market-stats ship gated
 OFF (`ANALYTICS_BO_ENABLED=false`); everything else launches after live prod checks.
 
@@ -20,9 +19,11 @@ persistence, `MlgCanView=false` delete/photo purge, open-house sync, universal `
 public read filtering, attribution/disclaimers, Back Office analytics gating, pgvector
 code prep, polygon bbox prefilter, embedding backfill, media budget guards, typed Inngest
 events, agent MLS ID normalization, backfill match warnings, and alert suppression/absolute
-email image URLs. Latest pushed commits: `1decbfc` (Phase 10 safety checks) and `5fa7fc3`
-(env blocker note). Full local verification passed: `npm run type-check`, `npm run lint`,
-`npx vitest run` (74 files / 501 tests), and `npm run build`.
+email image URLs. Later pushed commits added the public launch gate, completed shared/prod
+pgvector SQL + `db:push`, updated Vercel production env gating/signing values, and recorded
+preview deploy status. Full local verification passed after the latest code change:
+`npm run type-check`, `npm run lint`, `npx vitest run` (75 files / 503 tests), and
+`npm run build`.
 
 Remaining true blockers are production/live-state, not ordinary code: Phase 9 pgvector
 SQL + `db:push` completed successfully against shared/prod Supabase on 2026-06-08 after
@@ -36,9 +37,9 @@ Latest Vercel preview for `feature/mls-go-live` is Ready at
 was unavailable in this session, so browser smoke remains unverified.
 
 ## Open threads
-- **MLS go-live:** branch `feature/mls-go-live` is clean/pushed at `5fa7fc3` before the
-  uncommitted launch-flag follow-up. Finish verifying/committing that flag, then proceed
-  only with explicit approval/values for prod DB/env/backfill/live verification.
+- **MLS go-live:** branch `feature/mls-go-live` is clean/pushed. Proceed only after receiving
+  the live `MLS_GRID_TOKEN`, exact `MLS_GRID_ORIGINATING_SYSTEM_NAME`, sample/dry-run data or
+  approval path, and chrome-devtools/browser verification access.
 - **Largest real gap:** live Stellar MLS credentials/sample data and prod Vercel env are
   not yet configured. Research only in `docs/temp/`. See [[knowledge/roadmap]].
 - **Training Hub v2/v3** extracted as standalone plans (`269a6df`), not started. v1 shipped
