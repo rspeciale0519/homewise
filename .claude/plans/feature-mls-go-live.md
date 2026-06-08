@@ -286,13 +286,13 @@ Apply `withIdx()` / `IDX_WHERE` to **every** path that reads `prisma.listing` fo
 
 Stellar Articles 19.22/19.23/19.09 + MLS GRID source/disclaimer.
 
-- [ ] **Step 1:** `src/components/properties/listing-attribution.tsx` — renders **listing brokerage name + listing number (`listingId`) + status** adjacent to each listing. Add to every card/grid/map-list: the property card on `/properties`, `ListingCardSmall` (both widgets), detail page, agent listings.
-- [ ] **Step 2:** `src/components/properties/mls-grid-source-line.tsx` — "as distributed by MLS GRID" + MLS GRID logo, rendered on the first page listings appear (search results + homepage featured); plus the always-on **"Some IDX listings have been excluded from this website."** disclosure (the IDX filter is an objective limitation) and a **sold-listing disclaimer** wherever solds render.
-- [ ] **Step 3:** Keep existing `IdxDisclaimer` on `/properties`, `/properties/[id]`, `/agents/[slug]/listings`; add per-listing "Courtesy of {listingOfficeName} — {listingAgentName}" on the detail sidebar.
-- [ ] **Step 4:** Chatbot output that names a listing must include brokerage attribution (pass `listingOfficeName` into the answer template in both chatbot libs).
-- [ ] **Step 5:** type-check, lint, commit.
+- [x] **Step 1:** `src/components/properties/listing-attribution.tsx` — renders **listing brokerage name + listing number (`listingId`) + status** adjacent to each listing. Add to every card/grid/map-list: the property card on `/properties`, `ListingCardSmall` (both widgets), detail page, agent listings.
+- [x] **Step 2:** `src/components/properties/mls-grid-source-line.tsx` — "as distributed by MLS GRID" + MLS GRID logo, rendered on the first page listings appear (search results + homepage featured); plus the always-on **"Some IDX listings have been excluded from this website."** disclosure (the IDX filter is an objective limitation) and a **sold-listing disclaimer** wherever solds render.
+- [x] **Step 3:** Keep existing `IdxDisclaimer` on `/properties`, `/properties/[id]`, `/agents/[slug]/listings`; add per-listing "Courtesy of {listingOfficeName} — {listingAgentName}" on the detail sidebar.
+- [x] **Step 4:** Chatbot output that names a listing must include brokerage attribution (pass `listingOfficeName` into the answer template in both chatbot libs).
+- [x] **Step 5:** type-check, lint, commit.
 
-> ⚠️ **Verify-with-sample (Gap, req 52):** confirm whether `ListAgentDirectPhone`/`ListAgentEmail` are delivered/public in the IDX feed before displaying them (Article 19.19). If confidential, suppress.
+> ⚠️ **Verify-with-sample (Gap, req 52):** confirm whether `ListAgentDirectPhone`/`ListAgentEmail` are delivered/public in the IDX feed before displaying them (Article 19.19). If confidential, suppress. Direct listing-agent contact fields are currently suppressed until this sample verification is complete.
 
 ---
 

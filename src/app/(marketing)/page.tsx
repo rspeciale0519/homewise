@@ -33,6 +33,10 @@ export default async function HomePage() {
       sqft: true,
       status: true,
       daysOnMarket: true,
+      mlsId: true,
+      listingId: true,
+      listingOfficeName: true,
+      listingAgentName: true,
     },
   });
 

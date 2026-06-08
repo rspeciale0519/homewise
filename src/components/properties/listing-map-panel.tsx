@@ -222,10 +222,11 @@ export function ListingMapPanel({
         .setLngLat(coords)
         .setHTML(
           `<div style="font-family:sans-serif">
-            <p style="font-weight:700;font-size:16px;margin:0 0 4px">${props.price as string}</p>
-            <p style="font-size:13px;margin:0;color:#334155">${props.address as string}</p>
-            <p style="font-size:12px;margin:2px 0 0;color:#64748b">${props.beds as string} bd | ${props.baths as string} ba | ${props.sqft as string} sqft</p>
-            <a href="/properties/${props.id as string}" style="font-size:12px;color:#1e3a5f;font-weight:600;display:inline-block;margin-top:6px">View Details →</a>
+            <p style="font-weight:700;font-size:16px;margin:0 0 4px">${escapeHtml(String(props.price ?? ""))}</p>
+            <p style="font-size:13px;margin:0;color:#334155">${escapeHtml(String(props.address ?? ""))}</p>
+            <p style="font-size:12px;margin:2px 0 0;color:#64748b">${escapeHtml(String(props.beds ?? ""))} bd | ${escapeHtml(String(props.baths ?? ""))} ba | ${escapeHtml(String(props.sqft ?? ""))} sqft</p>
+            ${popupAttribution(props)}
+            <a href="/properties/${encodeURIComponent(String(props.id ?? ""))}" style="font-size:12px;color:#1e3a5f;font-weight:600;display:inline-block;margin-top:6px">View Details</a>
           </div>`
         )
         .addTo(map);
@@ -347,7 +348,33 @@ function toGeoJSON(properties: Property[]): GeoJSON.FeatureCollection {
           beds: p.beds,
           baths: p.baths,
           sqft: p.sqft.toLocaleString(),
+          listingOfficeName: p.listingOfficeName ?? "",
+          listingNumber: p.listingId ?? p.mlsId ?? "",
+          status: p.status,
         },
       })),
   };
+}
+
+function popupAttribution(props: mapboxgl.MapboxGeoJSONFeature["properties"]): string {
+  if (!props) return "";
+  const office = String(props.listingOfficeName ?? "");
+  const listingNumber = String(props.listingNumber ?? "");
+  const status = String(props.status ?? "");
+  if (!office && !listingNumber) return "";
+
+  const details = [listingNumber ? `Listing #${listingNumber}` : "", status]
+    .filter(Boolean)
+    .join(" | ");
+
+  return `<p style="font-size:11px;margin:5px 0 0;color:#64748b">${office ? `Courtesy of ${escapeHtml(office)}` : ""}${details ? `<br>${escapeHtml(details)}` : ""}</p>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }

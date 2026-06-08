@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/properties/favorite-button";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
 import type { Property } from "@/providers/property-provider";
 import { formatPrice } from "@/lib/format";
 
@@ -100,6 +101,16 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
         <p className="text-xs text-slate-500 mb-3">
           {property.city}, {property.state} {property.zip}
         </p>
+
+        <ListingAttribution
+          listingOfficeName={property.listingOfficeName}
+          listingAgentName={property.listingAgentName}
+          listingId={property.listingId}
+          mlsId={property.mlsId}
+          status={property.status}
+          className="mb-3"
+          compact
+        />
 
         {/* Stats bar */}
         <div className="flex items-center gap-3 pt-3 border-t border-slate-100">

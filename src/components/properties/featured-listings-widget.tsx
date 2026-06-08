@@ -4,6 +4,8 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { withIdx } from "@/lib/mls-visibility";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
+import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
 
 interface FeaturedListingsWidgetProps {
   agentMlsId?: string;
@@ -68,6 +70,15 @@ export async function FeaturedListingsWidget({
               </p>
               <p className="text-sm text-slate-600 truncate">{listing.address}</p>
               <p className="text-xs text-slate-400">{listing.city}, {listing.state} {listing.zip}</p>
+              <ListingAttribution
+                listingOfficeName={listing.listingOfficeName}
+                listingAgentName={listing.listingAgentName}
+                listingId={listing.listingId}
+                mlsId={listing.mlsId}
+                status={listing.status}
+                className="mt-2"
+                compact
+              />
               <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
                 <span>{listing.beds} bd</span>
                 <span>{listing.baths} ba</span>
@@ -77,6 +88,7 @@ export async function FeaturedListingsWidget({
           </Link>
         ))}
       </div>
+      <MlsGridSourceLine className="mt-4 bg-slate-50/80" />
     </div>
   );
 }

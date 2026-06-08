@@ -9,6 +9,8 @@ import { formatPrice } from "@/lib/format";
 import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { cn } from "@/lib/utils";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
+import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
 
 interface FeaturedListing {
   id: string;
@@ -23,6 +25,10 @@ interface FeaturedListing {
   sqft: number;
   status: string;
   daysOnMarket: number;
+  mlsId?: string | null;
+  listingId?: string | null;
+  listingOfficeName?: string | null;
+  listingAgentName?: string | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -72,6 +78,16 @@ function ListingCard({ listing }: { listing: FeaturedListing }) {
         <p className="text-xs text-slate-400 mb-4">
           {listing.city}, {listing.state} {listing.zip}
         </p>
+
+        <ListingAttribution
+          listingOfficeName={listing.listingOfficeName}
+          listingAgentName={listing.listingAgentName}
+          listingId={listing.listingId}
+          mlsId={listing.mlsId}
+          status={listing.status}
+          className="mb-4"
+          compact
+        />
 
         {/* Specs row */}
         <div className="flex items-center gap-4 pt-4 border-t border-slate-100 mt-auto">
@@ -181,6 +197,8 @@ export function FeaturedListings({ listings }: FeaturedListingsProps) {
             ))}
           </div>
         </div>
+
+        <MlsGridSourceLine className="mt-6" />
 
         {/* Dots */}
         <div className="flex items-center justify-center gap-2 mt-8">

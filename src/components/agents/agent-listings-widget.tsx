@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { withIdx } from "@/lib/mls-visibility";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
 import type { Listing } from "@prisma/client";
 
 interface AgentListingsWidgetProps {
@@ -124,6 +125,15 @@ function ListingCardSmall({ listing }: { listing: Listing }) {
         )}
         <p className="text-sm text-slate-600 truncate">{listing.address}</p>
         <p className="text-xs text-slate-400">{listing.city}, {listing.state} {listing.zip}</p>
+        <ListingAttribution
+          listingOfficeName={listing.listingOfficeName}
+          listingAgentName={listing.listingAgentName}
+          listingId={listing.listingId}
+          mlsId={listing.mlsId}
+          status={listing.status}
+          className="mt-2"
+          compact
+        />
         <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
           <span>{listing.beds} bd</span>
           <span>{listing.baths} ba</span>

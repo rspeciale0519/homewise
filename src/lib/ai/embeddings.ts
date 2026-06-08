@@ -82,7 +82,19 @@ export async function semanticSearch(
   query: string,
   limit = 10,
   filters?: { city?: string; minPrice?: number; maxPrice?: number; beds?: number },
-): Promise<{ id: string; mlsId: string; address: string; city: string; price: number; beds: number; baths: number; sqft: number; similarity: number }[]> {
+): Promise<{
+  id: string;
+  mlsId: string;
+  listingId: string | null;
+  address: string;
+  city: string;
+  price: number;
+  beds: number;
+  baths: number;
+  sqft: number;
+  listingOfficeName: string | null;
+  similarity: number;
+}[]> {
   const queryEmbedding = await generateEmbedding(query);
 
   const where: Prisma.ListingWhereInput = withIdx({
@@ -99,12 +111,14 @@ export async function semanticSearch(
     select: {
       id: true,
       mlsId: true,
+      listingId: true,
       address: true,
       city: true,
       price: true,
       beds: true,
       baths: true,
       sqft: true,
+      listingOfficeName: true,
       embedding: true,
     },
     take: 500,
@@ -114,12 +128,14 @@ export async function semanticSearch(
     .map((listing) => ({
       id: listing.id,
       mlsId: listing.mlsId,
+      listingId: listing.listingId,
       address: listing.address,
       city: listing.city,
       price: listing.price,
       beds: listing.beds,
       baths: listing.baths,
       sqft: listing.sqft,
+      listingOfficeName: listing.listingOfficeName,
       similarity: cosineSimilarity(queryEmbedding, listing.embedding),
     }))
     .sort((a, b) => b.similarity - a.similarity)

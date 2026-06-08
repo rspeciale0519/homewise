@@ -1,10 +1,13 @@
 import Link from "next/link";
 import type { Property } from "@/providers/property-provider";
 import { PHONE } from "@/lib/constants";
+import { ListingAttribution } from "./listing-attribution";
 
 interface ListingDetailSidebarProps {
   property: Property;
 }
+
+const SHOW_LISTING_AGENT_DIRECT_CONTACT = false;
 
 export function ListingDetailSidebar({ property }: ListingDetailSidebarProps) {
   return (
@@ -17,7 +20,16 @@ export function ListingDetailSidebar({ property }: ListingDetailSidebarProps) {
           {property.listingOfficeName && (
             <p className="text-xs text-slate-500">{property.listingOfficeName}</p>
           )}
-          {property.listingAgentPhone && (
+          <ListingAttribution
+            listingOfficeName={property.listingOfficeName}
+            listingAgentName={property.listingAgentName}
+            listingId={property.listingId}
+            mlsId={property.mlsId}
+            status={property.status}
+            className="mt-3 border-t border-slate-100 pt-3"
+            compact
+          />
+          {SHOW_LISTING_AGENT_DIRECT_CONTACT && property.listingAgentPhone && (
             <a
               href={`tel:${property.listingAgentPhone.replace(/[^0-9+]/g, "")}`}
               className="text-xs text-navy-600 hover:text-navy-800 mt-1 inline-block"

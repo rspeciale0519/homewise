@@ -6,6 +6,8 @@ import { Container } from "@/components/ui/container";
 import { Pagination } from "@/components/ui/pagination";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
+import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { createMetadata } from "@/lib/metadata";
@@ -167,6 +169,7 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
             </div>
           ) : (
             <>
+              <MlsGridSourceLine className="mb-4" showSoldDisclaimer={statusFilter === "sold"} />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {listings.map((listing) => (
                   <Link
@@ -200,6 +203,15 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
                       <p className="text-xs text-slate-400">
                         {listing.city}, {listing.state} {listing.zip}
                       </p>
+                      <ListingAttribution
+                        listingOfficeName={listing.listingOfficeName}
+                        listingAgentName={listing.listingAgentName}
+                        listingId={listing.listingId}
+                        mlsId={listing.mlsId}
+                        status={listing.status}
+                        className="mt-2"
+                        compact
+                      />
                       <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
                         <span>{listing.beds} bd</span>
                         <span>{listing.baths} ba</span>

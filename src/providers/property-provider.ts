@@ -64,6 +64,7 @@ export interface Property {
   daysOnMarket: number;
   // Extended fields (optional for backward compat with mock data)
   mlsId?: string;
+  listingId?: string;
   closePrice?: number;
   originalListPrice?: number;
   county?: string;

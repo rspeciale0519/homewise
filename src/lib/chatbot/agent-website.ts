@@ -63,6 +63,7 @@ ${config.agentBio ? `About the agent: ${config.agentBio}` : ""}
 ${config.clientType ? `Primary client type: ${config.clientType}` : ""}
 
 Your tone should be ${tone}. Help visitors learn about ${config.agentName}'s listings, qualify leads, and schedule appointments.
+When naming or recommending a listing, include its brokerage attribution from the tool result.
 
 When a visitor shows buying intent (asks about specific properties, mentions budget, timeline), use the qualify_lead tool.
 When they want to get in touch, use the schedule_contact tool.
@@ -92,12 +93,23 @@ Always represent ${config.agentName} professionally and encourage visitors to co
         listingAgentMlsId: agent.mlsAgentId,
         status: (input.status as string) ?? "Active",
       }),
-      select: { mlsId: true, address: true, city: true, price: true, beds: true, baths: true, sqft: true, status: true, listingOfficeName: true },
+      select: {
+        mlsId: true,
+        listingId: true,
+        address: true,
+        city: true,
+        price: true,
+        beds: true,
+        baths: true,
+        sqft: true,
+        status: true,
+        listingOfficeName: true,
+      },
       orderBy: { price: "desc" },
       take: 10,
     });
 
-    return { listings };
+    return { listings: listings.map(withListingAttribution) };
   });
 
   engine.registerTool("qualify_lead", async (input) => {
@@ -131,4 +143,19 @@ Always represent ${config.agentName} professionally and encourage visitors to co
   });
 
   return engine;
+}
+
+function withListingAttribution<T extends {
+  mlsId: string;
+  listingId?: string | null;
+  listingOfficeName?: string | null;
+  status?: string | null;
+}>(listing: T): T & { attribution: string } {
+  const listingNumber = listing.listingId ?? listing.mlsId;
+  const office = listing.listingOfficeName ?? "the listing brokerage";
+  const status = listing.status ? ` | ${listing.status}` : "";
+  return {
+    ...listing,
+    attribution: `Courtesy of ${office}. Listing #${listingNumber}${status}.`,
+  };
 }

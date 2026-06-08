@@ -178,6 +178,7 @@ function mapListingToProperty(listing: NonNullable<ListingRow>): Property {
   return {
     id: listing.id,
     mlsId: listing.mlsId,
+    listingId: listing.listingId ?? undefined,
     price: listing.price,
     closePrice: listing.closePrice ?? undefined,
     originalListPrice: listing.originalListPrice ?? undefined,

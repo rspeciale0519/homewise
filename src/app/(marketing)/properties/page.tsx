@@ -11,6 +11,7 @@ import { propertyProvider } from "@/providers";
 import type { PropertyFilters } from "@/providers/property-provider";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
 import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
+import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
@@ -149,6 +150,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
           />
 
           <div className="mt-8">
+            <MlsGridSourceLine className="mb-4" showSoldDisclaimer />
             <PropertySearchShell properties={result.properties}>
               <ListingGrid properties={result.properties} />
               <Pagination
