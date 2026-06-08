@@ -41,14 +41,19 @@ Verification passed for this follow-up:
 - full `npx vitest run` (`75` files / `503` tests)
 - `npm run build`
 
+## Phase 9 Pgvector Update
+
+After explicit command approval, ran the prepared additive pgvector SQL against shared/prod
+Supabase and then ran `npx dotenv -e .env.local -- npm run db:push` successfully. The first
+plain `npm run db:push` attempt failed before connecting because Prisma did not see
+`DIRECT_DATABASE_URL`; rerunning through dotenv succeeded and generated Prisma Client.
+
 ## Remaining Blockers
 
-- Phase 9 pgvector SQL + `db:push` still needs explicit approval for this specific shared/prod
-  schema change.
 - Vercel Production has legacy `MLS_GRID_CLIENT_ID`/`MLS_GRID_CLIENT_SECRET` and `MLS_OFFICE_ID`,
   but is missing required `MLS_GRID_TOKEN`, `MLS_GRID_ORIGINATING_SYSTEM_NAME`,
-  `MLS_IMAGE_SIGNING_SECRET`, and `ANALYTICS_BO_ENABLED=false`. `MLS_OFFICE_ID` must be unset for
-  full site-wide IDX launch.
+  `MLS_IMAGE_SIGNING_SECRET`, `ANALYTICS_BO_ENABLED=false`, and
+  `MLS_PUBLIC_SEARCH_ENABLED=false`. `MLS_OFFICE_ID` must be unset for full site-wide IDX launch.
 - Live MLS token, exact `OriginatingSystemName`, and sample data are required before safe dry-run,
   full backfill, count verification, E2E smoke, deploy monitoring, and freshness checks can be
   marked complete.

@@ -308,12 +308,12 @@ Stellar Articles 19.22/19.23/19.09 + MLS GRID source/disclaimer.
 ## Phase 9 — Scale (fixes BLOCKING Gap #9)
 
 - [x] **Step 1 — polygon bbox prefilter:** in `stellar-mls-provider.ts` `filterByPolygon`, compute the polygon's bounding box, query the DB with `latitude/longitude between` + `withIdx()` (and current filters), then ray-cast only that reduced set. No more full-table scan.
-- [ ] **Step 2 — pgvector:** enable extension + index via raw SQL in a one-time setup step: `CREATE EXTENSION IF NOT EXISTS vector;`, change `Listing.embedding` to `Unsupported("vector(1536)")` in schema (or keep `Float[]` + a parallel `vector` column), `db:push`, then `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops);`. Rewrite `semanticSearch` to `ORDER BY embedding <=> $query LIMIT k` via `$queryRaw` with the IDX clause — **stop** `SELECT`ing `embedding` on list reads (`select`/`omit` it in `stellar-mls-provider` and widgets).
+- [x] **Step 2 — pgvector:** enable extension + index via raw SQL in a one-time setup step: `CREATE EXTENSION IF NOT EXISTS vector;`, change `Listing.embedding` to `Unsupported("vector(1536)")` in schema (or keep `Float[]` + a parallel `vector` column), `db:push`, then `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops);`. Rewrite `semanticSearch` to `ORDER BY embedding <=> $query LIMIT k` via `$queryRaw` with the IDX clause — **stop** `SELECT`ing `embedding` on list reads (`select`/`omit` it in `stellar-mls-provider` and widgets).
 - [x] **Step 3 — embedding backfill:** on `mls/listing.backfilled`, enqueue embeddings in bounded batches (respect provider rate/cost); incremental `mls/listing.synced` embeds single rows.
 - [x] **Step 4 — media budget:** in the proxy + sync, add a daily-records / 4GB-hr guard and concurrency cap so on-demand downloads + sync stay within `2 req/s, 7200/hr, 4GB/hr, 40k/24h`.
 - [x] **Step 5:** type-check, lint, vitest, commit.
 
-> Phase 9 pgvector code/schema/SQL are prepared in `prisma/mls-pgvector.sql`, but the shared/prod SQL execution and `db:push` are pending explicit approval for this specific production schema change.
+> Phase 9 pgvector code/schema/SQL are prepared in `prisma/mls-pgvector.sql`; the shared/prod SQL execution and `db:push` completed successfully on 2026-06-08 after explicit approval through the command runner.
 
 ---
 
