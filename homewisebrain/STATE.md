@@ -28,8 +28,9 @@ Remaining true blockers are production/live-state, not ordinary code: Phase 9 pg
 SQL + `db:push` still needs explicit approval for this specific shared/prod schema change;
 Vercel Production currently has legacy MLS Grid client id/secret and `MLS_OFFICE_ID`, but
 is missing required `MLS_GRID_TOKEN`, `MLS_GRID_ORIGINATING_SYSTEM_NAME`,
-`MLS_IMAGE_SIGNING_SECRET`, and `ANALYTICS_BO_ENABLED=false`; live token/sample data are
-needed for safe dry-run, full backfill, counts, E2E smoke, and freshness verification.
+`MLS_IMAGE_SIGNING_SECRET`, `ANALYTICS_BO_ENABLED=false`, and
+`MLS_PUBLIC_SEARCH_ENABLED=false`; live token/sample data are needed for safe dry-run,
+full backfill, counts, E2E smoke, and freshness verification.
 
 ## Open threads
 - **MLS go-live:** branch `feature/mls-go-live` is clean/pushed at `5fa7fc3` before the
