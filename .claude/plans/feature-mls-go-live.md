@@ -323,6 +323,7 @@ Stellar Articles 19.22/19.23/19.09 + MLS GRID source/disclaimer.
 - [ ] **Step 2 — prod env:** set all vars in Vercel Production (`MLS_OFFICE_ID` unset, `ANALYTICS_BO_ENABLED=false`); confirm Inngest prod app registered.
   - Read-only Vercel check (2026-06-08): Production currently has legacy `MLS_GRID_CLIENT_ID`/`MLS_GRID_CLIENT_SECRET` and `MLS_OFFICE_ID`; it is missing required `MLS_GRID_TOKEN`, `MLS_GRID_ORIGINATING_SYSTEM_NAME`, `MLS_IMAGE_SIGNING_SECRET`, and `ANALYTICS_BO_ENABLED=false`. Do not mark complete until `MLS_OFFICE_ID` is unset and the static-token vars are configured.
 - [ ] **Step 3 — safe dry-run (Gap #17):** run the sample/branch import first (Supabase branch or temporary `MLS_OFFICE_ID` scope); snapshot before the full backfill; keep public reads behind a launch flag until counts verify.
+  - Code gate added: public property provider only uses Stellar when `PROPERTY_PROVIDER=stellar` and `MLS_PUBLIC_SEARCH_ENABLED=true`; keep it `false` until sample/full backfill counts and E2E pass.
 - [x] **Step 4 — alert suppression (Gap #15):** suppress `daily-listing-alerts` + price-change alerts for the backfill window (don't notify on `createdAt≈now` whole-feed); make alert email image URLs absolute.
 - [ ] **Step 5 — full backfill:** trigger `POST /api/admin/sync` (route + `sync-dashboard.tsx` already exist); watch `SyncState` syncing→idle, `cursor` advancing.
 - [ ] **Step 6 — verify counts:** total>0, `mlgCanUse has IDX`>0, featured = HomeWise count, agent portfolios populated.

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { mlsPublicSearchEnabled } from "@/lib/mls-launch";
 
 const MLS_PROVIDER = "stellar";
 
@@ -7,6 +8,10 @@ type SyncStateMetadata = {
 };
 
 export async function areMlsBackfillAlertsSuppressed(): Promise<boolean> {
+  if (!mlsPublicSearchEnabled()) {
+    return true;
+  }
+
   if (process.env.MLS_BACKFILL_ALERTS_SUPPRESSED === "true") {
     return true;
   }
