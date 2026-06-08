@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { withIdx } from "@/lib/mls-visibility";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -25,17 +26,17 @@ export async function GET(request: NextRequest) {
   const { mlsId } = input.data;
 
   try {
-    const listing = await prisma.listing.findUnique({ where: { mlsId } });
+    const listing = await prisma.listing.findFirst({ where: withIdx({ mlsId }) });
     if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
 
     const comparables = await prisma.listing.findMany({
-      where: {
+      where: withIdx({
         city: listing.city,
         propertyType: listing.propertyType,
         status: "Active",
         id: { not: listing.id },
         beds: { gte: listing.beds - 1, lte: listing.beds + 1 },
-      },
+      }),
       select: { price: true, daysOnMarket: true, sqft: true },
       take: 10,
     });

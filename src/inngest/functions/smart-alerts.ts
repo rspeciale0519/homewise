@@ -1,7 +1,9 @@
 import { inngest } from "../client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
 import { semanticSearch } from "@/lib/ai/embeddings";
+import { withIdx } from "@/lib/mls-visibility";
 
 export const smartListingAlerts = inngest.createFunction(
   { id: "smart-listing-alerts", concurrency: { limit: 1 } },
@@ -25,16 +27,16 @@ export const smartListingAlerts = inngest.createFunction(
         const rigidity = search.rigidity;
 
         // Exact match listings
-        const where: Record<string, unknown> = {
+        const where: Prisma.ListingWhereInput = withIdx({
           status: "Active",
           createdAt: { gte: oneDayAgo },
-        };
+        });
 
-        if (filters.city) where.city = { equals: filters.city, mode: "insensitive" };
-        if (filters.minPrice) where.price = { gte: filters.minPrice };
-        if (filters.maxPrice) where.price = { ...((where.price as Record<string, unknown>) ?? {}), lte: filters.maxPrice };
-        if (filters.beds) where.beds = { gte: filters.beds };
-        if (filters.baths) where.baths = { gte: filters.baths };
+        if (filters.city) where.city = { equals: String(filters.city), mode: "insensitive" };
+        if (filters.minPrice) where.price = { gte: Number(filters.minPrice) };
+        if (filters.maxPrice) where.price = { ...((where.price as Prisma.FloatFilter) ?? {}), lte: Number(filters.maxPrice) };
+        if (filters.beds) where.beds = { gte: Number(filters.beds) };
+        if (filters.baths) where.baths = { gte: Number(filters.baths) };
 
         const exactMatches = await prisma.listing.findMany({
           where,
@@ -68,7 +70,7 @@ export const smartListingAlerts = inngest.createFunction(
 
             if (suggestionIds.length > 0) {
               aiSuggestions = await prisma.listing.findMany({
-                where: { id: { in: suggestionIds }, createdAt: { gte: oneDayAgo } },
+                where: withIdx({ id: { in: suggestionIds }, createdAt: { gte: oneDayAgo } }),
                 select: { id: true, mlsId: true, address: true, city: true, price: true, beds: true, baths: true, sqft: true, imageUrl: true },
               });
             }

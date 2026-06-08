@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { COMMUNITIES } from "@/data/content/communities";
 import { SITE_URL } from "@/lib/constants";
+import { withIdx } from "@/lib/mls-visibility";
 
 const STATIC_ROUTES = [
   "",
@@ -34,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       select: { slug: true, updatedAt: true },
     }),
     prisma.listing.findMany({
-      where: { status: { in: ["Active", "Pending"] } },
+      where: withIdx({ status: { in: ["Active", "Pending"] } }),
       select: { id: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
       take: 5000,

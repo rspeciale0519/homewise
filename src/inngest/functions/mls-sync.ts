@@ -1,7 +1,40 @@
-import { inngest } from "../client";
+import type { Prisma, SyncState } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { hasCredentials, fetchListings } from "@/lib/mls-grid";
+import { buildPropertyUrl, fetchPage, hasCredentials } from "@/lib/mls-grid";
+import { storageKeyFor } from "@/lib/mls-image";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { ResoProperty } from "@/types/reso";
+import { inngest } from "../client";
+import { syncOpenHouses } from "./mls-openhouse";
+import {
+  detectPriceChange,
+  mapResoToListingData,
+  type ListingSyncData,
+} from "./mls-sync.mapper";
+
+export { detectPriceChange, mapResoToListingData } from "./mls-sync.mapper";
+
+const PROVIDER = "stellar";
+const PHOTO_BUCKET = "mls-photos";
+const PAGE_SIZE = 200;
+const PAGES_PER_RUN = 10;
+
+type SyncEventData = {
+  nextLink?: string;
+  cursor?: string;
+  initialImport?: boolean;
+};
+
+type BeginSyncResult =
+  | { skipped: true; state: SyncState }
+  | { skipped: false; state: SyncState };
+
+type ProcessPageResult = {
+  processed: number;
+  upserted: number;
+  deleted: number;
+  maxCursor?: string;
+};
 
 export const mlsSync = inngest.createFunction(
   {
@@ -9,181 +42,258 @@ export const mlsSync = inngest.createFunction(
     name: "MLS Grid Sync",
     retries: 2,
   },
-  { cron: "*/15 * * * *" },
-  async ({ step }) => {
+  [{ cron: "*/15 * * * *" }, { event: "mls-sync" }, { event: "mls/sync.continue" }],
+  async ({ event, step }) => {
     if (!hasCredentials()) {
       return { skipped: true, reason: "No MLS Grid credentials configured" };
     }
 
-    const syncState = await step.run("get-sync-state", async () => {
-      return prisma.syncState.upsert({
-        where: { provider: "stellar" },
-        update: { status: "syncing", updatedAt: new Date() },
-        create: { provider: "stellar", status: "syncing" },
+    const eventData = parseSyncEventData(event.data);
+    const begin = await step.run("begin-sync", async (): Promise<BeginSyncResult> => {
+      const current = await prisma.syncState.findUnique({
+        where: { provider: PROVIDER },
       });
+
+      if (isCronInvocation(event.name) && current?.status === "syncing") {
+        return { skipped: true, state: current };
+      }
+
+      const state = await prisma.syncState.upsert({
+        where: { provider: PROVIDER },
+        update: { status: "syncing", updatedAt: new Date() },
+        create: { provider: PROVIDER, status: "syncing" },
+      });
+
+      return { skipped: false, state };
     });
 
-    const modifiedAfter = syncState.lastSyncAt
-      ? new Date(syncState.lastSyncAt).toISOString()
-      : undefined;
-    let totalUpserted = 0;
-    let skip = 0;
-    const pageSize = 200;
+    if (begin.skipped) {
+      return { skipped: "backfill-in-flight" };
+    }
 
     try {
-      let hasMore = true;
+      const continuation = Boolean(eventData.nextLink);
+      const initialImport =
+        eventData.initialImport ?? (!begin.state.cursor && !continuation);
+      const modifiedAfter = eventData.cursor ?? begin.state.cursor ?? undefined;
+      let maxCursor = modifiedAfter;
+      let nextLink = eventData.nextLink;
+      let totalProcessed = 0;
+      let totalUpserted = 0;
+      let totalDeleted = 0;
 
-      while (hasMore) {
-        const batch = await step.run(`fetch-page-${skip}`, async () => {
-          return fetchListings({ modifiedAfter, top: pageSize, skip });
+      for (let pageIndex = 0; pageIndex < PAGES_PER_RUN; pageIndex++) {
+        const pageUrl =
+          nextLink ??
+          buildPropertyUrl({ modifiedAfter, initialImport, top: PAGE_SIZE });
+        const page = await step.run(`fetch-property-page-${pageIndex}`, async () => {
+          return fetchPage(pageUrl);
         });
 
-        if (batch.value.length === 0) {
-          hasMore = false;
-          break;
+        if (initialImport && !continuation && pageIndex === 0 && page.value.length === 0) {
+          throw new Error(
+            "MLS Grid initial import returned zero rows; verify OriginatingSystemName",
+          );
         }
 
-        const upsertCount = await step.run(`upsert-page-${skip}`, async () => {
-          let count = 0;
-          for (const listing of batch.value) {
-            await upsertListing(listing);
-            count++;
-          }
-          return count;
+        const result = await step.run(`process-property-page-${pageIndex}`, async () => {
+          return processPropertyPage(page.value, { initialImport });
         });
 
-        totalUpserted += upsertCount;
-        skip += pageSize;
+        totalProcessed += result.processed;
+        totalUpserted += result.upserted;
+        totalDeleted += result.deleted;
+        maxCursor = maxIsoTimestamp(maxCursor, result.maxCursor);
 
-        if (batch.value.length < pageSize || !batch["@odata.nextLink"]) {
-          hasMore = false;
-        }
+        await step.run(`persist-property-cursor-${pageIndex}`, async () => {
+          return prisma.syncState.update({
+            where: { provider: PROVIDER },
+            data: {
+              cursor: maxCursor,
+              lastSyncAt: new Date(),
+              totalSynced: { increment: result.upserted },
+              lastError: null,
+            },
+          });
+        });
+
+        nextLink = page["@odata.nextLink"];
+        if (!nextLink) break;
       }
+
+      if (nextLink) {
+        await step.sendEvent("continue-property-sync", {
+          name: "mls/sync.continue",
+          data: { nextLink, cursor: maxCursor, initialImport },
+        });
+        return {
+          status: "continued",
+          processed: totalProcessed,
+          upserted: totalUpserted,
+          deleted: totalDeleted,
+          cursor: maxCursor,
+        };
+      }
+
+      const openHouses = await syncOpenHouses(step);
 
       await step.run("update-sync-success", async () => {
         return prisma.syncState.update({
-          where: { provider: "stellar" },
+          where: { provider: PROVIDER },
           data: {
             status: "idle",
             lastSyncAt: new Date(),
-            totalSynced: { increment: totalUpserted },
+            cursor: maxCursor,
             lastError: null,
           },
         });
       });
 
-      return { synced: totalUpserted, status: "success" };
+      if (initialImport) {
+        await step.sendEvent("emit-backfill-complete", {
+          name: "mls/listing.backfilled",
+          data: { provider: PROVIDER, total: totalUpserted, cursor: maxCursor },
+        });
+      }
+
+      return {
+        status: "success",
+        processed: totalProcessed,
+        upserted: totalUpserted,
+        deleted: totalDeleted,
+        openHouses,
+        cursor: maxCursor,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      await prisma.syncState.update({
-        where: { provider: "stellar" },
-        data: { status: "error", lastError: message },
+      await prisma.syncState.upsert({
+        where: { provider: PROVIDER },
+        update: { status: "error", lastError: message },
+        create: { provider: PROVIDER, status: "error", lastError: message },
       });
       throw error;
     }
-  }
+  },
 );
 
-async function upsertListing(reso: ResoProperty): Promise<void> {
-  const mlsId = reso.ListingId || reso.ListingKey;
-  const photos = (reso.Media ?? [])
-    .sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
-    .map((m) => m.MediaURL);
+function parseSyncEventData(data: unknown): SyncEventData {
+  if (!isRecord(data)) return {};
 
-  const openHouse = reso.OpenHouse?.map((oh) => ({
-    date: oh.OpenHouseDate,
-    startTime: oh.OpenHouseStartTime,
-    endTime: oh.OpenHouseEndTime,
-    remarks: oh.OpenHouseRemarks,
-  }));
-
-  const data = {
-    listingId: reso.ListingId,
-    status: mapStatus(reso.StandardStatus),
-    price: reso.ListPrice,
-    closePrice: reso.ClosePrice ?? null,
-    originalListPrice: reso.OriginalListPrice ?? null,
-    address: reso.UnparsedAddress,
-    city: reso.City,
-    state: reso.StateOrProvince ?? "FL",
-    zip: reso.PostalCode,
-    county: reso.CountyOrParish ?? null,
-    subdivision: reso.SubdivisionName ?? null,
-    beds: reso.BedroomsTotal,
-    bathsFull: reso.BathroomsFull,
-    bathsHalf: reso.BathroomsHalf ?? 0,
-    baths: reso.BathroomsTotalDecimal,
-    sqft: reso.LivingArea,
-    lotSize: reso.LotSizeArea ?? null,
-    yearBuilt: reso.YearBuilt ?? null,
-    propertyType: reso.PropertyType,
-    propertySubType: reso.PropertySubType ?? null,
-    description: reso.PublicRemarks ?? null,
-    photos,
-    photoSources: photos,
-    photosChangeTimestamp: reso.PhotosChangeTimestamp
-      ? new Date(reso.PhotosChangeTimestamp)
-      : null,
-    imageUrl: photos[0] ?? null,
-    latitude: reso.Latitude ?? null,
-    longitude: reso.Longitude ?? null,
-    hoaFee: reso.AssociationFee ?? null,
-    hoaFrequency: reso.AssociationFeeFrequency ?? null,
-    taxAmount: reso.TaxAnnualAmount ?? null,
-    taxYear: reso.TaxYear ?? null,
-    hasPool: reso.PoolPrivateYN ?? false,
-    hasWaterfront: reso.WaterfrontYN ?? false,
-    hasGarage: reso.GarageYN ?? false,
-    garageSpaces: reso.GarageSpaces ?? 0,
-    isNewConstruction: reso.NewConstructionYN ?? false,
-    hasGatedCommunity: (reso.CommunityFeatures ?? []).some((f) =>
-      f.toLowerCase().includes("gated")
-    ),
-    daysOnMarket: reso.DaysOnMarket ?? 0,
-    listDate: reso.ListingContractDate ? new Date(reso.ListingContractDate) : null,
-    closeDate: reso.CloseDate ? new Date(reso.CloseDate) : null,
-    openHouseSchedule: openHouse ?? undefined,
-    schoolDistrict:
-      reso.ElementarySchoolDistrict ??
-      reso.MiddleOrJuniorSchoolDistrict ??
-      reso.HighSchoolDistrict ??
-      null,
-    elementarySchoolDistrict: reso.ElementarySchoolDistrict ?? null,
-    middleSchoolDistrict: reso.MiddleOrJuniorSchoolDistrict ?? null,
-    highSchoolDistrict: reso.HighSchoolDistrict ?? null,
-    elementarySchool: reso.ElementarySchool ?? null,
-    middleSchool: reso.MiddleOrJuniorSchool ?? null,
-    highSchool: reso.HighSchool ?? null,
-    listingAgentName: reso.ListAgentFullName ?? null,
-    listingAgentMlsId: reso.ListAgentMlsId ?? null,
-    listingAgentPhone: reso.ListAgentDirectPhone ?? null,
-    listingAgentEmail: reso.ListAgentEmail ?? null,
-    listingOfficeName: reso.ListOfficeName ?? null,
-    listingOfficeMlsId: reso.ListOfficeMlsId ?? null,
-    virtualTourUrl: reso.VirtualTourURLUnbranded ?? null,
-    mlgCanUse: reso.MlgCanUse ?? [],
-    mlsLastModified: new Date(reso.ModificationTimestamp),
-    syncedAt: new Date(),
+  return {
+    nextLink: stringValue(data.nextLink),
+    cursor: stringValue(data.cursor),
+    initialImport: typeof data.initialImport === "boolean" ? data.initialImport : undefined,
   };
-
-  await prisma.listing.upsert({
-    where: { mlsId },
-    update: data,
-    create: { mlsId, mlsSource: "stellar", ...data },
-  });
 }
 
-function mapStatus(resoStatus: string): string {
-  switch (resoStatus) {
-    case "Active":
-      return "Active";
-    case "Pending":
-      return "Pending";
-    case "Closed":
-      return "Sold";
-    case "Coming Soon":
-      return "Coming Soon";
-    default:
-      return resoStatus;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function isCronInvocation(eventName: string): boolean {
+  return eventName === "inngest/scheduled.timer";
+}
+
+function maxIsoTimestamp(left?: string, right?: string): string | undefined {
+  if (!left) return right;
+  if (!right) return left;
+  return new Date(left).getTime() >= new Date(right).getTime() ? left : right;
+}
+
+function updateDataFor(mapped: ListingSyncData): Prisma.ListingUncheckedUpdateInput {
+  const { mlsId: _mlsId, mlsSource: _mlsSource, ...update } = mapped;
+  return update;
+}
+
+async function processPropertyPage(
+  listings: ResoProperty[],
+  options: { initialImport: boolean },
+): Promise<ProcessPageResult> {
+  let upserted = 0;
+  let deleted = 0;
+  let maxCursor: string | undefined;
+
+  for (const listing of listings) {
+    maxCursor = maxIsoTimestamp(maxCursor, listing.ModificationTimestamp);
+
+    if (listing.MlgCanView === false) {
+      await deleteListingAndCachedPhotos(listing.ListingKey);
+      deleted++;
+      continue;
+    }
+
+    await upsertListing(listing, options);
+    upserted++;
   }
+
+  return { processed: listings.length, upserted, deleted, maxCursor };
+}
+
+async function deleteListingAndCachedPhotos(mlsId: string): Promise<void> {
+  const existing = await prisma.listing.findUnique({
+    where: { mlsId },
+    select: { photoSources: true },
+  });
+
+  if (existing?.photoSources.length) {
+    await purgeCachedPhotoSources(existing.photoSources);
+  }
+
+  await prisma.listing.deleteMany({ where: { mlsId } });
+}
+
+async function purgeCachedPhotoSources(photoSources: string[]): Promise<void> {
+  const storageKeys = [...new Set(photoSources.map((source) => storageKeyFor(source)))];
+  if (storageKeys.length === 0) return;
+
+  const { error } = await createAdminClient().storage
+    .from(PHOTO_BUCKET)
+    .remove(storageKeys);
+
+  if (error) {
+    throw new Error(`MLS photo purge failed: ${error.message}`);
+  }
+}
+
+async function upsertListing(
+  reso: ResoProperty,
+  options: { initialImport: boolean },
+): Promise<void> {
+  const mapped = mapResoToListingData(reso);
+  const existing = await prisma.listing.findUnique({
+    where: { mlsId: mapped.mlsId },
+    select: { id: true, price: true },
+  });
+  const saved = await prisma.listing.upsert({
+    where: { mlsId: mapped.mlsId },
+    update: updateDataFor(mapped),
+    create: mapped,
+    select: { id: true },
+  });
+
+  if (options.initialImport) return;
+
+  if (existing && detectPriceChange(existing, reso)) {
+    await inngest.send({
+      name: "mls/listing.price-changed",
+      data: {
+        listingId: mapped.mlsId,
+        mlsId: mapped.mlsId,
+        id: saved.id,
+        oldPrice: existing.price,
+        newPrice: reso.ListPrice,
+        address: mapped.address,
+        city: mapped.city,
+      },
+    });
+  }
+
+  await inngest.send({
+    name: "mls/listing.synced",
+    data: { listingId: mapped.mlsId, mlsId: mapped.mlsId, id: saved.id },
+  });
 }

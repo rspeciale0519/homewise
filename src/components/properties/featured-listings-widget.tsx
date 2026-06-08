@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
+import { withIdx } from "@/lib/mls-visibility";
 
 interface FeaturedListingsWidgetProps {
   agentMlsId?: string;
@@ -16,9 +18,9 @@ export async function FeaturedListingsWidget({
   limit = 6,
   title = "Featured Listings",
 }: FeaturedListingsWidgetProps) {
-  const where: Record<string, unknown> = {
+  const where: Prisma.ListingWhereInput = withIdx({
     status: { in: ["Active", "Pending"] },
-  };
+  });
 
   if (agentMlsId) where.listingAgentMlsId = agentMlsId;
   if (officeMlsId) where.listingOfficeMlsId = officeMlsId;

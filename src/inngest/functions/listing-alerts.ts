@@ -2,6 +2,7 @@ import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate } from "@/lib/email";
 import { listingAlertEmail } from "@/lib/email/templates";
+import { withIdx } from "@/lib/mls-visibility";
 
 export const dailyListingAlerts = inngest.createFunction(
   { id: "daily-listing-alerts", concurrency: { limit: 1 } },
@@ -11,10 +12,10 @@ export const dailyListingAlerts = inngest.createFunction(
 
     const newListings = await step.run("fetch-new-listings", async () => {
       return prisma.listing.findMany({
-        where: {
+        where: withIdx({
           status: "Active",
           createdAt: { gte: oneDayAgo },
-        },
+        }),
         select: {
           id: true,
           mlsId: true,

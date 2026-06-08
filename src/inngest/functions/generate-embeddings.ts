@@ -1,6 +1,7 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { generateListingEmbedding } from "@/lib/ai/embeddings";
+import { withIdx } from "@/lib/mls-visibility";
 
 export const generateListingEmbeddings = inngest.createFunction(
   { id: "generate-listing-embeddings", concurrency: { limit: 1 } },
@@ -8,10 +9,10 @@ export const generateListingEmbeddings = inngest.createFunction(
   async ({ step }) => {
     const listings = await step.run("fetch-listings-without-embeddings", async () => {
       return prisma.listing.findMany({
-        where: {
+        where: withIdx({
           status: "Active",
           embedding: { isEmpty: true },
-        },
+        }),
         select: { id: true },
         take: 100,
       });
@@ -34,10 +35,10 @@ export const generateSingleEmbedding = inngest.createFunction(
   { id: "generate-single-embedding" },
   { event: "mls/listing.synced" },
   async ({ event, step }) => {
-    const { listingId } = event.data as { listingId: string };
+    const { id, listingId } = event.data as { id?: string; listingId: string };
 
     await step.run("generate-embedding", async () => {
-      await generateListingEmbedding(listingId);
+      await generateListingEmbedding(id ?? listingId);
     });
   },
 );

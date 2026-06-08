@@ -1,7 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
+import { withIdx } from "@/lib/mls-visibility";
 import type { Listing } from "@prisma/client";
 
 interface AgentListingsWidgetProps {
@@ -11,22 +13,30 @@ interface AgentListingsWidgetProps {
 }
 
 export async function AgentListingsWidget({ mlsAgentId, agentSlug, limit = 6 }: AgentListingsWidgetProps) {
+  const activeWhere: Prisma.ListingWhereInput = withIdx({
+    listingAgentMlsId: mlsAgentId,
+    status: { in: ["Active", "Pending"] },
+  });
+  const soldWhere: Prisma.ListingWhereInput = withIdx({
+    listingAgentMlsId: mlsAgentId,
+    status: "Sold",
+  });
   const [activeListings, soldListings, activeTotal, soldTotal] = await Promise.all([
     prisma.listing.findMany({
-      where: { listingAgentMlsId: mlsAgentId, status: { in: ["Active", "Pending"] } },
+      where: activeWhere,
       orderBy: { price: "desc" },
       take: limit,
     }),
     prisma.listing.findMany({
-      where: { listingAgentMlsId: mlsAgentId, status: "Sold" },
+      where: soldWhere,
       orderBy: { closeDate: "desc" },
       take: 3,
     }),
     prisma.listing.count({
-      where: { listingAgentMlsId: mlsAgentId, status: { in: ["Active", "Pending"] } },
+      where: activeWhere,
     }),
     prisma.listing.count({
-      where: { listingAgentMlsId: mlsAgentId, status: "Sold" },
+      where: soldWhere,
     }),
   ]);
 

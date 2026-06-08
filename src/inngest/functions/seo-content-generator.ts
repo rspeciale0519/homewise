@@ -1,6 +1,7 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { aiComplete } from "@/lib/ai";
+import { withIdx } from "@/lib/mls-visibility";
 
 const NEIGHBORHOODS = [
   { city: "Orlando", neighborhoods: ["Downtown Orlando", "Lake Nona", "Baldwin Park", "Thornton Park", "College Park"] },
@@ -27,7 +28,7 @@ export const generateSeoContent = inngest.createFunction(
           if (existing?.refreshedAt && existing.refreshedAt > new Date(Date.now() - 30 * 86400000)) return;
 
           const stats = await prisma.listing.aggregate({
-            where: { city: { equals: area.city, mode: "insensitive" }, status: "Active" },
+            where: withIdx({ city: { equals: area.city, mode: "insensitive" }, status: "Active" }),
             _avg: { price: true, daysOnMarket: true },
             _count: true,
           });

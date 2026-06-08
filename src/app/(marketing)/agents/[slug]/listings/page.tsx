@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { createMetadata } from "@/lib/metadata";
 import { BackButton } from "@/components/ui/back-button";
+import { withIdx } from "@/lib/mls-visibility";
 
 interface AgentListingsPageProps {
   params: Promise<{ slug: string }>;
@@ -58,7 +59,7 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
     statusFilter === "all" ? ["Active", "Pending", "Sold"] :
     ["Active"];
 
-  const where = { listingAgentMlsId: agent.mlsAgentId, status: { in: statusValues } };
+  const where = withIdx({ listingAgentMlsId: agent.mlsAgentId, status: { in: statusValues } });
 
   const [listings, total, activeCt, pendingCt, soldCt] = await Promise.all([
     prisma.listing.findMany({
@@ -68,9 +69,9 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
       take: PER_PAGE,
     }),
     prisma.listing.count({ where }),
-    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Active" } }),
-    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Pending" } }),
-    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Sold" } }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agent.mlsAgentId, status: "Active" }) }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agent.mlsAgentId, status: "Pending" }) }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agent.mlsAgentId, status: "Sold" }) }),
   ]);
 
   const fullName = `${agent.firstName} ${agent.lastName}`;

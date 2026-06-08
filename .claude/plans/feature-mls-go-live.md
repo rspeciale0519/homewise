@@ -229,20 +229,21 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
 ## Phase 3 — Caching image proxy
 
 ### Task 3.1: Bucket + route (fixes Gap #12)
-- [ ] **Step 1 (non-code):** Create public Supabase Storage bucket `mls-photos`.
-- [ ] **Step 2:** Implement `src/app/api/mls-photo/route.ts` using the **existing** `src/lib/supabase/admin.ts` client (not raw `createClient`): `parseAndVerify` → 400 on bad sig; compute `storageKeyFor`; HEAD the public URL, 302 if cached; else `fetch(source, { headers: { "User-Agent": process.env.MLS_GRID_TOKEN ?? "" } })` (required since 2026-06-01), upload to `mls-photos` with year-long cache-control, stream bytes back. Export `export const dynamic = "force-dynamic";`.
-- [ ] **Step 3:** `npm run type-check`. Manual smoke per `[[skill-testing-mock-manual-smoke]]`: hit a signed URL for a public image, confirm stream then 302-on-reload. Document URL tried. Commit.
+- [x] **Step 1 (non-code):** Create public Supabase Storage bucket `mls-photos`.
+- [x] **Step 2:** Implement `src/app/api/mls-photo/route.ts` using the **existing** `src/lib/supabase/admin.ts` client (not raw `createClient`): `parseAndVerify` → 400 on bad sig; compute `storageKeyFor`; HEAD the public URL, 302 if cached; else `fetch(source, { headers: { "User-Agent": process.env.MLS_GRID_TOKEN ?? "" } })` (required since 2026-06-01), upload to `mls-photos` with year-long cache-control, stream bytes back. Export `export const dynamic = "force-dynamic";`.
+- [x] **Step 3:** `npm run type-check`. Manual smoke per `[[skill-testing-mock-manual-smoke]]`: hit a signed URL for a public image, confirm stream then 302-on-reload. Document URL tried. Commit.
+  - Smoke source URL: `https://picsum.photos/seed/homewise-mls/64/64.jpg`; first request `200 image/jpeg`, second request `302` to Supabase `mls-photos`.
 
 ---
 
 ## Phase 4 — Compliant sync engine
 
 ### Task 4.1: Mapping + compliance + event tests (TDD)
-- [ ] **Step 1:** `src/inngest/functions/mls-sync.test.ts` asserting on exported `mapResoToListingData(reso)`: `Closed→Sold`; `mlgCanUse` stored; raw urls in `photoSources`, `photos[0]` contains `/api/mls-photo`; `featured` true when office in `HOMEWISE_OFFICE_MLS_ID`; **`mlsId === reso.ListingKey`** and `listingId === reso.ListingId`; school districts mapped from `ElementarySchoolDistrict`/`MiddleOrJuniorSchoolDistrict`/`HighSchoolDistrict`. Plus a `detectPriceChange(prev, next)` unit test (returns true when `ListPrice` differs).
-- [ ] **Step 2:** Run → FAIL.
+- [x] **Step 1:** `src/inngest/functions/mls-sync.test.ts` asserting on exported `mapResoToListingData(reso)`: `Closed→Sold`; `mlgCanUse` stored; raw urls in `photoSources`, `photos[0]` contains `/api/mls-photo`; `featured` true when office in `HOMEWISE_OFFICE_MLS_ID`; **`mlsId === reso.ListingKey`** and `listingId === reso.ListingId`; school districts mapped from `ElementarySchoolDistrict`/`MiddleOrJuniorSchoolDistrict`/`HighSchoolDistrict`. Plus a `detectPriceChange(prev, next)` unit test (returns true when `ListPrice` differs).
+- [x] **Step 2:** Run → FAIL.
 
 ### Task 4.2: Rewrite sync (fixes Gaps #3, #5, #6, #7, #11, #13, #14)
-- [ ] **Step 1:** Rewrite `src/inngest/functions/mls-sync.ts`. Key changes vs v1:
+- [x] **Step 1:** Rewrite `src/inngest/functions/mls-sync.ts`. Key changes vs v1:
   - **Identity:** `const key = reso.ListingKey;` used for `upsert where {mlsId:key}`, deletes, and `listingId: reso.ListingId` stored separately.
   - **Cursor (Gap #6):** persist `cursor = maxSeenTs` to `SyncState` on **every** processed page (not just done); carry `cursor` + `nextLink` in the continuation event; resume `modifiedAfter` from `SyncState.cursor`; filter uses **`ge`** with idempotent upsert (boundary-safe).
   - **Cron re-entry guard (Gap #13):** if invoked by cron while `SyncState.status === "syncing"`, return early `{skipped:"backfill-in-flight"}`.
@@ -251,7 +252,7 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
   - **Events (Gap #3):** in `upsertListing`, read the existing row first; if `!initialImport` and `ListPrice` changed, `inngest.send({name:"mls/listing.price-changed", data:{listingId:key, oldPrice, newPrice}})`; and `inngest.send({name:"mls/listing.synced", data:{listingId:key}})`. **Suppress per-record events during `initialImport`** (backfill emits one bulk `mls/listing.backfilled` at completion for the embedding job).
   - **Status allowlist (Gap #14):** `mapStatus` confirmed against feed metadata; public-facing terminal statuses constrained in Phase 6 reads.
   - `mapResoToListingData` exported; school districts from the real fields; `featured` via `isHomewiseOffice`; `photos` via `proxyPhotoUrl`.
-- [ ] **Step 2:** `npx vitest run src/inngest/functions/mls-sync.test.ts` → PASS. `npm run type-check` (whole repo now green). Commit.
+- [x] **Step 2:** `npx vitest run src/inngest/functions/mls-sync.test.ts` → PASS. `npm run type-check` (whole repo now green). Commit.
 
 > **450-LOC watch (Gap from process lens):** if `mls-sync.ts` exceeds 450 lines, extract `mapResoToListingData` + `upsertListing` into `src/inngest/functions/mls-sync.mapper.ts`.
 
@@ -259,8 +260,8 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
 
 ## Phase 5 — OpenHouse sync (own cursor, every cycle) — fixes Gap #10
 
-- [ ] **Step 1:** Add `syncOpenHouses(cursor)` to `mls-sync.ts` (or `mls-openhouse.ts` if LOC): page `fetchOpenHousePage` by its **own** `ge` cursor (store `SyncState` provider row `stellar-openhouse`); skip `MlgCanView===false`; group slots by `ListingId`; parse `OpenHouseDate`+`OpenHouseStartTime`/`EndTime` as **full datetimes**; `updateMany` the schedule onto matching `listingId`; **clear** schedules for listings whose open houses are gone/expired (set `openHouseSchedule = JsonNull` where last slot < now). Throttle (`step.sleep` 600ms/page).
-- [ ] **Step 2:** Call it every incremental cycle (not only at backfill completion). Type-check, commit.
+- [x] **Step 1:** Add `syncOpenHouses(cursor)` to `mls-sync.ts` (or `mls-openhouse.ts` if LOC): page `fetchOpenHousePage` by its **own** `ge` cursor (store `SyncState` provider row `stellar-openhouse`); skip `MlgCanView===false`; group slots by `ListingId`; parse `OpenHouseDate`+`OpenHouseStartTime`/`EndTime` as **full datetimes**; `updateMany` the schedule onto matching `listingId`; **clear** schedules for listings whose open houses are gone/expired (set `openHouseSchedule = JsonNull` where last slot < now). Throttle (`step.sleep` 600ms/page).
+- [x] **Step 2:** Call it every incremental cycle (not only at backfill completion). Type-check, commit.
 
 ---
 
@@ -268,14 +269,14 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
 
 Apply `withIdx()` / `IDX_WHERE` to **every** path that reads `prisma.listing` for any public/user-facing or public-content output. Verified consumer list:
 
-- [ ] **Step 1 — provider:** `src/providers/stellar-mls-provider.ts` `search()` base `const where = withIdx();`; `getProperty()` add `mlgCanUse: { has: "IDX" }`.
-- [ ] **Step 2 — widgets/homepage:** `featured-listings-widget.tsx`, `agent-listings-widget.tsx` (all 4 queries), `src/app/(marketing)/page.tsx:18`.
-- [ ] **Step 3 — pages:** `src/app/(marketing)/agents/[slug]/listings/page.tsx`; `src/app/sitemap.ts`.
-- [ ] **Step 4 — chatbots:** `src/lib/chatbot/public-site.ts`, `src/lib/chatbot/agent-website.ts`.
-- [ ] **Step 5 — search/AI public:** `src/lib/ai/embeddings.ts` (`semanticSearch`), `src/inngest/functions/generate-embeddings.ts`, `src/inngest/functions/seo-content-generator.ts`.
-- [ ] **Step 6 — alerts:** `src/inngest/functions/listing-alerts.ts`, `src/inngest/functions/smart-alerts.ts`, `src/inngest/functions/price-change-alerts.ts` (alerts must not notify on non-IDX rows).
-- [ ] **Step 7 — favorites/saved:** any favorites/saved-search read API that returns listing data publicly.
-- [ ] **Step 8 — test (Gap #1 fix proof):** add `src/lib/mls-visibility.integration.test.ts` (mock prisma) seeding one `IDX` and one non-`IDX` row and asserting each surface’s query carries the `mlgCanUse has "IDX"` clause. Run, type-check, lint. Commit: `feat(mls): enforce IDX visibility on all read paths`.
+- [x] **Step 1 — provider:** `src/providers/stellar-mls-provider.ts` `search()` base `const where = withIdx();`; `getProperty()` add `mlgCanUse: { has: "IDX" }`.
+- [x] **Step 2 — widgets/homepage:** `featured-listings-widget.tsx`, `agent-listings-widget.tsx` (all 4 queries), `src/app/(marketing)/page.tsx:18`.
+- [x] **Step 3 — pages:** `src/app/(marketing)/agents/[slug]/listings/page.tsx`; `src/app/sitemap.ts`.
+- [x] **Step 4 — chatbots:** `src/lib/chatbot/public-site.ts`, `src/lib/chatbot/agent-website.ts`.
+- [x] **Step 5 — search/AI public:** `src/lib/ai/embeddings.ts` (`semanticSearch`), `src/inngest/functions/generate-embeddings.ts`, `src/inngest/functions/seo-content-generator.ts`.
+- [x] **Step 6 — alerts:** `src/inngest/functions/listing-alerts.ts`, `src/inngest/functions/smart-alerts.ts`, `src/inngest/functions/price-change-alerts.ts` (alerts must not notify on non-IDX rows).
+- [x] **Step 7 — favorites/saved:** any favorites/saved-search read API that returns listing data publicly.
+- [x] **Step 8 — test (Gap #1 fix proof):** add `src/lib/mls-visibility.integration.test.ts` (mock prisma) seeding one `IDX` and one non-`IDX` row and asserting each surface’s query carries the `mlgCanUse has "IDX"` clause. Run, type-check, lint. Commit: `feat(mls): enforce IDX visibility on all read paths`.
 
 > Note: agent-only CRM/transaction tools (listing-description/insights/social-post over the agent's **own active** listings) are IDX-permitted, but still read through `withIdx()` so opted-out records never surface.
 

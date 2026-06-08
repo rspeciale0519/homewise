@@ -2,6 +2,7 @@ import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate } from "@/lib/email";
 import { priceChangeAlertEmail } from "@/lib/email/templates";
+import { withIdx } from "@/lib/mls-visibility";
 
 export const priceChangeAlert = inngest.createFunction(
   { id: "price-change-alert" },
@@ -19,8 +20,8 @@ export const priceChangeAlert = inngest.createFunction(
 
     // Find users who favorited this listing
     const favorites = await step.run("find-favorites", async () => {
-      const listing = await prisma.listing.findUnique({
-        where: { mlsId },
+      const listing = await prisma.listing.findFirst({
+        where: withIdx({ mlsId }),
         select: { id: true },
       });
       if (!listing) return [];

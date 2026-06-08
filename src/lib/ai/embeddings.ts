@@ -1,5 +1,7 @@
 import OpenAI from "openai";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { withIdx } from "@/lib/mls-visibility";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
 
@@ -50,7 +52,7 @@ export function buildListingEmbeddingText(listing: {
 }
 
 export async function generateListingEmbedding(listingId: string): Promise<void> {
-  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  const listing = await prisma.listing.findFirst({ where: withIdx({ id: listingId }) });
   if (!listing) return;
 
   const text = buildListingEmbeddingText(listing);
@@ -83,13 +85,13 @@ export async function semanticSearch(
 ): Promise<{ id: string; mlsId: string; address: string; city: string; price: number; beds: number; baths: number; sqft: number; similarity: number }[]> {
   const queryEmbedding = await generateEmbedding(query);
 
-  const where: Record<string, unknown> = {
+  const where: Prisma.ListingWhereInput = withIdx({
     status: "Active",
     embedding: { isEmpty: false },
-  };
+  });
   if (filters?.city) where.city = { equals: filters.city, mode: "insensitive" };
-  if (filters?.minPrice) where.price = { ...((where.price as Record<string, unknown>) ?? {}), gte: filters.minPrice };
-  if (filters?.maxPrice) where.price = { ...((where.price as Record<string, unknown>) ?? {}), lte: filters.maxPrice };
+  if (filters?.minPrice) where.price = { ...((where.price as Prisma.FloatFilter) ?? {}), gte: filters.minPrice };
+  if (filters?.maxPrice) where.price = { ...((where.price as Prisma.FloatFilter) ?? {}), lte: filters.maxPrice };
   if (filters?.beds) where.beds = { gte: filters.beds };
 
   const listings = await prisma.listing.findMany({

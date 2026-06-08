@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { withIdx } from "@/lib/mls-visibility";
 import type {
   PropertyProvider,
   PropertyFilters,
@@ -42,7 +43,7 @@ export class StellarMlsProvider implements PropertyProvider {
       sortBy = "price_desc",
     } = filters;
 
-    const where: Prisma.ListingWhereInput = {};
+    const where: Prisma.ListingWhereInput = withIdx();
 
     if (location) {
       const q = location.toLowerCase();
@@ -116,7 +117,7 @@ export class StellarMlsProvider implements PropertyProvider {
 
   async getProperty(id: string): Promise<Property | null> {
     const listing = await prisma.listing.findFirst({
-      where: { OR: [{ id }, { mlsId: id }] },
+      where: withIdx({ OR: [{ id }, { mlsId: id }] }),
     });
     if (!listing) return null;
     return mapListingToProperty(listing);
@@ -126,7 +127,7 @@ export class StellarMlsProvider implements PropertyProvider {
 async function filterByPolygon(polygon: [number, number][]): Promise<string[]> {
   // Fetch all listings with coordinates, then filter in-memory using ray-casting
   const candidates = await prisma.listing.findMany({
-    where: { latitude: { not: null }, longitude: { not: null } },
+    where: withIdx({ latitude: { not: null }, longitude: { not: null } }),
     select: { id: true, latitude: true, longitude: true },
   });
 

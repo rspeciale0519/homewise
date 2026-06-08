@@ -1,6 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { ChatbotEngine, type ContextBundle } from "./engine";
 import { prisma } from "@/lib/prisma";
+import { withIdx } from "@/lib/mls-visibility";
 
 interface AgentConfig {
   agentId: string;
@@ -87,11 +88,11 @@ Always represent ${config.agentName} professionally and encourage visitors to co
     if (!agent?.mlsAgentId) return { listings: [] };
 
     const listings = await prisma.listing.findMany({
-      where: {
+      where: withIdx({
         listingAgentMlsId: agent.mlsAgentId,
         status: (input.status as string) ?? "Active",
-      },
-      select: { mlsId: true, address: true, city: true, price: true, beds: true, baths: true, sqft: true, status: true },
+      }),
+      select: { mlsId: true, address: true, city: true, price: true, beds: true, baths: true, sqft: true, status: true, listingOfficeName: true },
       orderBy: { price: "desc" },
       take: 10,
     });
