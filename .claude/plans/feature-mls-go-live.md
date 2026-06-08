@@ -82,7 +82,7 @@ Each Rule 9 checkpoint must be green (`npm run type-check && npm run lint && npx
 
 ### Task 1.1: Env vars
 
-- [ ] **Step 1: Add to `.env.example`:**
+- [x] **Step 1: Add to `.env.example`:**
 
 ```
 # --- MLS Grid (Stellar MLS, RESO Web API) ---
@@ -96,11 +96,11 @@ ANALYTICS_BO_ENABLED=false     # true ONLY when Back Office feed is licensed
 # SUPABASE_SERVICE_ROLE_KEY already present (used by src/lib/supabase/admin.ts)
 ```
 
-- [ ] **Step 2: Commit.** `git add .env.example && git commit -m "docs(mls): env vars for go-live"`
+- [x] **Step 2: Commit.** `git add .env.example && git commit -m "docs(mls): env vars for go-live"`
 
 ### Task 1.2: RESO types (fixes Gap #5 + generic envelope)
 
-- [ ] **Step 1:** In `src/types/reso.ts`, in `ResoProperty` after `ModificationTimestamp`:
+- [x] **Step 1:** In `src/types/reso.ts`, in `ResoProperty` after `ModificationTimestamp`:
 
 ```ts
   ModificationTimestamp: string;
@@ -110,7 +110,7 @@ ANALYTICS_BO_ENABLED=false     # true ONLY when Back Office feed is licensed
   PhotosChangeTimestamp?: string;
 ```
 
-- [ ] **Step 2:** **Replace** the bogus `SchoolDistrict?: string;` line with the real RESO district fields:
+- [x] **Step 2:** **Replace** the bogus `SchoolDistrict?: string;` line with the real RESO district fields:
 
 ```ts
   ElementarySchoolDistrict?: string;
@@ -118,9 +118,9 @@ ANALYTICS_BO_ENABLED=false     # true ONLY when Back Office feed is licensed
   HighSchoolDistrict?: string;
 ```
 
-- [ ] **Step 3:** Extend `ResoMedia` (`MediaKey?`, `MediaModificationTimestamp?`) and `ResoOpenHouse` (`OpenHouseKey?`, `ListingId?`, `ModificationTimestamp?`, `MlgCanView?`).
+- [x] **Step 3:** Extend `ResoMedia` (`MediaKey?`, `MediaModificationTimestamp?`) and `ResoOpenHouse` (`OpenHouseKey?`, `ListingId?`, `ModificationTimestamp?`, `MlgCanView?`).
 
-- [ ] **Step 4:** Make the envelope generic:
+- [x] **Step 4:** Make the envelope generic:
 
 ```ts
 export interface ResoODataResponse<T = ResoProperty> {
@@ -130,11 +130,11 @@ export interface ResoODataResponse<T = ResoProperty> {
 }
 ```
 
-- [ ] **Step 5:** `npm run type-check` → expect errors only in `mls-sync.ts` (fixed Phase 4). Commit: `git add src/types/reso.ts && git commit -m "feat(mls): RESO compliance fields + real school-district fields"`
+- [x] **Step 5:** `npm run type-check` → expect errors only in `mls-sync.ts` (fixed Phase 4). Commit: `git add src/types/reso.ts && git commit -m "feat(mls): RESO compliance fields + real school-district fields"`
 
 ### Task 1.3: Schema columns + indexes (fixes Gaps #5, #7, #9-index)
 
-- [ ] **Step 1:** In `prisma/schema.prisma` `Listing`, add:
+- [x] **Step 1:** In `prisma/schema.prisma` `Listing`, add:
 
 ```prisma
   listingId             String?
@@ -155,21 +155,21 @@ Add indexes in the model's index block:
 
 > `mlsId` now stores **`ListingKey`** (Task 4). `listingId` holds the human `ListingId`.
 
-- [ ] **Step 2:** In `SyncState`, add `cursor String?` (cross-run high-water mark).
+- [x] **Step 2:** In `SyncState`, add `cursor String?` (cross-run high-water mark).
 
-- [ ] **Step 3:** `npm run db:push` (writes to shared/prod; additive). If Prisma rejects `type: Gin` on `String[]`, create it via raw SQL instead: `CREATE INDEX IF NOT EXISTS listing_mlgcanuse_gin ON "Listing" USING GIN ("mlgCanUse");` and drop the `@@index` line.
+- [x] **Step 3:** `npm run db:push` (writes to shared/prod; additive). If Prisma rejects `type: Gin` on `String[]`, create it via raw SQL instead: `CREATE INDEX IF NOT EXISTS listing_mlgcanuse_gin ON "Listing" USING GIN ("mlgCanUse");` and drop the `@@index` line.
 
-- [ ] **Step 4:** `npm run prisma:generate && npm run type-check`. Commit: `git add prisma/schema.prisma && git commit -m "feat(mls): listing compliance/identity columns + GIN index"`
+- [x] **Step 4:** `npm run prisma:generate && npm run type-check`. Commit: `git add prisma/schema.prisma && git commit -m "feat(mls): listing compliance/identity columns + GIN index"`
 
 ### Task 1.4: Static-token auth + query builders (TDD)
 
 *(Unchanged from v1 except retained here for build order. See v1 archive for the full test list.)*
 
-- [ ] **Step 1:** Create `src/lib/mls-grid.test.ts` asserting: `hasCredentials()` true with token+originating system; `buildPropertyUrl({})` contains `OriginatingSystemName eq '<X>'` and `%24expand=Media` and NOT `OpenHouse`; `initialImport` adds `MlgCanView eq true`; `modifiedAfter` adds `ModificationTimestamp ge` (note: **`ge`**, see Gap #6); `MLS_OFFICE_ID` adds `ListOfficeMlsId eq`; `buildOpenHouseUrl({modifiedAfter})` hits `/OpenHouse` with originating system + cursor.
+- [x] **Step 1:** Create `src/lib/mls-grid.test.ts` asserting: `hasCredentials()` true with token+originating system; `buildPropertyUrl({})` contains `OriginatingSystemName eq '<X>'` and `%24expand=Media` and NOT `OpenHouse`; `initialImport` adds `MlgCanView eq true`; `modifiedAfter` adds `ModificationTimestamp ge` (note: **`ge`**, see Gap #6); `MLS_OFFICE_ID` adds `ListOfficeMlsId eq`; `buildOpenHouseUrl({modifiedAfter})` hits `/OpenHouse` with originating system + cursor.
 
-- [ ] **Step 2:** `npx vitest run src/lib/mls-grid.test.ts` → FAIL.
+- [x] **Step 2:** `npx vitest run src/lib/mls-grid.test.ts` → FAIL.
 
-- [ ] **Step 3:** Rewrite `src/lib/mls-grid.ts`: static `token()`/`originatingSystem()` from env; `hasCredentials()`; `buildPropertyUrl({modifiedAfter,initialImport,top})` with filter `OriginatingSystemName eq '…'` [+ `MlgCanView eq true` if initial] [+ `ModificationTimestamp ge <cursor>` if modifiedAfter] [+ `ListOfficeMlsId eq` if `MLS_OFFICE_ID`], `$expand=Media`, `$orderby=ModificationTimestamp,ListingKey`, `$top`; `buildOpenHouseUrl({modifiedAfter,top})` on `/OpenHouse`; `authedFetch(url)` with `Authorization: Bearer` **and 429/`RateLimit-Reset` backoff** (read header, sleep, one retry); `fetchPage`/`fetchOpenHousePage` (the latter typed `ResoODataResponse<ResoOpenHouse>`).
+- [x] **Step 3:** Rewrite `src/lib/mls-grid.ts`: static `token()`/`originatingSystem()` from env; `hasCredentials()`; `buildPropertyUrl({modifiedAfter,initialImport,top})` with filter `OriginatingSystemName eq '…'` [+ `MlgCanView eq true` if initial] [+ `ModificationTimestamp ge <cursor>` if modifiedAfter] [+ `ListOfficeMlsId eq` if `MLS_OFFICE_ID`], `$expand=Media`, `$orderby=ModificationTimestamp,ListingKey`, `$top`; `buildOpenHouseUrl({modifiedAfter,top})` on `/OpenHouse`; `authedFetch(url)` with `Authorization: Bearer` **and 429/`RateLimit-Reset` backoff** (read header, sleep, one retry); `fetchPage`/`fetchOpenHousePage` (the latter typed `ResoODataResponse<ResoOpenHouse>`).
 
 ```ts
 async function authedFetch(url: string): Promise<ResoODataResponse> {
@@ -187,7 +187,7 @@ async function authedFetch(url: string): Promise<ResoODataResponse> {
 }
 ```
 
-- [ ] **Step 4:** `npx vitest run src/lib/mls-grid.test.ts` → PASS. Commit.
+- [x] **Step 4:** `npx vitest run src/lib/mls-grid.test.ts` → PASS. Commit.
 
 ---
 
