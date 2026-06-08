@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/format";
 import { withIdx } from "@/lib/mls-visibility";
 import { ListingAttribution } from "@/components/properties/listing-attribution";
 import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
+import { LISTING_CARD_SELECT } from "@/lib/listing-selects";
 
 interface FeaturedListingsWidgetProps {
   agentMlsId?: string;
@@ -30,6 +31,7 @@ export async function FeaturedListingsWidget({
 
   const listings = await prisma.listing.findMany({
     where,
+    select: LISTING_CARD_SELECT,
     orderBy: { price: "desc" },
     take: limit,
   });

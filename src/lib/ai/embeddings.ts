@@ -57,25 +57,16 @@ export async function generateListingEmbedding(listingId: string): Promise<void>
 
   const text = buildListingEmbeddingText(listing);
   const embedding = await generateEmbedding(text);
+  const vectorLiteral = toVectorLiteral(embedding);
 
-  await prisma.listing.update({
-    where: { id: listingId },
-    data: { embedding, embeddingText: text },
-  });
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    const ai = a[i]!;
-    const bi = b[i]!;
-    dotProduct += ai * bi;
-    normA += ai * ai;
-    normB += bi * bi;
-  }
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  await prisma.$executeRaw`
+    UPDATE "Listing"
+    SET
+      "embedding" = ${embedding},
+      "embeddingText" = ${text},
+      "embeddingVector" = ${vectorLiteral}::vector
+    WHERE "id" = ${listingId}
+  `;
 }
 
 export async function semanticSearch(
@@ -96,50 +87,66 @@ export async function semanticSearch(
   similarity: number;
 }[]> {
   const queryEmbedding = await generateEmbedding(query);
+  const vectorLiteral = toVectorLiteral(queryEmbedding);
 
-  const where: Prisma.ListingWhereInput = withIdx({
-    status: "Active",
-    embedding: { isEmpty: false },
-  });
-  if (filters?.city) where.city = { equals: filters.city, mode: "insensitive" };
-  if (filters?.minPrice) where.price = { ...((where.price as Prisma.FloatFilter) ?? {}), gte: filters.minPrice };
-  if (filters?.maxPrice) where.price = { ...((where.price as Prisma.FloatFilter) ?? {}), lte: filters.maxPrice };
-  if (filters?.beds) where.beds = { gte: filters.beds };
+  const clauses: Prisma.Sql[] = [
+    Prisma.sql`"mlgCanUse" @> ARRAY['IDX']::text[]`,
+    Prisma.sql`"status" = 'Active'`,
+    Prisma.sql`"embeddingVector" IS NOT NULL`,
+  ];
+  if (filters?.city) clauses.push(Prisma.sql`"city" ILIKE ${filters.city}`);
+  if (filters?.minPrice) clauses.push(Prisma.sql`"price" >= ${filters.minPrice}`);
+  if (filters?.maxPrice) clauses.push(Prisma.sql`"price" <= ${filters.maxPrice}`);
+  if (filters?.beds) clauses.push(Prisma.sql`"beds" >= ${filters.beds}`);
 
-  const listings = await prisma.listing.findMany({
-    where,
-    select: {
-      id: true,
-      mlsId: true,
-      listingId: true,
-      address: true,
-      city: true,
-      price: true,
-      beds: true,
-      baths: true,
-      sqft: true,
-      listingOfficeName: true,
-      embedding: true,
-    },
-    take: 500,
-  });
+  const rows = await prisma.$queryRaw<SemanticSearchRow[]>`
+    SELECT
+      "id",
+      "mlsId",
+      "listingId",
+      "address",
+      "city",
+      "price",
+      "beds",
+      "baths",
+      "sqft",
+      "listingOfficeName",
+      ("embeddingVector" <=> ${vectorLiteral}::vector) AS distance
+    FROM "Listing"
+    WHERE ${Prisma.join(clauses, " AND ")}
+    ORDER BY "embeddingVector" <=> ${vectorLiteral}::vector
+    LIMIT ${limit}
+  `;
 
-  const scored = listings
-    .map((listing) => ({
-      id: listing.id,
-      mlsId: listing.mlsId,
-      listingId: listing.listingId,
-      address: listing.address,
-      city: listing.city,
-      price: listing.price,
-      beds: listing.beds,
-      baths: listing.baths,
-      sqft: listing.sqft,
-      listingOfficeName: listing.listingOfficeName,
-      similarity: cosineSimilarity(queryEmbedding, listing.embedding),
-    }))
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, limit);
+  return rows.map((row) => ({
+    id: row.id,
+    mlsId: row.mlsId,
+    listingId: row.listingId,
+    address: row.address,
+    city: row.city,
+    price: row.price,
+    beds: row.beds,
+    baths: row.baths,
+    sqft: row.sqft,
+    listingOfficeName: row.listingOfficeName,
+    similarity: 1 - Number(row.distance),
+  }));
+}
 
-  return scored;
+interface SemanticSearchRow {
+  id: string;
+  mlsId: string;
+  listingId: string | null;
+  address: string;
+  city: string;
+  price: number;
+  beds: number;
+  baths: number;
+  sqft: number;
+  listingOfficeName: string | null;
+  distance: number;
+}
+
+function toVectorLiteral(values: number[]): string {
+  return `[${values.join(",")}]`;
 }

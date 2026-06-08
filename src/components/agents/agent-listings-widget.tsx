@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { withIdx } from "@/lib/mls-visibility";
 import { ListingAttribution } from "@/components/properties/listing-attribution";
-import type { Listing } from "@prisma/client";
+import { LISTING_CARD_SELECT, type ListingCardRow } from "@/lib/listing-selects";
 
 interface AgentListingsWidgetProps {
   mlsAgentId: string;
@@ -25,11 +25,13 @@ export async function AgentListingsWidget({ mlsAgentId, agentSlug, limit = 6 }: 
   const [activeListings, soldListings, activeTotal, soldTotal] = await Promise.all([
     prisma.listing.findMany({
       where: activeWhere,
+      select: LISTING_CARD_SELECT,
       orderBy: { price: "desc" },
       take: limit,
     }),
     prisma.listing.findMany({
       where: soldWhere,
+      select: LISTING_CARD_SELECT,
       orderBy: { closeDate: "desc" },
       take: 3,
     }),
@@ -90,7 +92,7 @@ export async function AgentListingsWidget({ mlsAgentId, agentSlug, limit = 6 }: 
   );
 }
 
-function ListingCardSmall({ listing }: { listing: Listing }) {
+function ListingCardSmall({ listing }: { listing: ListingCardRow }) {
   const statusColor =
     listing.status === "Sold" ? "bg-slate-700 text-white" :
     listing.status === "Pending" ? "bg-amber-500 text-white" :

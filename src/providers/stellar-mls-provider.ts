@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { withIdx } from "@/lib/mls-visibility";
+import {
+  LISTING_PROPERTY_SELECT,
+  type ListingPropertyRow,
+} from "@/lib/listing-selects";
 import type {
   PropertyProvider,
   PropertyFilters,
@@ -90,7 +94,7 @@ export class StellarMlsProvider implements PropertyProvider {
 
     // Polygon search: point-in-polygon test
     if (filters.polygon && filters.polygon.length >= 3) {
-      const polyIds = await filterByPolygon(filters.polygon);
+      const polyIds = await filterByPolygon(filters.polygon, where);
       if (polyIds.length === 0) {
         return { properties: [], total: 0, totalPages: 0, currentPage: page };
       }
@@ -102,6 +106,7 @@ export class StellarMlsProvider implements PropertyProvider {
     const [listings, total] = await Promise.all([
       prisma.listing.findMany({
         where,
+        select: LISTING_PROPERTY_SELECT,
         orderBy,
         skip: (page - 1) * perPage,
         take: perPage,
@@ -118,22 +123,45 @@ export class StellarMlsProvider implements PropertyProvider {
   async getProperty(id: string): Promise<Property | null> {
     const listing = await prisma.listing.findFirst({
       where: withIdx({ OR: [{ id }, { mlsId: id }] }),
+      select: LISTING_PROPERTY_SELECT,
     });
     if (!listing) return null;
     return mapListingToProperty(listing);
   }
 }
 
-async function filterByPolygon(polygon: [number, number][]): Promise<string[]> {
-  // Fetch all listings with coordinates, then filter in-memory using ray-casting
+async function filterByPolygon(
+  polygon: [number, number][],
+  baseWhere: Prisma.ListingWhereInput,
+): Promise<string[]> {
+  const { north, south, east, west } = polygonBounds(polygon);
   const candidates = await prisma.listing.findMany({
-    where: withIdx({ latitude: { not: null }, longitude: { not: null } }),
+    where: {
+      AND: [
+        baseWhere,
+        {
+          latitude: { gte: south, lte: north },
+          longitude: { gte: west, lte: east },
+        },
+      ],
+    },
     select: { id: true, latitude: true, longitude: true },
   });
 
   return candidates
     .filter((c) => pointInPolygon([c.longitude!, c.latitude!], polygon))
     .map((c) => c.id);
+}
+
+function polygonBounds(polygon: [number, number][]) {
+  const lngs = polygon.map(([lng]) => lng);
+  const lats = polygon.map(([, lat]) => lat);
+  return {
+    north: Math.max(...lats),
+    south: Math.min(...lats),
+    east: Math.max(...lngs),
+    west: Math.min(...lngs),
+  };
 }
 
 function pointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
@@ -170,9 +198,7 @@ function buildOrderBy(sortBy: string): Prisma.ListingOrderByWithRelationInput {
   }
 }
 
-type ListingRow = Awaited<ReturnType<typeof prisma.listing.findFirst>> & Record<string, unknown>;
-
-function mapListingToProperty(listing: NonNullable<ListingRow>): Property {
+function mapListingToProperty(listing: ListingPropertyRow): Property {
   const openHouse = listing.openHouseSchedule as OpenHouseSlot[] | null;
 
   return {

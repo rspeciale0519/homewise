@@ -260,6 +260,7 @@ model Listing {
   virtualTourUrl     String?
   remarks            String?
   embedding          Float[]
+  embeddingVector    Unsupported("vector(1536)")?
   embeddingText      String?
   mlgCanUse          String[]  @default([])
   mlsLastModified    DateTime?

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { isHomewiseOffice } from "@/lib/mls-featured";
 import { proxyPhotoUrl } from "@/lib/mls-image";
+import { limitMlsPhotoSources } from "@/lib/mls-media-budget";
 import type { ResoProperty } from "@/types/reso";
 
 export type ExistingListingPrice = {
@@ -15,9 +16,9 @@ export type ListingSyncData = Prisma.ListingUncheckedCreateInput & {
 };
 
 function sortedPhotoSources(reso: ResoProperty): string[] {
-  return [...(reso.Media ?? [])]
+  return limitMlsPhotoSources([...(reso.Media ?? [])]
     .sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
-    .map((media) => media.MediaURL);
+    .map((media) => media.MediaURL));
 }
 
 export function mapStatus(resoStatus: string): string {

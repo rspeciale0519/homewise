@@ -13,6 +13,7 @@ import { formatPrice } from "@/lib/format";
 import { createMetadata } from "@/lib/metadata";
 import { BackButton } from "@/components/ui/back-button";
 import { withIdx } from "@/lib/mls-visibility";
+import { LISTING_CARD_SELECT } from "@/lib/listing-selects";
 
 interface AgentListingsPageProps {
   params: Promise<{ slug: string }>;
@@ -66,6 +67,7 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
   const [listings, total, activeCt, pendingCt, soldCt] = await Promise.all([
     prisma.listing.findMany({
       where,
+      select: LISTING_CARD_SELECT,
       orderBy: statusFilter === "sold" ? { closeDate: "desc" } : { price: "desc" },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,

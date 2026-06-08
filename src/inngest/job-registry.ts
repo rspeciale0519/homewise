@@ -83,6 +83,12 @@ export const JOB_REGISTRY: Record<string, JobMeta> = {
     schedule: "Every 6 hours",
     type: "cron",
   },
+  "generate-backfilled-listing-embeddings": {
+    name: "Backfilled Listing Embeddings",
+    description: "Create listing embeddings in bounded batches after MLS backfill",
+    schedule: null,
+    type: "event",
+  },
   "generate-single-embedding": {
     name: "Single Embedding",
     description: "Generate embedding for a listing on sync",
