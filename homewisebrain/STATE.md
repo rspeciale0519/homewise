@@ -31,6 +31,9 @@ explicit command approval. Vercel Production has `MLS_OFFICE_ID` removed and now
 `MLS_IMAGE_SIGNING_SECRET`; it still has legacy MLS Grid client id/secret and is missing
 required `MLS_GRID_TOKEN` plus exact `MLS_GRID_ORIGINATING_SYSTEM_NAME`. Live token/sample
 data are needed for safe dry-run, full backfill, counts, E2E smoke, and freshness verification.
+Latest Vercel preview for `feature/mls-go-live` is Ready at
+`https://homewise-qn9aurms7-robs-projects-c72886ba.vercel.app`, but chrome-devtools MCP
+was unavailable in this session, so browser smoke remains unverified.
 
 ## Open threads
 - **MLS go-live:** branch `feature/mls-go-live` is clean/pushed at `5fa7fc3` before the

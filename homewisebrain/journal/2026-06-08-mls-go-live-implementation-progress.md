@@ -57,6 +57,14 @@ After explicit command approvals:
 - Generated a 32-byte random value and added it as Vercel Production `MLS_IMAGE_SIGNING_SECRET`
   without printing the secret.
 
+## Vercel Preview
+
+Fresh `feature/mls-go-live` preview reached Ready:
+`https://homewise-qn9aurms7-robs-projects-c72886ba.vercel.app`.
+
+Chrome-devtools MCP was not available in this session, so browser E2E smoke is still
+unverified and Phase 10 Step 7 remains unchecked.
+
 ## Remaining Blockers
 
 - Vercel Production still has legacy `MLS_GRID_CLIENT_ID`/`MLS_GRID_CLIENT_SECRET`, but is missing
