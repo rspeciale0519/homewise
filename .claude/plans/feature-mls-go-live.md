@@ -194,13 +194,13 @@ async function authedFetch(url: string): Promise<ResoODataResponse> {
 ## Phase 2 — Pure helpers (built BEFORE the sync)
 
 ### Task 2.1: `mls-featured` (TDD)
-- [ ] `parseOfficeIds(raw)` → trimmed non-empty list; `isHomewiseOffice(id)` → membership in `HOMEWISE_OFFICE_MLS_ID`. Tests for comma-parse, null, no-config=false. Implement, run, commit. *(Same as v1 Phase 3.)*
+- [x] `parseOfficeIds(raw)` → trimmed non-empty list; `isHomewiseOffice(id)` → membership in `HOMEWISE_OFFICE_MLS_ID`. Tests for comma-parse, null, no-config=false. Implement, run, commit. *(Same as v1 Phase 3.)*
 
 ### Task 2.2: `mls-image` (TDD)
-- [ ] `storageKeyFor(url)`=sha256 hex+`.jpg`; `proxyPhotoUrl(url)`=`/api/mls-photo?u=<b64url>&sig=<hmac>`; `parseAndVerify(params)` HMAC `timingSafeEqual`. Tests: builds under `/api/mls-photo`, round-trips, rejects tampered sig, deterministic key. Implement, run, commit. *(Same as v1 Phase 4.1.)*
+- [x] `storageKeyFor(url)`=sha256 hex+`.jpg`; `proxyPhotoUrl(url)`=`/api/mls-photo?u=<b64url>&sig=<hmac>`; `parseAndVerify(params)` HMAC `timingSafeEqual`. Tests: builds under `/api/mls-photo`, round-trips, rejects tampered sig, deterministic key. Implement, run, commit. *(Same as v1 Phase 4.1.)*
 
 ### Task 2.3: `mls-visibility` (TDD — fixes Gap #1 foundation)
-- [ ] **Step 1:** Failing test `src/lib/mls-visibility.test.ts`:
+- [x] **Step 1:** Failing test `src/lib/mls-visibility.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -212,7 +212,7 @@ it("merges into an existing where", () => {
 it("merges into empty", () => { expect(withIdx()).toEqual({ mlgCanUse: { has: "IDX" } }); });
 ```
 
-- [ ] **Step 2:** Implement `src/lib/mls-visibility.ts`:
+- [x] **Step 2:** Implement `src/lib/mls-visibility.ts`:
 
 ```ts
 import type { Prisma } from "@prisma/client";
@@ -222,7 +222,7 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
 }
 ```
 
-- [ ] **Step 3:** Run → PASS. Commit: `git add src/lib/mls-visibility.* && git commit -m "feat(mls): central IDX visibility filter"`
+- [x] **Step 3:** Run → PASS. Commit: `git add src/lib/mls-visibility.* && git commit -m "feat(mls): central IDX visibility filter"`
 
 ---
 
