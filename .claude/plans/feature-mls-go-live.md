@@ -328,7 +328,7 @@ Stellar Articles 19.22/19.23/19.09 + MLS GRID source/disclaimer.
 - [ ] **Step 5 — full backfill:** trigger `POST /api/admin/sync` (route + `sync-dashboard.tsx` already exist); watch `SyncState` syncing→idle, `cursor` advancing.
 - [ ] **Step 6 — verify counts:** total>0, `mlgCanUse has IDX`>0, featured = HomeWise count, agent portfolios populated.
 - [ ] **Step 7 — E2E smoke (chrome-devtools, Rule 4):** search/map/polygon/filters; detail photos+attribution+disclaimer; homepage featured = HomeWise only; agent listings; a non-IDX row is invisible everywhere; analytics surfaces show the BO-gated state. Monitor Vercel deploy green per `[[skill-build-vercel-monitor]]`.
-  - Vercel preview for `feature/mls-go-live` reached Ready on 2026-06-08: `https://homewise-qn9aurms7-robs-projects-c72886ba.vercel.app`. Chrome-devtools MCP was not available in this session, so browser E2E smoke remains unverified and this step stays unchecked.
+  - Latest Vercel preview for `feature/mls-go-live` reached Ready on 2026-06-08: `https://homewise-ii0xeorlz-robs-projects-c72886ba.vercel.app`. Chrome-devtools MCP was not available in this session, so browser E2E smoke remains unverified and this step stays unchecked.
 - [ ] **Step 8 — compliance/freshness:** off-market record deletes + its cached photos purge within the 12h window; 15-min cron advances `cursor` and pulls only changed rows.
 
 ---

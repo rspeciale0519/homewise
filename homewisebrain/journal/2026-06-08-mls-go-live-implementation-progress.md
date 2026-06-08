@@ -60,7 +60,7 @@ After explicit command approvals:
 ## Vercel Preview
 
 Fresh `feature/mls-go-live` preview reached Ready:
-`https://homewise-qn9aurms7-robs-projects-c72886ba.vercel.app`.
+`https://homewise-ii0xeorlz-robs-projects-c72886ba.vercel.app`.
 
 Chrome-devtools MCP was not available in this session, so browser E2E smoke is still
 unverified and Phase 10 Step 7 remains unchecked.

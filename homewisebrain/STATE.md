@@ -32,7 +32,7 @@ explicit command approval. Vercel Production has `MLS_OFFICE_ID` removed and now
 required `MLS_GRID_TOKEN` plus exact `MLS_GRID_ORIGINATING_SYSTEM_NAME`. Live token/sample
 data are needed for safe dry-run, full backfill, counts, E2E smoke, and freshness verification.
 Latest Vercel preview for `feature/mls-go-live` is Ready at
-`https://homewise-qn9aurms7-robs-projects-c72886ba.vercel.app`, but chrome-devtools MCP
+`https://homewise-ii0xeorlz-robs-projects-c72886ba.vercel.app`, but chrome-devtools MCP
 was unavailable in this session, so browser smoke remains unverified.
 
 ## Open threads
