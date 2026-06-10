@@ -1,47 +1,54 @@
 # homewise brain — STATE
-Updated: 2026-06-08
+Updated: 2026-06-10
 
 ## Current focus
-**MLS go-live implementation on `feature/mls-go-live`.** The audit-corrected v2 plan at
-`.claude/plans/feature-mls-go-live.md` is the source of truth. All unblocked local code,
-DB, and Vercel env setup work is implemented and pushed through `449274c`; verification
-passed for type-check, lint, full Vitest, and production build. Public property reads use
-Stellar only when `PROPERTY_PROVIDER=stellar` and `MLS_PUBLIC_SEARCH_ENABLED=true`, allowing
-sync/backfill to run while public MLS search remains off until counts/E2E pass.
+**MLS go-live PROVEN against live Stellar demo data on `feature/mls-go-live`** (pushed
+through `9275b53`). Rob received MLS Grid demo-portal tokens (in .env.local under "MLS
+DEMO DATA"; IDX token → `MLS_GRID_TOKEN`, base `https://api-demo.mlsgrid.com/v2`,
+`MLS_GRID_ORIGINATING_SYSTEM_NAME=mfrmls`). Full backfill of 12,793 listings + open
+houses completed into shared/prod Supabase; search/detail/featured/attribution/photo
+proxy all smoke-verified in browser; six real defects found by live-feed testing were
+fixed and verified (see journal 2026-06-10). Public search remains gated off in Vercel
+prod (`MLS_PUBLIC_SEARCH_ENABLED=false`); local .env.local has it on for demo browsing.
 Confirmed decision: skip the Back Office feed for launch → CMA/market-stats ship gated
-OFF (`ANALYTICS_BO_ENABLED=false`); everything else launches after live prod checks.
+OFF (`ANALYTICS_BO_ENABLED=false`).
 
 ## Latest synopsis
-2026-06-08: MLS go-live v2 moved from plan to implementation. Completed and pushed:
-config/RESO/schema/db push, MLS Grid static token query builders, helper tests, public
-photo proxy + prod `mls-photos` bucket, compliant sync using `ListingKey`, cursor
-persistence, `MlgCanView=false` delete/photo purge, open-house sync, universal `withIdx()`
-public read filtering, attribution/disclaimers, Back Office analytics gating, pgvector
-code prep, polygon bbox prefilter, embedding backfill, media budget guards, typed Inngest
-events, agent MLS ID normalization, backfill match warnings, and alert suppression/absolute
-email image URLs. Later pushed commits added the public launch gate, completed shared/prod
-pgvector SQL + `db:push`, updated Vercel production env gating/signing values, and recorded
-preview deploy status. Full local verification passed after the latest code change:
-`npm run type-check`, `npm run lint`, `npx vitest run` (75 files / 503 tests), and
-`npm run build`.
+2026-06-10: Demo data go-live proof completed end-to-end. Wired demo IDX token, probed
+feed (12,933 records, OriginatingSystemName=`mfrmls` lowercase, MlgCanUse=[IDX], media
+needs `User-Agent: <token>`), ran full Inngest backfill (12,793 listings: 9,606 Active /
+1,538 Pending / 1,620 Sold / 29 Coming Soon; counts reconcile vs API after 132
+MlgCanView=false exclusions), open houses attached (demo slots are historical → expired-
+clear empties them; correct behavior), featured-by-office proven with Patterson Realty
+stand-in (`HOMEWISE_OFFICE_MLS_ID=MFR260504438`). Browser smoke (chrome-devtools): home,
+featured cards w/ attribution + land 0bd/0ba fallbacks, /properties search "12793
+properties found" + MLS GRID disclosure + map, detail page w/ 40-photo gallery, IDX
+disclaimer, courtesy/listing#, open-house+walk-score+schools sections. Six live-feed
+defects fixed (commit `9275b53`): land-listing bath/bed/sqft fallbacks; 10× parallel page
+writes (0.8/s → ~7/s); single-step page sync (raw RESO page exceeded Inngest step-output
+limit — would also break in Cloud); `images.localPatterns` for the proxy route;
+canonical-identity storage keys (token rotation orphaned cache); self-healing photo
+refresh via single-entity `$expand=Media` + 429 propagation. Verification: lint, tsc,
+vitest 75 files / 507 tests, production build — all green.
 
-Remaining true blockers are production/live-state, not ordinary code: Phase 9 pgvector
-SQL + `db:push` completed successfully against shared/prod Supabase on 2026-06-08 after
-explicit command approval. Vercel Production has `MLS_OFFICE_ID` removed and now includes
-`ANALYTICS_BO_ENABLED=false`, `MLS_PUBLIC_SEARCH_ENABLED=false`, and a generated
-`MLS_IMAGE_SIGNING_SECRET`; it still has legacy MLS Grid client id/secret and is missing
-required `MLS_GRID_TOKEN` plus exact `MLS_GRID_ORIGINATING_SYSTEM_NAME`. Live token/sample
-data are needed for safe dry-run, full backfill, counts, E2E smoke, and freshness verification.
-Latest Vercel preview for `feature/mls-go-live` is Ready at
-`https://homewise-ii0xeorlz-robs-projects-c72886ba.vercel.app`, but chrome-devtools MCP
-was unavailable in this session, so browser smoke remains unverified.
+Demo-data quirks (NOT bugs): no school fields at all; media URLs expire ~2h (self-heal
+covers it); media server rate-limits bursts (429s on first-view; cache warms over time);
+demo open houses all in the past. Unresolved oddity: the FIRST backfill's photo HMAC sigs
+didn't match the current secret (process-specific, never explained); full re-import
+re-signed everything and sig survey now 12,788/12,788 ok.
 
 ## Open threads
-- **MLS go-live:** branch `feature/mls-go-live` is clean/pushed. Proceed only after receiving
-  the live `MLS_GRID_TOKEN`, exact `MLS_GRID_ORIGINATING_SYSTEM_NAME`, sample/dry-run data or
-  approval path, and chrome-devtools/browser verification access.
-- **Largest real gap:** live Stellar MLS credentials/sample data and prod Vercel env are
-  not yet configured. Research only in `docs/temp/`. See [[knowledge/roadmap]].
+- **MLS go-live:** demo-proven. Remaining for real launch: live (non-demo) MLS Grid token +
+  real `OriginatingSystemName`, set Vercel prod `MLS_GRID_TOKEN`/`MLS_GRID_BASE_URL`/
+  `MLS_GRID_ORIGINATING_SYSTEM_NAME`/`HOMEWISE_OFFICE_MLS_ID` (real office), flip
+  `PROPERTY_PROVIDER=stellar` + `MLS_PUBLIC_SEARCH_ENABLED=true`, re-point sync, backfill,
+  E2E. `OPENAI_API_KEY` missing locally → embeddings/NL search unproven against demo data.
+- **Agent-listings widget** untested against demo (auto-mode denied editing a prod Agent
+  row to link `mlsAgentId=MFR260504162`; Rob can set an agent's MLS ID via admin UI to see
+  their listings populate).
+- **Local demo env note:** stale Windows portproxy rules hijack 127.0.0.1:3000-3005 (dead
+  WSL IP 172.31.166.45) — run dev on `127.0.0.1:3100`; after dev-server restart, re-register
+  Inngest with `PUT /api/inngest` or invocations 404 silently.
 - **Training Hub v2/v3** extracted as standalone plans (`269a6df`), not started. v1 shipped
   inert columns so v2 activates with no migration.
 - **Admin shell isn't mobile** — features are built mobile-aware but the sidebar doesn't
