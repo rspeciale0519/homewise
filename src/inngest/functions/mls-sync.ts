@@ -91,18 +91,17 @@ export const mlsSync = inngest.createFunction(
         const pageUrl =
           nextLink ??
           buildPropertyUrl({ modifiedAfter, initialImport, top: PAGE_SIZE });
-        const page = await step.run(`fetch-property-page-${pageIndex}`, async () => {
-          return fetchPage(pageUrl);
-        });
+        const result = await step.run(`sync-property-page-${pageIndex}`, async () => {
+          const page = await fetchPage(pageUrl);
 
-        if (initialImport && !continuation && pageIndex === 0 && page.value.length === 0) {
-          throw new Error(
-            "MLS Grid initial import returned zero rows; verify OriginatingSystemName",
-          );
-        }
+          if (initialImport && !continuation && pageIndex === 0 && page.value.length === 0) {
+            throw new Error(
+              "MLS Grid initial import returned zero rows; verify OriginatingSystemName",
+            );
+          }
 
-        const result = await step.run(`process-property-page-${pageIndex}`, async () => {
-          return processPropertyPage(page.value, { initialImport });
+          const processed = await processPropertyPage(page.value, { initialImport });
+          return { ...processed, nextLink: page["@odata.nextLink"] ?? null };
         });
 
         totalProcessed += result.processed;
@@ -122,7 +121,7 @@ export const mlsSync = inngest.createFunction(
           });
         });
 
-        nextLink = page["@odata.nextLink"];
+        nextLink = result.nextLink ?? undefined;
         if (!nextLink) break;
       }
 
@@ -231,6 +230,8 @@ function updateDataFor(mapped: ListingSyncData): Prisma.ListingUncheckedUpdateIn
   return update;
 }
 
+const PAGE_WRITE_CONCURRENCY = 10;
+
 async function processPropertyPage(
   listings: ResoProperty[],
   options: { initialImport: boolean },
@@ -241,15 +242,25 @@ async function processPropertyPage(
 
   for (const listing of listings) {
     maxCursor = maxIsoTimestamp(maxCursor, listing.ModificationTimestamp);
+  }
 
-    if (listing.MlgCanView === false) {
-      await deleteListingAndCachedPhotos(listing.ListingKey);
-      deleted++;
-      continue;
+  for (let i = 0; i < listings.length; i += PAGE_WRITE_CONCURRENCY) {
+    const chunk = listings.slice(i, i + PAGE_WRITE_CONCURRENCY);
+    const outcomes = await Promise.all(
+      chunk.map(async (listing) => {
+        if (listing.MlgCanView === false) {
+          await deleteListingAndCachedPhotos(listing.ListingKey);
+          return "deleted" as const;
+        }
+        await upsertListing(listing, options);
+        return "upserted" as const;
+      }),
+    );
+
+    for (const outcome of outcomes) {
+      if (outcome === "deleted") deleted++;
+      else upserted++;
     }
-
-    await upsertListing(listing, options);
-    upserted++;
   }
 
   return { processed: listings.length, upserted, deleted, maxCursor };

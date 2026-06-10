@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { parseAndVerify, proxyPhotoUrl, storageKeyFor } from "./mls-image";
+import { canonicalMediaIdentity, parseAndVerify, proxyPhotoUrl, storageKeyFor } from "./mls-image";
 
 const originalEnv = { ...process.env };
 
@@ -13,6 +13,23 @@ describe("MLS image proxy helpers", () => {
 
     expect(storageKeyFor(sourceUrl)).toBe(storageKeyFor(sourceUrl));
     expect(storageKeyFor(sourceUrl)).toMatch(/^[a-f0-9]{64}\.jpg$/);
+  });
+
+  it("keeps storage keys stable when MLS Grid rotates signed media tokens", () => {
+    const before =
+      "https://media-demo.mlsgrid.com/token=AAA&expires=1781124658&id=abc/images/MFR733869680/061a16d2.jpeg";
+    const after =
+      "https://media-demo.mlsgrid.com/token=BBB&expires=1781129266&id=def/images/MFR733869680/061a16d2.jpeg";
+
+    expect(canonicalMediaIdentity(before)).toBe("/images/MFR733869680/061a16d2.jpeg");
+    expect(storageKeyFor(before)).toBe(storageKeyFor(after));
+  });
+
+  it("canonicalizes plain media URLs to host and path", () => {
+    expect(canonicalMediaIdentity("https://media.example.test/photo.jpg?x=1")).toBe(
+      "media.example.test/photo.jpg",
+    );
+    expect(canonicalMediaIdentity("not a url")).toBe("not a url");
   });
 
   it("builds signed proxy URLs", () => {

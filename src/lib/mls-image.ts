@@ -26,8 +26,22 @@ function signPayload(payload: string): string {
   return createHmac("sha256", secret).update(payload).digest("hex");
 }
 
+export function canonicalMediaIdentity(sourceUrl: string): string {
+  const imagesIndex = sourceUrl.indexOf("/images/");
+  if (imagesIndex !== -1) {
+    return sourceUrl.slice(imagesIndex);
+  }
+
+  try {
+    const url = new URL(sourceUrl);
+    return `${url.host}${url.pathname}`;
+  } catch {
+    return sourceUrl;
+  }
+}
+
 export function storageKeyFor(sourceUrl: string): string {
-  return `${createHash("sha256").update(sourceUrl).digest("hex")}.jpg`;
+  return `${createHash("sha256").update(canonicalMediaIdentity(sourceUrl)).digest("hex")}.jpg`;
 }
 
 export function proxyPhotoUrl(sourceUrl: string): string {

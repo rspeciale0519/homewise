@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseAndVerify } from "@/lib/mls-image";
 import { reserveMlsMediaDownload } from "@/lib/mls-media-budget";
+import { refreshPhotoSource } from "@/lib/mls-photo-refresh";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,26 @@ async function cachedPublicUrl(publicUrl: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function fetchSource(sourceUrl: string): Promise<Response> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch(sourceUrl, {
+      headers: { "User-Agent": process.env.MLS_GRID_TOKEN ?? "" },
+      cache: "no-store",
+    });
+
+    if (response.status !== 429 || attempt > 0) {
+      return response;
+    }
+
+    const retryAfter = Number(response.headers.get("Retry-After") ?? "2");
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(Math.max(retryAfter, 1), 8) * 1000),
+    );
+  }
+
+  throw new Error("unreachable");
 }
 
 function budgetExceededResponse(reason: string, retryAfterSeconds: number) {
@@ -60,10 +81,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const sourceResponse = await fetch(verified.sourceUrl, {
-      headers: { "User-Agent": process.env.MLS_GRID_TOKEN ?? "" },
-      cache: "no-store",
-    });
+    let sourceResponse = await fetchSource(verified.sourceUrl);
+
+    if (!sourceResponse.ok && sourceResponse.status !== 429) {
+      const refreshedUrl = await refreshPhotoSource(verified.sourceUrl).catch((error) => {
+        console.error("[mls-photo] Source refresh failed:", error);
+        return null;
+      });
+
+      if (refreshedUrl) {
+        sourceResponse = await fetchSource(refreshedUrl);
+      }
+    }
+
+    if (sourceResponse.status === 429) {
+      const retryAfter = sourceResponse.headers.get("Retry-After") ?? "5";
+      return NextResponse.json(
+        { error: "MLS photo source rate-limited" },
+        { status: 429, headers: { "Retry-After": retryAfter } }
+      );
+    }
 
     if (!sourceResponse.ok) {
       return NextResponse.json(

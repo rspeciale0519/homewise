@@ -3,6 +3,10 @@ import { OLD_SITE_REDIRECTS } from "./src/config/redirects";
 
 const nextConfig: NextConfig = {
   images: {
+    localPatterns: [
+      { pathname: "/api/mls-photo" },
+      { pathname: "/**", search: "" },
+    ],
     remotePatterns: [
       {
         protocol: "https",

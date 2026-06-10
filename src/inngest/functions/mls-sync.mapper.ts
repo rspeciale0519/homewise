@@ -48,6 +48,14 @@ export function detectPriceChange(
   return previous !== null && previous.price !== next.ListPrice;
 }
 
+function totalBaths(reso: ResoProperty): number {
+  return (
+    reso.BathroomsTotalDecimal ??
+    reso.BathroomsTotalInteger ??
+    (reso.BathroomsFull ?? 0) + (reso.BathroomsHalf ?? 0) * 0.5
+  );
+}
+
 export function mapResoToListingData(reso: ResoProperty): ListingSyncData {
   const photoSources = sortedPhotoSources(reso);
   const photos = photoSources.map((sourceUrl) => proxyPhotoUrl(sourceUrl));
@@ -65,17 +73,17 @@ export function mapResoToListingData(reso: ResoProperty): ListingSyncData {
     price: reso.ListPrice,
     closePrice: reso.ClosePrice ?? null,
     originalListPrice: reso.OriginalListPrice ?? null,
-    address: reso.UnparsedAddress,
-    city: reso.City,
+    address: reso.UnparsedAddress ?? "",
+    city: reso.City ?? "",
     state: reso.StateOrProvince ?? "FL",
-    zip: reso.PostalCode,
+    zip: reso.PostalCode ?? "",
     county: reso.CountyOrParish ?? null,
     subdivision: reso.SubdivisionName ?? null,
-    beds: reso.BedroomsTotal,
-    bathsFull: reso.BathroomsFull,
+    beds: reso.BedroomsTotal ?? 0,
+    bathsFull: reso.BathroomsFull ?? 0,
     bathsHalf: reso.BathroomsHalf ?? 0,
-    baths: reso.BathroomsTotalDecimal,
-    sqft: reso.LivingArea,
+    baths: totalBaths(reso),
+    sqft: reso.LivingArea ?? 0,
     lotSize: reso.LotSizeArea ?? null,
     yearBuilt: reso.YearBuilt ?? null,
     propertyType: reso.PropertyType,

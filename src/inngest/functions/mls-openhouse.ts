@@ -55,18 +55,17 @@ export async function syncOpenHouses(step: StepLike): Promise<OpenHouseSyncResul
   try {
     do {
       const pageUrl = nextLink ?? buildOpenHouseUrl({ modifiedAfter: cursor, top: PAGE_SIZE });
-      const page = (await step.run(`fetch-openhouse-page-${pageIndex}`, async () => {
-        return fetchOpenHousePage(pageUrl);
-      })) as Awaited<ReturnType<typeof fetchOpenHousePage>>;
-      const result = (await step.run(`process-openhouse-page-${pageIndex}`, async () => {
-        return processOpenHousePage(page.value);
-      })) as OpenHousePageResult;
+      const result = (await step.run(`sync-openhouse-page-${pageIndex}`, async () => {
+        const page = await fetchOpenHousePage(pageUrl);
+        const pageResult = await processOpenHousePage(page.value);
+        return { ...pageResult, nextLink: page["@odata.nextLink"] ?? null };
+      })) as OpenHousePageResult & { nextLink: string | null };
 
       processed += result.processed;
       updated += result.updated;
       cleared += result.cleared;
       cursor = maxIsoTimestamp(cursor, result.maxCursor);
-      nextLink = page["@odata.nextLink"];
+      nextLink = result.nextLink ?? undefined;
 
       await step.run(`persist-openhouse-cursor-${pageIndex}`, async () => {
         return prisma.syncState.update({

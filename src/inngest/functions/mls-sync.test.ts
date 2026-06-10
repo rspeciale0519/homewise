@@ -81,6 +81,37 @@ describe("MLS sync mapping", () => {
     expect(mapResoToListingData(resoListing()).featured).toBe(false);
   });
 
+  it("maps land listings without bed/bath/area fields using zero fallbacks", () => {
+    process.env.MLS_IMAGE_SIGNING_SECRET = "secret";
+
+    const mapped = mapResoToListingData(
+      resoListing({
+        PropertyType: "Land",
+        BedroomsTotal: undefined,
+        BathroomsFull: undefined,
+        BathroomsHalf: undefined,
+        BathroomsTotalDecimal: undefined,
+        LivingArea: undefined,
+      }),
+    );
+
+    expect(mapped.beds).toBe(0);
+    expect(mapped.bathsFull).toBe(0);
+    expect(mapped.bathsHalf).toBe(0);
+    expect(mapped.baths).toBe(0);
+    expect(mapped.sqft).toBe(0);
+  });
+
+  it("derives total baths from full and half counts when decimal is absent", () => {
+    process.env.MLS_IMAGE_SIGNING_SECRET = "secret";
+
+    const mapped = mapResoToListingData(
+      resoListing({ BathroomsTotalDecimal: undefined, BathroomsFull: 4, BathroomsHalf: 1 }),
+    );
+
+    expect(mapped.baths).toBe(4.5);
+  });
+
   it("detects price changes", () => {
     expect(detectPriceChange({ price: 600_000 }, resoListing())).toBe(true);
     expect(detectPriceChange({ price: 625_000 }, resoListing())).toBe(false);
