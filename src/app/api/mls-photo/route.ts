@@ -29,6 +29,12 @@ async function cachedPublicUrl(publicUrl: string): Promise<boolean> {
   }
 }
 
+function isImageResponse(response: Response): boolean {
+  return (
+    response.ok && (response.headers.get("content-type") ?? "").startsWith("image/")
+  );
+}
+
 async function fetchSource(sourceUrl: string): Promise<Response> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const response = await fetch(sourceUrl, {
@@ -83,7 +89,9 @@ export async function GET(request: NextRequest) {
   try {
     let sourceResponse = await fetchSource(verified.sourceUrl);
 
-    if (!sourceResponse.ok && sourceResponse.status !== 429) {
+    // MLS Grid's media servers can answer expired-token URLs with a 2xx
+    // status and a JSON error body, so a usable response must be an image.
+    if (!isImageResponse(sourceResponse) && sourceResponse.status !== 429) {
       const refreshedUrl = await refreshPhotoSource(verified.sourceUrl).catch((error) => {
         console.error("[mls-photo] Source refresh failed:", error);
         return null;
@@ -102,7 +110,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!sourceResponse.ok) {
+    if (!isImageResponse(sourceResponse)) {
       return NextResponse.json(
         { error: "MLS photo source fetch failed" },
         { status: 502 }
