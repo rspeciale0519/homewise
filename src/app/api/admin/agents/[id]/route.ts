@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { prisma } from "@/lib/prisma";
 import { adminAgentUpdateSchema } from "@/schemas/admin-agent.schema";
 
@@ -59,6 +60,8 @@ export async function PATCH(
         emailSignature: data.emailSignature === "" ? null : data.emailSignature,
         emailTagline: data.emailTagline === "" ? null : data.emailTagline,
         brandColor: data.brandColor === "" ? null : data.brandColor,
+        mlsAgentId:
+          data.mlsAgentId === undefined ? undefined : normalizeMlsAgentId(data.mlsAgentId),
       },
     });
 

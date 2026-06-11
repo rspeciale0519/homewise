@@ -16,6 +16,7 @@ interface AgentFormData {
   languages: string[];
   designations: string[];
   active: boolean;
+  mlsAgentId: string;
   emailSignature: string;
   emailTagline: string;
   brandColor: string;
@@ -37,6 +38,7 @@ const defaultData: AgentFormData = {
   languages: [],
   designations: [],
   active: true,
+  mlsAgentId: "",
   emailSignature: "",
   emailTagline: "",
   brandColor: "",
@@ -223,6 +225,24 @@ export function AgentForm({ mode, agentId, initialData }: AgentFormProps) {
                 placeholder="(407) 555-0100"
                 maxLength={14}
               />
+            </div>
+          </div>
+
+          {/* MLS Agent ID */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>MLS Agent ID</label>
+              <input
+                type="text"
+                value={form.mlsAgentId}
+                onChange={(e) => updateField("mlsAgentId", e.target.value.toUpperCase())}
+                className={inputCls}
+                placeholder="MFR261234567"
+                maxLength={50}
+              />
+              <p className="mt-1.5 text-xs text-slate-400">
+                Stellar MLS member ID — links this agent&apos;s MLS listings to their profile.
+              </p>
             </div>
           </div>
 

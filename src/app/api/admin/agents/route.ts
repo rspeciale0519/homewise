@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { adminAgentFilterSchema, adminAgentCreateSchema } from "@/schemas/admin-agent.schema";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { generateSlug } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
         phone: data.phone || null,
         photoUrl: data.photoUrl || null,
         bio: data.bio || null,
+        mlsAgentId: normalizeMlsAgentId(data.mlsAgentId),
         slug,
       },
     });

@@ -45,6 +45,7 @@ export default async function AdminEditAgentPage({
                 languages: agent.languages,
                 designations: agent.designations,
                 active: agent.active,
+                mlsAgentId: agent.mlsAgentId ?? "",
                 emailSignature: agent.emailSignature ?? "",
                 emailTagline: agent.emailTagline ?? "",
                 brandColor: agent.brandColor ?? "",

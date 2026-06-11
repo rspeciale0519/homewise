@@ -187,6 +187,14 @@ export default async function AgentProfilePage({ params }: AgentProfileProps) {
                 )}
               </div>
 
+              {/* MLS ID */}
+              {agent.mlsAgentId && (
+                <p className="mt-6 text-xs text-slate-500">
+                  <span className="font-semibold tracking-wider uppercase">MLS ID:</span>{" "}
+                  <span className="font-mono text-slate-400">{agent.mlsAgentId}</span>
+                </p>
+              )}
+
               {/* Languages */}
               {agent.languages.length > 0 && (
                 <div className="mt-6">
