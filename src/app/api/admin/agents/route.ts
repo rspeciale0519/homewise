@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
@@ -96,6 +97,9 @@ export async function POST(request: NextRequest) {
         slug,
       },
     });
+
+    revalidatePath("/agents");
+    revalidatePath(`/agents/${agent.slug}`);
 
     return NextResponse.json({ agent }, { status: 201 });
   } catch {

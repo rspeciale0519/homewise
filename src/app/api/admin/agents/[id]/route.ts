@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
@@ -64,6 +65,10 @@ export async function PATCH(
           data.mlsAgentId === undefined ? undefined : normalizeMlsAgentId(data.mlsAgentId),
       },
     });
+
+    revalidatePath("/agents");
+    revalidatePath(`/agents/${updated.slug}`);
+    revalidatePath(`/agents/${updated.slug}/listings`);
 
     return NextResponse.json({ agent: updated });
   } catch {

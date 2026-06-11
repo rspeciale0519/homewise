@@ -18,6 +18,8 @@ interface AgentProfileProps {
   params: Promise<{ slug: string }>;
 }
 
+export const revalidate = 900;
+
 export async function generateStaticParams() {
   const agents = await prisma.agent.findMany({
     where: { active: true },
