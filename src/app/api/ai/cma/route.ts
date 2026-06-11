@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -31,13 +32,17 @@ export async function POST(request: NextRequest) {
     }
     const body = input.data;
 
+    if (!analyticsBoEnabled()) {
+      return NextResponse.json(analyticsUnavailable("cma_report"), { status: 503 });
+    }
+
     const comps = await prisma.listing.findMany({
-      where: {
+      where: withBo({
         status: "Sold",
         zip: body.zip,
         ...(body.beds ? { beds: { gte: body.beds - 1, lte: body.beds + 1 } } : {}),
         ...(body.sqft ? { sqft: { gte: body.sqft - 500, lte: body.sqft + 500 } } : {}),
-      },
+      }),
       orderBy: { closeDate: "desc" },
       take: 8,
       select: {
@@ -49,11 +54,11 @@ export async function POST(request: NextRequest) {
     });
 
     const activeComps = await prisma.listing.findMany({
-      where: {
+      where: withBo({
         status: "Active",
         zip: body.zip,
         ...(body.beds ? { beds: { gte: body.beds - 1, lte: body.beds + 1 } } : {}),
-      },
+      }),
       orderBy: { price: "asc" },
       take: 5,
       select: { address: true, city: true, price: true, beds: true, baths: true, sqft: true, daysOnMarket: true },

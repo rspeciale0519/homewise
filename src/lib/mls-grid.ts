@@ -1,41 +1,119 @@
-import type { ResoODataResponse } from "@/types/reso";
+import type { ResoODataResponse, ResoOpenHouse, ResoProperty } from "@/types/reso";
 
-const BASE_URL = process.env.MLS_GRID_BASE_URL ?? "https://api.mlsgrid.com/v2";
-const CLIENT_ID = process.env.MLS_GRID_CLIENT_ID ?? "";
-const CLIENT_SECRET = process.env.MLS_GRID_CLIENT_SECRET ?? "";
+type PropertyUrlOptions = {
+  modifiedAfter?: string;
+  initialImport?: boolean;
+  top?: number;
+};
 
-let cachedToken: { token: string; expiresAt: number } | null = null;
+type OpenHouseUrlOptions = {
+  modifiedAfter?: string;
+  top?: number;
+};
 
-export function hasCredentials(): boolean {
-  return Boolean(CLIENT_ID && CLIENT_SECRET);
+const DEFAULT_BASE_URL = "https://api.mlsgrid.com/v2";
+
+function baseUrl(): string {
+  return process.env.MLS_GRID_BASE_URL ?? DEFAULT_BASE_URL;
 }
 
-export async function getToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
-    return cachedToken.token;
+function token(): string {
+  return process.env.MLS_GRID_TOKEN ?? "";
+}
+
+function originatingSystem(): string {
+  return process.env.MLS_GRID_ORIGINATING_SYSTEM_NAME ?? "";
+}
+
+function escapeODataString(value: string): string {
+  return value.replaceAll("'", "''");
+}
+
+function addFilter(url: URL, filter: string): void {
+  const existing = url.searchParams.get("$filter");
+  url.searchParams.set("$filter", existing ? `${existing} and ${filter}` : filter);
+}
+
+export function hasCredentials(): boolean {
+  return Boolean(token() && originatingSystem());
+}
+
+export function buildPropertyUrl({
+  modifiedAfter,
+  initialImport = false,
+  top = 200,
+}: PropertyUrlOptions): string {
+  const url = new URL(`${baseUrl()}/Property`);
+  url.searchParams.set("$top", String(top));
+  url.searchParams.set("$expand", "Media");
+  url.searchParams.set("$orderby", "ModificationTimestamp,ListingKey");
+  addFilter(url, `OriginatingSystemName eq '${escapeODataString(originatingSystem())}'`);
+
+  if (initialImport) {
+    addFilter(url, "MlgCanView eq true");
   }
 
-  const res = await fetch(`${BASE_URL}/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`MLS Grid token error: ${res.status} ${await res.text()}`);
+  if (modifiedAfter) {
+    addFilter(url, `ModificationTimestamp ge ${modifiedAfter}`);
   }
 
-  const data = (await res.json()) as { access_token: string; expires_in: number };
-  cachedToken = {
-    token: data.access_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
-  };
+  const officeId = process.env.MLS_OFFICE_ID?.trim();
+  if (officeId) {
+    addFilter(url, `ListOfficeMlsId eq '${escapeODataString(officeId)}'`);
+  }
 
-  return cachedToken.token;
+  return url.toString();
+}
+
+export function buildOpenHouseUrl({ modifiedAfter, top = 200 }: OpenHouseUrlOptions): string {
+  const url = new URL(`${baseUrl()}/OpenHouse`);
+  url.searchParams.set("$top", String(top));
+  url.searchParams.set("$orderby", "ModificationTimestamp,OpenHouseKey");
+  addFilter(url, `OriginatingSystemName eq '${escapeODataString(originatingSystem())}'`);
+
+  if (modifiedAfter) {
+    addFilter(url, `ModificationTimestamp ge ${modifiedAfter}`);
+  }
+
+  return url.toString();
+}
+
+export async function authedFetch<T = ResoProperty>(
+  url: string,
+): Promise<ResoODataResponse<T>> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token()}` },
+    });
+
+    if (res.status === 429 && attempt === 0) {
+      const reset = Number(res.headers.get("RateLimit-Reset") ?? "2");
+      await new Promise((resolve) => setTimeout(resolve, Math.min(reset, 30) * 1000));
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new Error(`MLS Grid fetch error: ${res.status} ${await res.text()}`);
+    }
+
+    return (await res.json()) as ResoODataResponse<T>;
+  }
+
+  throw new Error("MLS Grid: rate-limited after retry");
+}
+
+export async function fetchPage(
+  urlOrOptions: string | PropertyUrlOptions,
+): Promise<ResoODataResponse> {
+  const url = typeof urlOrOptions === "string" ? urlOrOptions : buildPropertyUrl(urlOrOptions);
+  return authedFetch<ResoProperty>(url);
+}
+
+export async function fetchOpenHousePage(
+  urlOrOptions: string | OpenHouseUrlOptions,
+): Promise<ResoODataResponse<ResoOpenHouse>> {
+  const url = typeof urlOrOptions === "string" ? urlOrOptions : buildOpenHouseUrl(urlOrOptions);
+  return authedFetch<ResoOpenHouse>(url);
 }
 
 export async function fetchListings(params: {
@@ -43,32 +121,9 @@ export async function fetchListings(params: {
   top?: number;
   skip?: number;
 }): Promise<ResoODataResponse> {
-  const token = await getToken();
-  const { modifiedAfter, top = 200, skip = 0 } = params;
-
-  const url = new URL(`${BASE_URL}/Property`);
-  url.searchParams.set("$top", String(top));
-  url.searchParams.set("$skip", String(skip));
-  url.searchParams.set("$orderby", "ModificationTimestamp desc");
-
-  if (modifiedAfter) {
-    url.searchParams.set("$filter", `ModificationTimestamp gt ${modifiedAfter}`);
+  const url = new URL(buildPropertyUrl(params));
+  if (params.skip) {
+    url.searchParams.set("$skip", String(params.skip));
   }
-
-  const officeId = process.env.MLS_OFFICE_ID;
-  if (officeId) {
-    const existing = url.searchParams.get("$filter");
-    const officeFilter = `ListOfficeMlsId eq '${officeId}'`;
-    url.searchParams.set("$filter", existing ? `${existing} and ${officeFilter}` : officeFilter);
-  }
-
-  const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!res.ok) {
-    throw new Error(`MLS Grid fetch error: ${res.status} ${await res.text()}`);
-  }
-
-  return (await res.json()) as ResoODataResponse;
+  return fetchPage(url.toString());
 }

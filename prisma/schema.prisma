@@ -197,6 +197,7 @@ model RecentlyViewed {
 model Listing {
   id                 String    @id @default(cuid())
   mlsId              String    @unique
+  listingId          String?
   mlsSource          String    @default("stellar")
   status             String    @default("Active")
   price              Float
@@ -219,6 +220,8 @@ model Listing {
   propertySubType    String?
   description        String?
   photos             String[]
+  photoSources       String[]  @default([])
+  photosChangeTimestamp DateTime?
   imageUrl           String?
   latitude           Float?
   longitude          Float?
@@ -237,6 +240,9 @@ model Listing {
   closeDate          DateTime?
   openHouseSchedule  Json?
   schoolDistrict     String?
+  elementarySchoolDistrict String?
+  middleSchoolDistrict     String?
+  highSchoolDistrict       String?
   elementarySchool   String?
   middleSchool       String?
   highSchool         String?
@@ -254,7 +260,9 @@ model Listing {
   virtualTourUrl     String?
   remarks            String?
   embedding          Float[]
+  embeddingVector    Unsupported("vector(1536)")?
   embeddingText      String?
+  mlgCanUse          String[]  @default([])
   mlsLastModified    DateTime?
   syncedAt           DateTime  @default(now())
   createdAt          DateTime  @default(now())
@@ -265,6 +273,8 @@ model Listing {
   @@index([price])
   @@index([propertyType])
   @@index([mlsId])
+  @@index([listingId])
+  @@index([mlgCanUse], type: Gin)
   @@index([listingAgentMlsId])
   @@index([listingOfficeMlsId])
   @@index([featured])
@@ -301,6 +311,7 @@ model SyncState {
   id          String    @id @default(cuid())
   provider    String    @unique @default("stellar")
   lastSyncAt  DateTime?
+  cursor      String?
   totalSynced Int       @default(0)
   lastError   String?
   status      String    @default("idle")

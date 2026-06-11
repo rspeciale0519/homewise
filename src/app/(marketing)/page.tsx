@@ -8,6 +8,7 @@ import { CtaBanner } from "@/components/shared/cta-banner";
 import { JsonLdScript } from "@/components/shared/json-ld-script";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/json-ld";
 import { prisma } from "@/lib/prisma";
+import { withIdx } from "@/lib/mls-visibility";
 
 export const metadata: Metadata = {
   title: SITE_NAME,
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const featuredListings = await prisma.listing.findMany({
-    where: { featured: true, status: { in: ["Active", "Pending"] } },
+    where: withIdx({ featured: true, status: { in: ["Active", "Pending"] } }),
     orderBy: { price: "desc" },
     take: 12,
     select: {
@@ -32,6 +33,10 @@ export default async function HomePage() {
       sqft: true,
       status: true,
       daysOnMarket: true,
+      mlsId: true,
+      listingId: true,
+      listingOfficeName: true,
+      listingAgentName: true,
     },
   });
 

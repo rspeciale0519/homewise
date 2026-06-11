@@ -1,7 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { Prisma } from "@prisma/client";
 import { ChatbotEngine, type ContextBundle } from "./engine";
 import { prisma } from "@/lib/prisma";
 import { semanticSearch } from "@/lib/ai/embeddings";
+import { withIdx } from "@/lib/mls-visibility";
 
 const SYSTEM_PROMPT = `You are a friendly real estate assistant for Homewise FL, a real estate brokerage in Florida.
 
@@ -10,6 +12,7 @@ Help users find homes, answer questions about the home buying process, and conne
 When users describe what they're looking for, use the search_listings tool to find matching properties.
 When users ask about a specific neighborhood or area, provide helpful information.
 Always be warm, professional, and knowledgeable about Central Florida real estate.
+When naming or recommending a listing, include its brokerage attribution from the tool result.
 
 If a user seems ready to schedule a showing or wants to speak with an agent, encourage them to use the contact form or schedule a showing.`;
 
@@ -64,38 +67,65 @@ export function createPublicChatbot(sessionId: string, userId?: string): Chatbot
 
     if (results.length === 0) {
       // Fallback to database text search
-      const where: Record<string, unknown> = { status: "Active" };
-      if (input.city) where.city = { equals: input.city, mode: "insensitive" };
-      if (input.minPrice) where.price = { gte: input.minPrice };
-      if (input.maxPrice) where.price = { ...((where.price as Record<string, unknown>) ?? {}), lte: input.maxPrice };
-      if (input.beds) where.beds = { gte: input.beds };
+      const where: Prisma.ListingWhereInput = withIdx({ status: "Active" });
+      if (input.city) where.city = { equals: String(input.city), mode: "insensitive" };
+      if (input.minPrice) where.price = { gte: Number(input.minPrice) };
+      if (input.maxPrice) where.price = { ...((where.price as Prisma.FloatFilter) ?? {}), lte: Number(input.maxPrice) };
+      if (input.beds) where.beds = { gte: Number(input.beds) };
 
       const listings = await prisma.listing.findMany({
         where,
-        select: { mlsId: true, address: true, city: true, price: true, beds: true, baths: true, sqft: true },
+        select: {
+          mlsId: true,
+          listingId: true,
+          address: true,
+          city: true,
+          price: true,
+          beds: true,
+          baths: true,
+          sqft: true,
+          status: true,
+          listingOfficeName: true,
+        },
         orderBy: { price: "asc" },
         take: 6,
       });
 
-      return { results: listings, source: "database" };
+      return { results: listings.map(withListingAttribution), source: "database" };
     }
 
-    return { results, source: "semantic" };
+    return { results: results.map(withListingAttribution), source: "semantic" };
   });
 
   engine.registerTool("get_listing_details", async (input) => {
-    const listing = await prisma.listing.findUnique({
-      where: { mlsId: input.mlsId as string },
+    const listing = await prisma.listing.findFirst({
+      where: withIdx({ mlsId: input.mlsId as string }),
       select: {
-        mlsId: true, address: true, city: true, state: true, zip: true,
+        mlsId: true, listingId: true, address: true, city: true, state: true, zip: true,
         price: true, beds: true, baths: true, sqft: true, propertyType: true,
         yearBuilt: true, description: true, hasPool: true, hasWaterfront: true,
         hoaFee: true, lotSize: true, garageSpaces: true, daysOnMarket: true,
-        walkScore: true, transitScore: true, bikeScore: true,
+        walkScore: true, transitScore: true, bikeScore: true, status: true,
+        listingOfficeName: true,
       },
     });
-    return listing ?? { error: "Listing not found" };
+    return listing ? withListingAttribution(listing) : { error: "Listing not found" };
   });
 
   return engine;
+}
+
+function withListingAttribution<T extends {
+  mlsId: string;
+  listingId?: string | null;
+  listingOfficeName?: string | null;
+  status?: string | null;
+}>(listing: T): T & { attribution: string } {
+  const listingNumber = listing.listingId ?? listing.mlsId;
+  const office = listing.listingOfficeName ?? "the listing brokerage";
+  const status = listing.status ? ` | ${listing.status}` : "";
+  return {
+    ...listing,
+    attribution: `Courtesy of ${office}. Listing #${listingNumber}${status}.`,
+  };
 }

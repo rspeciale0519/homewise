@@ -1,8 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
-import type { Listing } from "@prisma/client";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
+import { withIdx } from "@/lib/mls-visibility";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
+import { LISTING_CARD_SELECT, type ListingCardRow } from "@/lib/listing-selects";
 
 interface AgentListingsWidgetProps {
   mlsAgentId: string;
@@ -11,22 +15,35 @@ interface AgentListingsWidgetProps {
 }
 
 export async function AgentListingsWidget({ mlsAgentId, agentSlug, limit = 6 }: AgentListingsWidgetProps) {
+  const normalizedAgentMlsId = normalizeMlsAgentId(mlsAgentId);
+  if (!normalizedAgentMlsId) return null;
+
+  const activeWhere: Prisma.ListingWhereInput = withIdx({
+    listingAgentMlsId: normalizedAgentMlsId,
+    status: { in: ["Active", "Pending"] },
+  });
+  const soldWhere: Prisma.ListingWhereInput = withIdx({
+    listingAgentMlsId: normalizedAgentMlsId,
+    status: "Sold",
+  });
   const [activeListings, soldListings, activeTotal, soldTotal] = await Promise.all([
     prisma.listing.findMany({
-      where: { listingAgentMlsId: mlsAgentId, status: { in: ["Active", "Pending"] } },
+      where: activeWhere,
+      select: LISTING_CARD_SELECT,
       orderBy: { price: "desc" },
       take: limit,
     }),
     prisma.listing.findMany({
-      where: { listingAgentMlsId: mlsAgentId, status: "Sold" },
+      where: soldWhere,
+      select: LISTING_CARD_SELECT,
       orderBy: { closeDate: "desc" },
       take: 3,
     }),
     prisma.listing.count({
-      where: { listingAgentMlsId: mlsAgentId, status: { in: ["Active", "Pending"] } },
+      where: activeWhere,
     }),
     prisma.listing.count({
-      where: { listingAgentMlsId: mlsAgentId, status: "Sold" },
+      where: soldWhere,
     }),
   ]);
 
@@ -79,7 +96,7 @@ export async function AgentListingsWidget({ mlsAgentId, agentSlug, limit = 6 }: 
   );
 }
 
-function ListingCardSmall({ listing }: { listing: Listing }) {
+function ListingCardSmall({ listing }: { listing: ListingCardRow }) {
   const statusColor =
     listing.status === "Sold" ? "bg-slate-700 text-white" :
     listing.status === "Pending" ? "bg-amber-500 text-white" :
@@ -114,6 +131,15 @@ function ListingCardSmall({ listing }: { listing: Listing }) {
         )}
         <p className="text-sm text-slate-600 truncate">{listing.address}</p>
         <p className="text-xs text-slate-400">{listing.city}, {listing.state} {listing.zip}</p>
+        <ListingAttribution
+          listingOfficeName={listing.listingOfficeName}
+          listingAgentName={listing.listingAgentName}
+          listingId={listing.listingId}
+          mlsId={listing.mlsId}
+          status={listing.status}
+          className="mt-2"
+          compact
+        />
         <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
           <span>{listing.beds} bd</span>
           <span>{listing.baths} ba</span>

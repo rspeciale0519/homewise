@@ -1,7 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
+import { withIdx } from "@/lib/mls-visibility";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
+import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
+import { LISTING_CARD_SELECT } from "@/lib/listing-selects";
 
 interface FeaturedListingsWidgetProps {
   agentMlsId?: string;
@@ -16,16 +22,18 @@ export async function FeaturedListingsWidget({
   limit = 6,
   title = "Featured Listings",
 }: FeaturedListingsWidgetProps) {
-  const where: Record<string, unknown> = {
+  const normalizedAgentMlsId = normalizeMlsAgentId(agentMlsId);
+  const where: Prisma.ListingWhereInput = withIdx({
     status: { in: ["Active", "Pending"] },
-  };
+  });
 
-  if (agentMlsId) where.listingAgentMlsId = agentMlsId;
+  if (normalizedAgentMlsId) where.listingAgentMlsId = normalizedAgentMlsId;
   if (officeMlsId) where.listingOfficeMlsId = officeMlsId;
-  if (!agentMlsId && !officeMlsId) where.featured = true;
+  if (!normalizedAgentMlsId && !officeMlsId) where.featured = true;
 
   const listings = await prisma.listing.findMany({
     where,
+    select: LISTING_CARD_SELECT,
     orderBy: { price: "desc" },
     take: limit,
   });
@@ -66,6 +74,15 @@ export async function FeaturedListingsWidget({
               </p>
               <p className="text-sm text-slate-600 truncate">{listing.address}</p>
               <p className="text-xs text-slate-400">{listing.city}, {listing.state} {listing.zip}</p>
+              <ListingAttribution
+                listingOfficeName={listing.listingOfficeName}
+                listingAgentName={listing.listingAgentName}
+                listingId={listing.listingId}
+                mlsId={listing.mlsId}
+                status={listing.status}
+                className="mt-2"
+                compact
+              />
               <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
                 <span>{listing.beds} bd</span>
                 <span>{listing.baths} ba</span>
@@ -75,6 +92,7 @@ export async function FeaturedListingsWidget({
           </Link>
         ))}
       </div>
+      <MlsGridSourceLine className="mt-4 bg-slate-50/80" />
     </div>
   );
 }

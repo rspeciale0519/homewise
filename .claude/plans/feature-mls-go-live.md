@@ -82,7 +82,7 @@ Each Rule 9 checkpoint must be green (`npm run type-check && npm run lint && npx
 
 ### Task 1.1: Env vars
 
-- [ ] **Step 1: Add to `.env.example`:**
+- [x] **Step 1: Add to `.env.example`:**
 
 ```
 # --- MLS Grid (Stellar MLS, RESO Web API) ---
@@ -96,11 +96,11 @@ ANALYTICS_BO_ENABLED=false     # true ONLY when Back Office feed is licensed
 # SUPABASE_SERVICE_ROLE_KEY already present (used by src/lib/supabase/admin.ts)
 ```
 
-- [ ] **Step 2: Commit.** `git add .env.example && git commit -m "docs(mls): env vars for go-live"`
+- [x] **Step 2: Commit.** `git add .env.example && git commit -m "docs(mls): env vars for go-live"`
 
 ### Task 1.2: RESO types (fixes Gap #5 + generic envelope)
 
-- [ ] **Step 1:** In `src/types/reso.ts`, in `ResoProperty` after `ModificationTimestamp`:
+- [x] **Step 1:** In `src/types/reso.ts`, in `ResoProperty` after `ModificationTimestamp`:
 
 ```ts
   ModificationTimestamp: string;
@@ -110,7 +110,7 @@ ANALYTICS_BO_ENABLED=false     # true ONLY when Back Office feed is licensed
   PhotosChangeTimestamp?: string;
 ```
 
-- [ ] **Step 2:** **Replace** the bogus `SchoolDistrict?: string;` line with the real RESO district fields:
+- [x] **Step 2:** **Replace** the bogus `SchoolDistrict?: string;` line with the real RESO district fields:
 
 ```ts
   ElementarySchoolDistrict?: string;
@@ -118,9 +118,9 @@ ANALYTICS_BO_ENABLED=false     # true ONLY when Back Office feed is licensed
   HighSchoolDistrict?: string;
 ```
 
-- [ ] **Step 3:** Extend `ResoMedia` (`MediaKey?`, `MediaModificationTimestamp?`) and `ResoOpenHouse` (`OpenHouseKey?`, `ListingId?`, `ModificationTimestamp?`, `MlgCanView?`).
+- [x] **Step 3:** Extend `ResoMedia` (`MediaKey?`, `MediaModificationTimestamp?`) and `ResoOpenHouse` (`OpenHouseKey?`, `ListingId?`, `ModificationTimestamp?`, `MlgCanView?`).
 
-- [ ] **Step 4:** Make the envelope generic:
+- [x] **Step 4:** Make the envelope generic:
 
 ```ts
 export interface ResoODataResponse<T = ResoProperty> {
@@ -130,11 +130,11 @@ export interface ResoODataResponse<T = ResoProperty> {
 }
 ```
 
-- [ ] **Step 5:** `npm run type-check` → expect errors only in `mls-sync.ts` (fixed Phase 4). Commit: `git add src/types/reso.ts && git commit -m "feat(mls): RESO compliance fields + real school-district fields"`
+- [x] **Step 5:** `npm run type-check` → expect errors only in `mls-sync.ts` (fixed Phase 4). Commit: `git add src/types/reso.ts && git commit -m "feat(mls): RESO compliance fields + real school-district fields"`
 
 ### Task 1.3: Schema columns + indexes (fixes Gaps #5, #7, #9-index)
 
-- [ ] **Step 1:** In `prisma/schema.prisma` `Listing`, add:
+- [x] **Step 1:** In `prisma/schema.prisma` `Listing`, add:
 
 ```prisma
   listingId             String?
@@ -155,21 +155,21 @@ Add indexes in the model's index block:
 
 > `mlsId` now stores **`ListingKey`** (Task 4). `listingId` holds the human `ListingId`.
 
-- [ ] **Step 2:** In `SyncState`, add `cursor String?` (cross-run high-water mark).
+- [x] **Step 2:** In `SyncState`, add `cursor String?` (cross-run high-water mark).
 
-- [ ] **Step 3:** `npm run db:push` (writes to shared/prod; additive). If Prisma rejects `type: Gin` on `String[]`, create it via raw SQL instead: `CREATE INDEX IF NOT EXISTS listing_mlgcanuse_gin ON "Listing" USING GIN ("mlgCanUse");` and drop the `@@index` line.
+- [x] **Step 3:** `npm run db:push` (writes to shared/prod; additive). If Prisma rejects `type: Gin` on `String[]`, create it via raw SQL instead: `CREATE INDEX IF NOT EXISTS listing_mlgcanuse_gin ON "Listing" USING GIN ("mlgCanUse");` and drop the `@@index` line.
 
-- [ ] **Step 4:** `npm run prisma:generate && npm run type-check`. Commit: `git add prisma/schema.prisma && git commit -m "feat(mls): listing compliance/identity columns + GIN index"`
+- [x] **Step 4:** `npm run prisma:generate && npm run type-check`. Commit: `git add prisma/schema.prisma && git commit -m "feat(mls): listing compliance/identity columns + GIN index"`
 
 ### Task 1.4: Static-token auth + query builders (TDD)
 
 *(Unchanged from v1 except retained here for build order. See v1 archive for the full test list.)*
 
-- [ ] **Step 1:** Create `src/lib/mls-grid.test.ts` asserting: `hasCredentials()` true with token+originating system; `buildPropertyUrl({})` contains `OriginatingSystemName eq '<X>'` and `%24expand=Media` and NOT `OpenHouse`; `initialImport` adds `MlgCanView eq true`; `modifiedAfter` adds `ModificationTimestamp ge` (note: **`ge`**, see Gap #6); `MLS_OFFICE_ID` adds `ListOfficeMlsId eq`; `buildOpenHouseUrl({modifiedAfter})` hits `/OpenHouse` with originating system + cursor.
+- [x] **Step 1:** Create `src/lib/mls-grid.test.ts` asserting: `hasCredentials()` true with token+originating system; `buildPropertyUrl({})` contains `OriginatingSystemName eq '<X>'` and `%24expand=Media` and NOT `OpenHouse`; `initialImport` adds `MlgCanView eq true`; `modifiedAfter` adds `ModificationTimestamp ge` (note: **`ge`**, see Gap #6); `MLS_OFFICE_ID` adds `ListOfficeMlsId eq`; `buildOpenHouseUrl({modifiedAfter})` hits `/OpenHouse` with originating system + cursor.
 
-- [ ] **Step 2:** `npx vitest run src/lib/mls-grid.test.ts` → FAIL.
+- [x] **Step 2:** `npx vitest run src/lib/mls-grid.test.ts` → FAIL.
 
-- [ ] **Step 3:** Rewrite `src/lib/mls-grid.ts`: static `token()`/`originatingSystem()` from env; `hasCredentials()`; `buildPropertyUrl({modifiedAfter,initialImport,top})` with filter `OriginatingSystemName eq '…'` [+ `MlgCanView eq true` if initial] [+ `ModificationTimestamp ge <cursor>` if modifiedAfter] [+ `ListOfficeMlsId eq` if `MLS_OFFICE_ID`], `$expand=Media`, `$orderby=ModificationTimestamp,ListingKey`, `$top`; `buildOpenHouseUrl({modifiedAfter,top})` on `/OpenHouse`; `authedFetch(url)` with `Authorization: Bearer` **and 429/`RateLimit-Reset` backoff** (read header, sleep, one retry); `fetchPage`/`fetchOpenHousePage` (the latter typed `ResoODataResponse<ResoOpenHouse>`).
+- [x] **Step 3:** Rewrite `src/lib/mls-grid.ts`: static `token()`/`originatingSystem()` from env; `hasCredentials()`; `buildPropertyUrl({modifiedAfter,initialImport,top})` with filter `OriginatingSystemName eq '…'` [+ `MlgCanView eq true` if initial] [+ `ModificationTimestamp ge <cursor>` if modifiedAfter] [+ `ListOfficeMlsId eq` if `MLS_OFFICE_ID`], `$expand=Media`, `$orderby=ModificationTimestamp,ListingKey`, `$top`; `buildOpenHouseUrl({modifiedAfter,top})` on `/OpenHouse`; `authedFetch(url)` with `Authorization: Bearer` **and 429/`RateLimit-Reset` backoff** (read header, sleep, one retry); `fetchPage`/`fetchOpenHousePage` (the latter typed `ResoODataResponse<ResoOpenHouse>`).
 
 ```ts
 async function authedFetch(url: string): Promise<ResoODataResponse> {
@@ -187,20 +187,20 @@ async function authedFetch(url: string): Promise<ResoODataResponse> {
 }
 ```
 
-- [ ] **Step 4:** `npx vitest run src/lib/mls-grid.test.ts` → PASS. Commit.
+- [x] **Step 4:** `npx vitest run src/lib/mls-grid.test.ts` → PASS. Commit.
 
 ---
 
 ## Phase 2 — Pure helpers (built BEFORE the sync)
 
 ### Task 2.1: `mls-featured` (TDD)
-- [ ] `parseOfficeIds(raw)` → trimmed non-empty list; `isHomewiseOffice(id)` → membership in `HOMEWISE_OFFICE_MLS_ID`. Tests for comma-parse, null, no-config=false. Implement, run, commit. *(Same as v1 Phase 3.)*
+- [x] `parseOfficeIds(raw)` → trimmed non-empty list; `isHomewiseOffice(id)` → membership in `HOMEWISE_OFFICE_MLS_ID`. Tests for comma-parse, null, no-config=false. Implement, run, commit. *(Same as v1 Phase 3.)*
 
 ### Task 2.2: `mls-image` (TDD)
-- [ ] `storageKeyFor(url)`=sha256 hex+`.jpg`; `proxyPhotoUrl(url)`=`/api/mls-photo?u=<b64url>&sig=<hmac>`; `parseAndVerify(params)` HMAC `timingSafeEqual`. Tests: builds under `/api/mls-photo`, round-trips, rejects tampered sig, deterministic key. Implement, run, commit. *(Same as v1 Phase 4.1.)*
+- [x] `storageKeyFor(url)`=sha256 hex+`.jpg`; `proxyPhotoUrl(url)`=`/api/mls-photo?u=<b64url>&sig=<hmac>`; `parseAndVerify(params)` HMAC `timingSafeEqual`. Tests: builds under `/api/mls-photo`, round-trips, rejects tampered sig, deterministic key. Implement, run, commit. *(Same as v1 Phase 4.1.)*
 
 ### Task 2.3: `mls-visibility` (TDD — fixes Gap #1 foundation)
-- [ ] **Step 1:** Failing test `src/lib/mls-visibility.test.ts`:
+- [x] **Step 1:** Failing test `src/lib/mls-visibility.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -212,7 +212,7 @@ it("merges into an existing where", () => {
 it("merges into empty", () => { expect(withIdx()).toEqual({ mlgCanUse: { has: "IDX" } }); });
 ```
 
-- [ ] **Step 2:** Implement `src/lib/mls-visibility.ts`:
+- [x] **Step 2:** Implement `src/lib/mls-visibility.ts`:
 
 ```ts
 import type { Prisma } from "@prisma/client";
@@ -222,27 +222,28 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
 }
 ```
 
-- [ ] **Step 3:** Run → PASS. Commit: `git add src/lib/mls-visibility.* && git commit -m "feat(mls): central IDX visibility filter"`
+- [x] **Step 3:** Run → PASS. Commit: `git add src/lib/mls-visibility.* && git commit -m "feat(mls): central IDX visibility filter"`
 
 ---
 
 ## Phase 3 — Caching image proxy
 
 ### Task 3.1: Bucket + route (fixes Gap #12)
-- [ ] **Step 1 (non-code):** Create public Supabase Storage bucket `mls-photos`.
-- [ ] **Step 2:** Implement `src/app/api/mls-photo/route.ts` using the **existing** `src/lib/supabase/admin.ts` client (not raw `createClient`): `parseAndVerify` → 400 on bad sig; compute `storageKeyFor`; HEAD the public URL, 302 if cached; else `fetch(source, { headers: { "User-Agent": process.env.MLS_GRID_TOKEN ?? "" } })` (required since 2026-06-01), upload to `mls-photos` with year-long cache-control, stream bytes back. Export `export const dynamic = "force-dynamic";`.
-- [ ] **Step 3:** `npm run type-check`. Manual smoke per `[[skill-testing-mock-manual-smoke]]`: hit a signed URL for a public image, confirm stream then 302-on-reload. Document URL tried. Commit.
+- [x] **Step 1 (non-code):** Create public Supabase Storage bucket `mls-photos`.
+- [x] **Step 2:** Implement `src/app/api/mls-photo/route.ts` using the **existing** `src/lib/supabase/admin.ts` client (not raw `createClient`): `parseAndVerify` → 400 on bad sig; compute `storageKeyFor`; HEAD the public URL, 302 if cached; else `fetch(source, { headers: { "User-Agent": process.env.MLS_GRID_TOKEN ?? "" } })` (required since 2026-06-01), upload to `mls-photos` with year-long cache-control, stream bytes back. Export `export const dynamic = "force-dynamic";`.
+- [x] **Step 3:** `npm run type-check`. Manual smoke per `[[skill-testing-mock-manual-smoke]]`: hit a signed URL for a public image, confirm stream then 302-on-reload. Document URL tried. Commit.
+  - Smoke source URL: `https://picsum.photos/seed/homewise-mls/64/64.jpg`; first request `200 image/jpeg`, second request `302` to Supabase `mls-photos`.
 
 ---
 
 ## Phase 4 — Compliant sync engine
 
 ### Task 4.1: Mapping + compliance + event tests (TDD)
-- [ ] **Step 1:** `src/inngest/functions/mls-sync.test.ts` asserting on exported `mapResoToListingData(reso)`: `Closed→Sold`; `mlgCanUse` stored; raw urls in `photoSources`, `photos[0]` contains `/api/mls-photo`; `featured` true when office in `HOMEWISE_OFFICE_MLS_ID`; **`mlsId === reso.ListingKey`** and `listingId === reso.ListingId`; school districts mapped from `ElementarySchoolDistrict`/`MiddleOrJuniorSchoolDistrict`/`HighSchoolDistrict`. Plus a `detectPriceChange(prev, next)` unit test (returns true when `ListPrice` differs).
-- [ ] **Step 2:** Run → FAIL.
+- [x] **Step 1:** `src/inngest/functions/mls-sync.test.ts` asserting on exported `mapResoToListingData(reso)`: `Closed→Sold`; `mlgCanUse` stored; raw urls in `photoSources`, `photos[0]` contains `/api/mls-photo`; `featured` true when office in `HOMEWISE_OFFICE_MLS_ID`; **`mlsId === reso.ListingKey`** and `listingId === reso.ListingId`; school districts mapped from `ElementarySchoolDistrict`/`MiddleOrJuniorSchoolDistrict`/`HighSchoolDistrict`. Plus a `detectPriceChange(prev, next)` unit test (returns true when `ListPrice` differs).
+- [x] **Step 2:** Run → FAIL.
 
 ### Task 4.2: Rewrite sync (fixes Gaps #3, #5, #6, #7, #11, #13, #14)
-- [ ] **Step 1:** Rewrite `src/inngest/functions/mls-sync.ts`. Key changes vs v1:
+- [x] **Step 1:** Rewrite `src/inngest/functions/mls-sync.ts`. Key changes vs v1:
   - **Identity:** `const key = reso.ListingKey;` used for `upsert where {mlsId:key}`, deletes, and `listingId: reso.ListingId` stored separately.
   - **Cursor (Gap #6):** persist `cursor = maxSeenTs` to `SyncState` on **every** processed page (not just done); carry `cursor` + `nextLink` in the continuation event; resume `modifiedAfter` from `SyncState.cursor`; filter uses **`ge`** with idempotent upsert (boundary-safe).
   - **Cron re-entry guard (Gap #13):** if invoked by cron while `SyncState.status === "syncing"`, return early `{skipped:"backfill-in-flight"}`.
@@ -251,7 +252,7 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
   - **Events (Gap #3):** in `upsertListing`, read the existing row first; if `!initialImport` and `ListPrice` changed, `inngest.send({name:"mls/listing.price-changed", data:{listingId:key, oldPrice, newPrice}})`; and `inngest.send({name:"mls/listing.synced", data:{listingId:key}})`. **Suppress per-record events during `initialImport`** (backfill emits one bulk `mls/listing.backfilled` at completion for the embedding job).
   - **Status allowlist (Gap #14):** `mapStatus` confirmed against feed metadata; public-facing terminal statuses constrained in Phase 6 reads.
   - `mapResoToListingData` exported; school districts from the real fields; `featured` via `isHomewiseOffice`; `photos` via `proxyPhotoUrl`.
-- [ ] **Step 2:** `npx vitest run src/inngest/functions/mls-sync.test.ts` → PASS. `npm run type-check` (whole repo now green). Commit.
+- [x] **Step 2:** `npx vitest run src/inngest/functions/mls-sync.test.ts` → PASS. `npm run type-check` (whole repo now green). Commit.
 
 > **450-LOC watch (Gap from process lens):** if `mls-sync.ts` exceeds 450 lines, extract `mapResoToListingData` + `upsertListing` into `src/inngest/functions/mls-sync.mapper.ts`.
 
@@ -259,8 +260,8 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
 
 ## Phase 5 — OpenHouse sync (own cursor, every cycle) — fixes Gap #10
 
-- [ ] **Step 1:** Add `syncOpenHouses(cursor)` to `mls-sync.ts` (or `mls-openhouse.ts` if LOC): page `fetchOpenHousePage` by its **own** `ge` cursor (store `SyncState` provider row `stellar-openhouse`); skip `MlgCanView===false`; group slots by `ListingId`; parse `OpenHouseDate`+`OpenHouseStartTime`/`EndTime` as **full datetimes**; `updateMany` the schedule onto matching `listingId`; **clear** schedules for listings whose open houses are gone/expired (set `openHouseSchedule = JsonNull` where last slot < now). Throttle (`step.sleep` 600ms/page).
-- [ ] **Step 2:** Call it every incremental cycle (not only at backfill completion). Type-check, commit.
+- [x] **Step 1:** Add `syncOpenHouses(cursor)` to `mls-sync.ts` (or `mls-openhouse.ts` if LOC): page `fetchOpenHousePage` by its **own** `ge` cursor (store `SyncState` provider row `stellar-openhouse`); skip `MlgCanView===false`; group slots by `ListingId`; parse `OpenHouseDate`+`OpenHouseStartTime`/`EndTime` as **full datetimes**; `updateMany` the schedule onto matching `listingId`; **clear** schedules for listings whose open houses are gone/expired (set `openHouseSchedule = JsonNull` where last slot < now). Throttle (`step.sleep` 600ms/page).
+- [x] **Step 2:** Call it every incremental cycle (not only at backfill completion). Type-check, commit.
 
 ---
 
@@ -268,14 +269,14 @@ export function withIdx(where: Prisma.ListingWhereInput = {}): Prisma.ListingWhe
 
 Apply `withIdx()` / `IDX_WHERE` to **every** path that reads `prisma.listing` for any public/user-facing or public-content output. Verified consumer list:
 
-- [ ] **Step 1 — provider:** `src/providers/stellar-mls-provider.ts` `search()` base `const where = withIdx();`; `getProperty()` add `mlgCanUse: { has: "IDX" }`.
-- [ ] **Step 2 — widgets/homepage:** `featured-listings-widget.tsx`, `agent-listings-widget.tsx` (all 4 queries), `src/app/(marketing)/page.tsx:18`.
-- [ ] **Step 3 — pages:** `src/app/(marketing)/agents/[slug]/listings/page.tsx`; `src/app/sitemap.ts`.
-- [ ] **Step 4 — chatbots:** `src/lib/chatbot/public-site.ts`, `src/lib/chatbot/agent-website.ts`.
-- [ ] **Step 5 — search/AI public:** `src/lib/ai/embeddings.ts` (`semanticSearch`), `src/inngest/functions/generate-embeddings.ts`, `src/inngest/functions/seo-content-generator.ts`.
-- [ ] **Step 6 — alerts:** `src/inngest/functions/listing-alerts.ts`, `src/inngest/functions/smart-alerts.ts`, `src/inngest/functions/price-change-alerts.ts` (alerts must not notify on non-IDX rows).
-- [ ] **Step 7 — favorites/saved:** any favorites/saved-search read API that returns listing data publicly.
-- [ ] **Step 8 — test (Gap #1 fix proof):** add `src/lib/mls-visibility.integration.test.ts` (mock prisma) seeding one `IDX` and one non-`IDX` row and asserting each surface’s query carries the `mlgCanUse has "IDX"` clause. Run, type-check, lint. Commit: `feat(mls): enforce IDX visibility on all read paths`.
+- [x] **Step 1 — provider:** `src/providers/stellar-mls-provider.ts` `search()` base `const where = withIdx();`; `getProperty()` add `mlgCanUse: { has: "IDX" }`.
+- [x] **Step 2 — widgets/homepage:** `featured-listings-widget.tsx`, `agent-listings-widget.tsx` (all 4 queries), `src/app/(marketing)/page.tsx:18`.
+- [x] **Step 3 — pages:** `src/app/(marketing)/agents/[slug]/listings/page.tsx`; `src/app/sitemap.ts`.
+- [x] **Step 4 — chatbots:** `src/lib/chatbot/public-site.ts`, `src/lib/chatbot/agent-website.ts`.
+- [x] **Step 5 — search/AI public:** `src/lib/ai/embeddings.ts` (`semanticSearch`), `src/inngest/functions/generate-embeddings.ts`, `src/inngest/functions/seo-content-generator.ts`.
+- [x] **Step 6 — alerts:** `src/inngest/functions/listing-alerts.ts`, `src/inngest/functions/smart-alerts.ts`, `src/inngest/functions/price-change-alerts.ts` (alerts must not notify on non-IDX rows).
+- [x] **Step 7 — favorites/saved:** any favorites/saved-search read API that returns listing data publicly.
+- [x] **Step 8 — test (Gap #1 fix proof):** add `src/lib/mls-visibility.integration.test.ts` (mock prisma) seeding one `IDX` and one non-`IDX` row and asserting each surface’s query carries the `mlgCanUse has "IDX"` clause. Run, type-check, lint. Commit: `feat(mls): enforce IDX visibility on all read paths`.
 
 > Note: agent-only CRM/transaction tools (listing-description/insights/social-post over the agent's **own active** listings) are IDX-permitted, but still read through `withIdx()` so opted-out records never surface.
 
@@ -285,44 +286,49 @@ Apply `withIdx()` / `IDX_WHERE` to **every** path that reads `prisma.listing` fo
 
 Stellar Articles 19.22/19.23/19.09 + MLS GRID source/disclaimer.
 
-- [ ] **Step 1:** `src/components/properties/listing-attribution.tsx` — renders **listing brokerage name + listing number (`listingId`) + status** adjacent to each listing. Add to every card/grid/map-list: the property card on `/properties`, `ListingCardSmall` (both widgets), detail page, agent listings.
-- [ ] **Step 2:** `src/components/properties/mls-grid-source-line.tsx` — "as distributed by MLS GRID" + MLS GRID logo, rendered on the first page listings appear (search results + homepage featured); plus the always-on **"Some IDX listings have been excluded from this website."** disclosure (the IDX filter is an objective limitation) and a **sold-listing disclaimer** wherever solds render.
-- [ ] **Step 3:** Keep existing `IdxDisclaimer` on `/properties`, `/properties/[id]`, `/agents/[slug]/listings`; add per-listing "Courtesy of {listingOfficeName} — {listingAgentName}" on the detail sidebar.
-- [ ] **Step 4:** Chatbot output that names a listing must include brokerage attribution (pass `listingOfficeName` into the answer template in both chatbot libs).
-- [ ] **Step 5:** type-check, lint, commit.
+- [x] **Step 1:** `src/components/properties/listing-attribution.tsx` — renders **listing brokerage name + listing number (`listingId`) + status** adjacent to each listing. Add to every card/grid/map-list: the property card on `/properties`, `ListingCardSmall` (both widgets), detail page, agent listings.
+- [x] **Step 2:** `src/components/properties/mls-grid-source-line.tsx` — "as distributed by MLS GRID" + MLS GRID logo, rendered on the first page listings appear (search results + homepage featured); plus the always-on **"Some IDX listings have been excluded from this website."** disclosure (the IDX filter is an objective limitation) and a **sold-listing disclaimer** wherever solds render.
+- [x] **Step 3:** Keep existing `IdxDisclaimer` on `/properties`, `/properties/[id]`, `/agents/[slug]/listings`; add per-listing "Courtesy of {listingOfficeName} — {listingAgentName}" on the detail sidebar.
+- [x] **Step 4:** Chatbot output that names a listing must include brokerage attribution (pass `listingOfficeName` into the answer template in both chatbot libs).
+- [x] **Step 5:** type-check, lint, commit.
 
-> ⚠️ **Verify-with-sample (Gap, req 52):** confirm whether `ListAgentDirectPhone`/`ListAgentEmail` are delivered/public in the IDX feed before displaying them (Article 19.19). If confidential, suppress.
+> ⚠️ **Verify-with-sample (Gap, req 52):** confirm whether `ListAgentDirectPhone`/`ListAgentEmail` are delivered/public in the IDX feed before displaying them (Article 19.19). If confidential, suppress. Direct listing-agent contact fields are currently suppressed until this sample verification is complete.
 
 ---
 
 ## Phase 8 — Sold-analytics BO-gating (fixes BLOCKING Gap #2)
 
-- [ ] **Step 1:** `src/lib/analytics-flags.ts` → `analyticsBoEnabled()` reads `ANALYTICS_BO_ENABLED === "true"`. Unit test both states.
-- [ ] **Step 2:** Gate every sold-comp/analytics consumer so that when BO is **off** it returns a clear "market analytics unavailable" state instead of computing over IDX data: `src/app/api/ai/cma/route.ts`, `src/app/api/ai/home-valuation/route.ts`, `src/app/api/ai/market-insights/route.ts`, `src/app/api/ai/meeting-prep/route.ts`, `src/inngest/functions/market-stats-aggregation.ts`, and the public `src/app/(marketing)/market/[city]/page.tsx` + `home-evaluation/page.tsx`.
-- [ ] **Step 3:** When BO is later licensed, these route their reads to `{ mlgCanUse: { has: "BO" } }` (a `withBo()` sibling helper) and public pages must keep BO-derived sold output **behind login** (VOW/BO rule). Document this in each gated file.
-- [ ] **Step 4:** type-check, lint, commit: `feat(mls): gate sold-data analytics behind Back Office license flag`.
+- [x] **Step 1:** `src/lib/analytics-flags.ts` → `analyticsBoEnabled()` reads `ANALYTICS_BO_ENABLED === "true"`. Unit test both states.
+- [x] **Step 2:** Gate every sold-comp/analytics consumer so that when BO is **off** it returns a clear "market analytics unavailable" state instead of computing over IDX data: `src/app/api/ai/cma/route.ts`, `src/app/api/ai/home-valuation/route.ts`, `src/app/api/ai/market-insights/route.ts`, `src/app/api/ai/meeting-prep/route.ts`, `src/inngest/functions/market-stats-aggregation.ts`, and the public `src/app/(marketing)/market/[city]/page.tsx` + `home-evaluation/page.tsx`.
+- [x] **Step 3:** When BO is later licensed, these route their reads to `{ mlgCanUse: { has: "BO" } }` (a `withBo()` sibling helper) and public pages must keep BO-derived sold output **behind login** (VOW/BO rule). Document this in each gated file.
+- [x] **Step 4:** type-check, lint, commit: `feat(mls): gate sold-data analytics behind Back Office license flag`.
 
 ---
 
 ## Phase 9 — Scale (fixes BLOCKING Gap #9)
 
-- [ ] **Step 1 — polygon bbox prefilter:** in `stellar-mls-provider.ts` `filterByPolygon`, compute the polygon's bounding box, query the DB with `latitude/longitude between` + `withIdx()` (and current filters), then ray-cast only that reduced set. No more full-table scan.
-- [ ] **Step 2 — pgvector:** enable extension + index via raw SQL in a one-time setup step: `CREATE EXTENSION IF NOT EXISTS vector;`, change `Listing.embedding` to `Unsupported("vector(1536)")` in schema (or keep `Float[]` + a parallel `vector` column), `db:push`, then `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops);`. Rewrite `semanticSearch` to `ORDER BY embedding <=> $query LIMIT k` via `$queryRaw` with the IDX clause — **stop** `SELECT`ing `embedding` on list reads (`select`/`omit` it in `stellar-mls-provider` and widgets).
-- [ ] **Step 3 — embedding backfill:** on `mls/listing.backfilled`, enqueue embeddings in bounded batches (respect provider rate/cost); incremental `mls/listing.synced` embeds single rows.
-- [ ] **Step 4 — media budget:** in the proxy + sync, add a daily-records / 4GB-hr guard and concurrency cap so on-demand downloads + sync stay within `2 req/s, 7200/hr, 4GB/hr, 40k/24h`.
-- [ ] **Step 5:** type-check, lint, vitest, commit.
+- [x] **Step 1 — polygon bbox prefilter:** in `stellar-mls-provider.ts` `filterByPolygon`, compute the polygon's bounding box, query the DB with `latitude/longitude between` + `withIdx()` (and current filters), then ray-cast only that reduced set. No more full-table scan.
+- [x] **Step 2 — pgvector:** enable extension + index via raw SQL in a one-time setup step: `CREATE EXTENSION IF NOT EXISTS vector;`, change `Listing.embedding` to `Unsupported("vector(1536)")` in schema (or keep `Float[]` + a parallel `vector` column), `db:push`, then `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops);`. Rewrite `semanticSearch` to `ORDER BY embedding <=> $query LIMIT k` via `$queryRaw` with the IDX clause — **stop** `SELECT`ing `embedding` on list reads (`select`/`omit` it in `stellar-mls-provider` and widgets).
+- [x] **Step 3 — embedding backfill:** on `mls/listing.backfilled`, enqueue embeddings in bounded batches (respect provider rate/cost); incremental `mls/listing.synced` embeds single rows.
+- [x] **Step 4 — media budget:** in the proxy + sync, add a daily-records / 4GB-hr guard and concurrency cap so on-demand downloads + sync stay within `2 req/s, 7200/hr, 4GB/hr, 40k/24h`.
+- [x] **Step 5:** type-check, lint, vitest, commit.
+
+> Phase 9 pgvector code/schema/SQL are prepared in `prisma/mls-pgvector.sql`; the shared/prod SQL execution and `db:push` completed successfully on 2026-06-08 after explicit approval through the command runner.
 
 ---
 
 ## Phase 10 — Backfill + go-live verification (fixes Gaps #15, #17, #18)
 
-- [ ] **Step 1 — typing (Gap #18):** add Inngest `EventSchemas` for `mls-sync`, `mls/listing.price-changed`, `mls/listing.synced`, `mls/listing.backfilled`; normalize `listingAgentMlsId` vs `Agent.mlsAgentId` (trim/upper) + a backfill check that warns on agents with zero matched listings.
+- [x] **Step 1 — typing (Gap #18):** add Inngest `EventSchemas` for `mls-sync`, `mls/listing.price-changed`, `mls/listing.synced`, `mls/listing.backfilled`; normalize `listingAgentMlsId` vs `Agent.mlsAgentId` (trim/upper) + a backfill check that warns on agents with zero matched listings.
 - [ ] **Step 2 — prod env:** set all vars in Vercel Production (`MLS_OFFICE_ID` unset, `ANALYTICS_BO_ENABLED=false`); confirm Inngest prod app registered.
+  - Vercel Production update (2026-06-08): `MLS_OFFICE_ID` removed; `ANALYTICS_BO_ENABLED=false`, `MLS_PUBLIC_SEARCH_ENABLED=false`, and generated `MLS_IMAGE_SIGNING_SECRET` added. Production still has legacy `MLS_GRID_CLIENT_ID`/`MLS_GRID_CLIENT_SECRET` and is still missing required `MLS_GRID_TOKEN` plus exact `MLS_GRID_ORIGINATING_SYSTEM_NAME`. Do not mark complete until the live token/originating-system vars are configured and Inngest prod app registration is confirmed.
 - [ ] **Step 3 — safe dry-run (Gap #17):** run the sample/branch import first (Supabase branch or temporary `MLS_OFFICE_ID` scope); snapshot before the full backfill; keep public reads behind a launch flag until counts verify.
-- [ ] **Step 4 — alert suppression (Gap #15):** suppress `daily-listing-alerts` + price-change alerts for the backfill window (don't notify on `createdAt≈now` whole-feed); make alert email image URLs absolute.
+  - Code gate added: public property provider only uses Stellar when `PROPERTY_PROVIDER=stellar` and `MLS_PUBLIC_SEARCH_ENABLED=true`; keep it `false` until sample/full backfill counts and E2E pass.
+- [x] **Step 4 — alert suppression (Gap #15):** suppress `daily-listing-alerts` + price-change alerts for the backfill window (don't notify on `createdAt≈now` whole-feed); make alert email image URLs absolute.
 - [ ] **Step 5 — full backfill:** trigger `POST /api/admin/sync` (route + `sync-dashboard.tsx` already exist); watch `SyncState` syncing→idle, `cursor` advancing.
 - [ ] **Step 6 — verify counts:** total>0, `mlgCanUse has IDX`>0, featured = HomeWise count, agent portfolios populated.
 - [ ] **Step 7 — E2E smoke (chrome-devtools, Rule 4):** search/map/polygon/filters; detail photos+attribution+disclaimer; homepage featured = HomeWise only; agent listings; a non-IDX row is invisible everywhere; analytics surfaces show the BO-gated state. Monitor Vercel deploy green per `[[skill-build-vercel-monitor]]`.
+  - Latest Vercel preview for `feature/mls-go-live` reached Ready on 2026-06-08: `https://homewise-ii0xeorlz-robs-projects-c72886ba.vercel.app`. Chrome-devtools MCP was not available in this session, so browser E2E smoke remains unverified and this step stays unchecked.
 - [ ] **Step 8 — compliance/freshness:** off-market record deletes + its cached photos purge within the 12h window; 15-min cron advances `cursor` and pulls only changed rows.
 
 ---

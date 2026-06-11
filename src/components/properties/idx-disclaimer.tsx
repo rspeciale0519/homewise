@@ -21,6 +21,11 @@ export function IdxDisclaimer() {
             may not be used for any purpose other than to identify prospective
             properties consumers may be interested in purchasing.
           </p>
+          <p className="mt-1">
+            Some IDX listings have been excluded from this website. Sold listing
+            information, when shown, is provided for informational use only and may
+            not reflect all market activity.
+          </p>
         </div>
       </div>
     </div>

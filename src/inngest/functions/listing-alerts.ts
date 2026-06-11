@@ -2,19 +2,29 @@ import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate } from "@/lib/email";
 import { listingAlertEmail } from "@/lib/email/templates";
+import { areMlsBackfillAlertsSuppressed } from "@/lib/mls-alert-suppression";
+import { withIdx } from "@/lib/mls-visibility";
+import { getSiteUrl, toAbsoluteSiteUrl } from "@/lib/site-url";
 
 export const dailyListingAlerts = inngest.createFunction(
   { id: "daily-listing-alerts", concurrency: { limit: 1 } },
   { cron: "0 8 * * *" }, // Daily at 8 AM
   async ({ step }) => {
+    const suppressed = await step.run("check-mls-backfill-alert-suppression", () => {
+      return areMlsBackfillAlertsSuppressed();
+    });
+
+    if (suppressed) return { alerts: 0, skipped: "mls-backfill-in-flight" };
+
     const oneDayAgo = new Date(Date.now() - 86400000);
+    const siteUrl = getSiteUrl();
 
     const newListings = await step.run("fetch-new-listings", async () => {
       return prisma.listing.findMany({
-        where: {
+        where: withIdx({
           status: "Active",
           createdAt: { gte: oneDayAgo },
-        },
+        }),
         select: {
           id: true,
           mlsId: true,
@@ -52,20 +62,22 @@ export const dailyListingAlerts = inngest.createFunction(
 
         if (matching.length === 0) return;
 
-        const listingsHtml = matching.slice(0, 6).map((l) => `
-          <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:12px">
-            ${l.imageUrl ? `<img src="${l.imageUrl}" alt="${l.address}" style="width:100%;height:160px;object-fit:cover">` : ""}
-            <div style="padding:12px">
-              <p style="margin:0;font-weight:600">${l.address}, ${l.city}</p>
-              <p style="margin:4px 0;color:#2563eb;font-weight:700">$${l.price.toLocaleString()}</p>
-              <p style="margin:0;font-size:13px;color:#64748b">${l.beds} bed · ${l.baths} bath · ${l.sqft.toLocaleString()} sqft</p>
+        const listingsHtml = matching.slice(0, 6).map((l) => {
+          const imageUrl = toAbsoluteSiteUrl(l.imageUrl, siteUrl);
+          return `
+            <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:12px">
+              ${imageUrl ? `<img src="${imageUrl}" alt="${l.address}" style="width:100%;height:160px;object-fit:cover">` : ""}
+              <div style="padding:12px">
+                <p style="margin:0;font-weight:600">${l.address}, ${l.city}</p>
+                <p style="margin:4px 0;color:#2563eb;font-weight:700">$${l.price.toLocaleString()}</p>
+                <p style="margin:0;font-size:13px;color:#64748b">${l.beds} bed · ${l.baths} bath · ${l.sqft.toLocaleString()} sqft</p>
+              </div>
             </div>
-          </div>
-        `).join("");
+          `;
+        }).join("");
 
         const template = listingAlertEmail();
         const firstName = alert.user?.firstName ?? alert.name ?? "there";
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://homewisefl.com";
         const tokens: Record<string, string> = {
           first_name: firstName,
           count: String(matching.length),

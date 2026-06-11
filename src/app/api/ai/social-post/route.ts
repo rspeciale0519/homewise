@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { withIdx } from "@/lib/mls-visibility";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -31,8 +32,8 @@ export async function POST(request: NextRequest) {
     let context = "";
 
     if (body.type === "listing" && body.mlsId) {
-      const listing = await prisma.listing.findUnique({
-        where: { mlsId: body.mlsId },
+      const listing = await prisma.listing.findFirst({
+        where: withIdx({ mlsId: body.mlsId }),
         select: {
           address: true, city: true, price: true, beds: true, baths: true,
           sqft: true, propertyType: true, hasPool: true, hasWaterfront: true,

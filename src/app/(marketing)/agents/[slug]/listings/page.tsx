@@ -6,10 +6,15 @@ import { Container } from "@/components/ui/container";
 import { Pagination } from "@/components/ui/pagination";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
+import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { createMetadata } from "@/lib/metadata";
 import { BackButton } from "@/components/ui/back-button";
+import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
+import { withIdx } from "@/lib/mls-visibility";
+import { LISTING_CARD_SELECT } from "@/lib/listing-selects";
 
 interface AgentListingsPageProps {
   params: Promise<{ slug: string }>;
@@ -46,7 +51,9 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
     select: { id: true, firstName: true, lastName: true, mlsAgentId: true, slug: true },
   });
 
-  if (!agent || !agent.mlsAgentId) {
+  const agentMlsId = normalizeMlsAgentId(agent?.mlsAgentId);
+
+  if (!agent || !agentMlsId) {
     notFound();
   }
 
@@ -58,19 +65,20 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
     statusFilter === "all" ? ["Active", "Pending", "Sold"] :
     ["Active"];
 
-  const where = { listingAgentMlsId: agent.mlsAgentId, status: { in: statusValues } };
+  const where = withIdx({ listingAgentMlsId: agentMlsId, status: { in: statusValues } });
 
   const [listings, total, activeCt, pendingCt, soldCt] = await Promise.all([
     prisma.listing.findMany({
       where,
+      select: LISTING_CARD_SELECT,
       orderBy: statusFilter === "sold" ? { closeDate: "desc" } : { price: "desc" },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
     prisma.listing.count({ where }),
-    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Active" } }),
-    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Pending" } }),
-    prisma.listing.count({ where: { listingAgentMlsId: agent.mlsAgentId, status: "Sold" } }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agentMlsId, status: "Active" }) }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agentMlsId, status: "Pending" }) }),
+    prisma.listing.count({ where: withIdx({ listingAgentMlsId: agentMlsId, status: "Sold" }) }),
   ]);
 
   const fullName = `${agent.firstName} ${agent.lastName}`;
@@ -166,6 +174,7 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
             </div>
           ) : (
             <>
+              <MlsGridSourceLine className="mb-4" showSoldDisclaimer={statusFilter === "sold"} />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {listings.map((listing) => (
                   <Link
@@ -199,6 +208,15 @@ export default async function AgentListingsPage({ params, searchParams }: AgentL
                       <p className="text-xs text-slate-400">
                         {listing.city}, {listing.state} {listing.zip}
                       </p>
+                      <ListingAttribution
+                        listingOfficeName={listing.listingOfficeName}
+                        listingAgentName={listing.listingAgentName}
+                        listingId={listing.listingId}
+                        mlsId={listing.mlsId}
+                        status={listing.status}
+                        className="mt-2"
+                        compact
+                      />
                       <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
                         <span>{listing.beds} bd</span>
                         <span>{listing.baths} ba</span>

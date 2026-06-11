@@ -16,6 +16,7 @@ import { getWalkScore } from "@/lib/walk-score";
 import { getNearbySchools } from "@/lib/great-schools";
 import { createMetadata } from "@/lib/metadata";
 import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
+import { ListingAttribution } from "@/components/properties/listing-attribution";
 import { PHONE } from "@/lib/constants";
 import { JsonLdScript } from "@/components/shared/json-ld-script";
 import { realEstateListingJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
@@ -134,6 +135,14 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
               <p className="text-slate-600 text-lg mt-1">
                 {property.address}, {property.city}, {property.state} {property.zip}
               </p>
+              <ListingAttribution
+                listingOfficeName={property.listingOfficeName}
+                listingAgentName={property.listingAgentName}
+                listingId={property.listingId}
+                mlsId={property.mlsId}
+                status={property.status}
+                className="mt-2"
+              />
             </div>
             <div className="flex gap-2">
               <Link href="/agents">
