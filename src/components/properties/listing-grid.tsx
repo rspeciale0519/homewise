@@ -3,9 +3,10 @@ import type { Property } from "@/providers/property-provider";
 
 interface ListingGridProps {
   properties: Property[];
+  matchScores?: Record<string, number>;
 }
 
-export function ListingGrid({ properties }: ListingGridProps) {
+export function ListingGrid({ properties, matchScores }: ListingGridProps) {
   if (properties.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
@@ -25,7 +26,11 @@ export function ListingGrid({ properties }: ListingGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
       {properties.map((property) => (
-        <ListingCard key={property.id} property={property} />
+        <ListingCard
+          key={property.id}
+          property={property}
+          matchScore={matchScores?.[property.id]}
+        />
       ))}
     </div>
   );

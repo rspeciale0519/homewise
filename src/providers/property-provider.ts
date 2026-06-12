@@ -40,6 +40,7 @@ export interface PropertyFilters {
   hasGatedCommunity?: boolean;
   openHousesOnly?: boolean;
   schoolDistrict?: string;
+  tag?: string;
   featured?: boolean;
   listingAgentMlsId?: string;
   listingOfficeMlsId?: string;
@@ -96,6 +97,7 @@ export interface Property {
   listingAgentEmail?: string;
   listingOfficeName?: string;
   listingOfficeMlsId?: string;
+  tags?: string[];
   walkScore?: number;
   walkScoreDescription?: string;
   transitScore?: number;

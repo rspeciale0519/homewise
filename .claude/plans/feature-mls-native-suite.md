@@ -114,7 +114,10 @@ on `OPENAI_API_KEY` presence (off now).
 EXIT CRITERIA: digest job unit tests incl. zero-match skip + suppression pass; ranker unit tests
 (deterministic ordering) pass; full verify suite exit 0.
 
-### Phase 7 — Match score + auto-tagging (AI-ready, key-gated)
+### Phase 7 — Match score + auto-tagging (AI-ready, key-gated) ✅ COMPLETE (2026-06-12)
+> 9,901/12,806 listings rule-tagged (2,321 pool). Community-feature tags (golf/55+/boating)
+> apply at sync time only — DB doesn't store CommunityFeatures, so backfilled rows gain them
+> on their next feed update. AI style tags hard-gated on OPENAI_API_KEY (asserted no-call).
 Build: (a) **Property match score**: heuristic 0–100 for logged-in users vs their saved
 searches/favorites (reuse Phase 6 ranker), badge on listing cards when logged in; embedding
 similarity term activates only when embeddings exist. (b) **Auto-tagging**: at sync, rule-based

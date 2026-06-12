@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { isHomewiseOffice } from "@/lib/mls-featured";
+import { deriveListingTags } from "@/lib/listing-tags";
 import { proxyPhotoUrl } from "@/lib/mls-image";
 import { limitMlsPhotoSources } from "@/lib/mls-media-budget";
 import type { ResoProperty } from "@/types/reso";
@@ -169,6 +170,17 @@ export function mapResoToListingData(reso: ResoProperty): ListingSyncData {
     virtualTourUrl: reso.VirtualTourURLUnbranded ?? null,
     featured: isHomewiseOffice(reso.ListOfficeMlsId),
     mlgCanUse: reso.MlgCanUse ?? [],
+    tags: deriveListingTags({
+      hasPool: reso.PoolPrivateYN ?? false,
+      hasWaterfront: reso.WaterfrontYN ?? false,
+      isNewConstruction: reso.NewConstructionYN ?? false,
+      hasGatedCommunity: (reso.CommunityFeatures ?? []).some((feature) =>
+        feature.toLowerCase().includes("gated"),
+      ),
+      yearBuilt: reso.YearBuilt ?? null,
+      communityFeatures: reso.CommunityFeatures ?? [],
+      propertyType: reso.PropertyType,
+    }),
     mlsLastModified: new Date(reso.ModificationTimestamp),
     syncedAt: new Date(),
   };

@@ -208,6 +208,19 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
             {/* Left: Details */}
             <div className="space-y-8">
               <ListingDetailOverview property={enrichedProperty} />
+              {property.tags && property.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {property.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/properties?tag=${encodeURIComponent(tag)}`}
+                      className="px-3 py-1 rounded-full bg-navy-50 text-navy-700 text-xs font-semibold capitalize hover:bg-navy-100 transition-colors"
+                    >
+                      {tag.replaceAll("-", " ")}
+                    </Link>
+                  ))}
+                </div>
+              )}
               <PriceHistoryTimeline
                 points={priceHistory.map((point) => ({
                   observedAt: point.observedAt.toISOString(),

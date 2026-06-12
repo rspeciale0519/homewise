@@ -28,6 +28,7 @@ export const LISTING_PROPERTY_SELECT = {
   id: true,
   mlsId: true,
   mlsSource: true,
+  tags: true,
   listingId: true,
   price: true,
   closePrice: true,

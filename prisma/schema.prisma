@@ -263,6 +263,7 @@ model Listing {
   embeddingVector    Unsupported("vector(1536)")?
   embeddingText      String?
   mlgCanUse          String[]  @default([])
+  tags               String[]  @default([])
   manualStatus       String?
   createdByAgentId   String?
   mlsLastModified    DateTime?
@@ -290,6 +291,7 @@ model Listing {
   @@index([daysOnMarket])
   @@index([mlsSource, manualStatus])
   @@index([createdByAgentId])
+  @@index([tags], type: Gin)
 }
 
 model ClientListingMatch {
