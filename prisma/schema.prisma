@@ -263,6 +263,8 @@ model Listing {
   embeddingVector    Unsupported("vector(1536)")?
   embeddingText      String?
   mlgCanUse          String[]  @default([])
+  manualStatus       String?
+  createdByAgentId   String?
   mlsLastModified    DateTime?
   syncedAt           DateTime  @default(now())
   createdAt          DateTime  @default(now())
@@ -283,6 +285,8 @@ model Listing {
   @@index([latitude, longitude])
   @@index([beds])
   @@index([daysOnMarket])
+  @@index([mlsSource, manualStatus])
+  @@index([createdByAgentId])
 }
 
 model OpenHouseRsvp {

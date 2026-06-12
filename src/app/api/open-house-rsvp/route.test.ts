@@ -55,7 +55,7 @@ describe("POST /api/open-house-rsvp", () => {
 
     expect(res.status).toBe(404);
     const where = listingFindFirstMock.mock.calls[0]?.[0]?.where;
-    expect(where.OR ?? where.mlgCanUse).toBeDefined();
+    expect(where.AND).toBeDefined();
     expect(rsvpCreateMock).not.toHaveBeenCalled();
   });
 

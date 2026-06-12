@@ -131,9 +131,14 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
         <Container>
           <div className="flex items-end justify-between gap-4 flex-wrap py-5">
             <div>
-              <Badge variant={statusVariant[property.status] ?? "default"} size="lg" className="mb-2">
-                {property.status}
-              </Badge>
+              <span className="inline-flex items-center gap-2 mb-2">
+                <Badge variant={statusVariant[property.status] ?? "default"} size="lg">
+                  {property.status}
+                </Badge>
+                {property.mlsSource === "manual" && (
+                  <Badge variant="crimson" size="lg">Exclusive</Badge>
+                )}
+              </span>
               <h1 className="font-serif text-3xl sm:text-4xl font-bold text-navy-700">
                 {formatPrice(property.closePrice ?? property.price)}
               </h1>

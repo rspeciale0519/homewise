@@ -206,6 +206,7 @@ function mapListingToProperty(listing: ListingPropertyRow): Property {
   return {
     id: listing.id,
     mlsId: listing.mlsId,
+    mlsSource: listing.mlsSource,
     listingId: listing.listingId ?? undefined,
     price: listing.price,
     closePrice: listing.closePrice ?? undefined,

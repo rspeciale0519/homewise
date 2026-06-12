@@ -64,7 +64,7 @@ agent (`listingAgentMlsId` → Agent) else admin; agent-dashboard list of upcomi
 EXIT CRITERIA: compare page renders 3 demo listings locally (evidence surfaced); RSVP API route
 unit tests (validation, agent match, fallback) pass; full verify suite exit 0.
 
-### Phase 3 — Exclusive (pocket) listings
+### Phase 3 — Exclusive (pocket) listings ✅ COMPLETE (2026-06-12)
 Build: agent-dashboard CRUD for manual listings (`mlsSource: "manual"`): create/edit/archive own
 listings only; required subset of Listing fields + photo upload to existing storage patterns;
 admin approval queue (pending → active) in admin; public visibility: extend the public read filter

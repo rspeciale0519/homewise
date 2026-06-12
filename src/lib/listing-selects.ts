@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 export const LISTING_CARD_SELECT = {
   id: true,
   mlsId: true,
+  mlsSource: true,
   listingId: true,
   imageUrl: true,
   address: true,
@@ -26,6 +27,7 @@ export type ListingCardRow = Prisma.ListingGetPayload<{
 export const LISTING_PROPERTY_SELECT = {
   id: true,
   mlsId: true,
+  mlsSource: true,
   listingId: true,
   price: true,
   closePrice: true,

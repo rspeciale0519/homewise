@@ -43,7 +43,7 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         {/* Status badge */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex items-center gap-1.5">
           <Badge
             variant={statusVariant[property.status] ?? "default"}
             size="sm"
@@ -51,6 +51,11 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
           >
             {statusLabel[property.status] ?? property.status}
           </Badge>
+          {property.mlsSource === "manual" && (
+            <Badge variant="crimson" size="sm" className="shadow-sm backdrop-blur-sm">
+              Exclusive
+            </Badge>
+          )}
         </div>
 
         {/* Days on market */}
