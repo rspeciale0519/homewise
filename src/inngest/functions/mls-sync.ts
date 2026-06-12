@@ -11,6 +11,7 @@ import { syncOpenHouses } from "./mls-openhouse";
 import {
   detectPriceChange,
   mapResoToListingData,
+  priceHistoryEntriesFor,
   type ListingSyncData,
 } from "./mls-sync.mapper";
 
@@ -225,6 +226,11 @@ function syncRunMetadata(initialImport: boolean): Prisma.InputJsonObject {
   };
 }
 
+function toDateOrNull(value: Date | string | null | undefined): Date | null {
+  if (value == null) return null;
+  return value instanceof Date ? value : new Date(value);
+}
+
 function updateDataFor(mapped: ListingSyncData): Prisma.ListingUncheckedUpdateInput {
   const { mlsId: _mlsId, mlsSource: _mlsSource, ...update } = mapped;
   return update;
@@ -307,6 +313,19 @@ async function upsertListing(
     create: mapped,
     select: { id: true },
   });
+
+  const historyEntries = priceHistoryEntriesFor(existing, {
+    price: mapped.price as number,
+    originalListPrice: mapped.originalListPrice as number | null,
+    listDate: toDateOrNull(mapped.listDate),
+    mlsLastModified: toDateOrNull(mapped.mlsLastModified),
+    syncedAt: toDateOrNull(mapped.syncedAt) ?? new Date(),
+  });
+  if (historyEntries.length > 0) {
+    await prisma.priceHistory.createMany({
+      data: historyEntries.map((entry) => ({ ...entry, listingId: saved.id })),
+    });
+  }
 
   if (options.initialImport) return;
 

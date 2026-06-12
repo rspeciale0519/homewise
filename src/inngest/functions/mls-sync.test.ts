@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { storageKeyFor } from "@/lib/mls-image";
 import type { ResoProperty } from "@/types/reso";
 import { detectPriceChange, mapResoToListingData } from "./mls-sync";
+import { priceHistoryEntriesFor } from "./mls-sync.mapper";
 
 const originalEnv = { ...process.env };
 
@@ -116,5 +117,54 @@ describe("MLS sync mapping", () => {
     expect(detectPriceChange({ price: 600_000 }, resoListing())).toBe(true);
     expect(detectPriceChange({ price: 625_000 }, resoListing())).toBe(false);
     expect(detectPriceChange(null, resoListing())).toBe(false);
+  });
+});
+
+describe("price history capture", () => {
+  const syncedAt = new Date("2026-06-12T12:00:00Z");
+  const mlsLastModified = new Date("2026-06-10T08:00:00Z");
+  const listDate = new Date("2026-05-01T00:00:00Z");
+
+  it("records original and current price on first import", () => {
+    const entries = priceHistoryEntriesFor(null, {
+      price: 618_000,
+      originalListPrice: 650_000,
+      listDate,
+      mlsLastModified,
+      syncedAt,
+    });
+
+    expect(entries).toEqual([
+      { price: 650_000, observedAt: listDate, source: "import" },
+      { price: 618_000, observedAt: mlsLastModified, source: "import" },
+    ]);
+  });
+
+  it("records a single row on first import when original equals current", () => {
+    const entries = priceHistoryEntriesFor(null, {
+      price: 618_000,
+      originalListPrice: 618_000,
+      listDate,
+      mlsLastModified,
+      syncedAt,
+    });
+
+    expect(entries).toEqual([
+      { price: 618_000, observedAt: mlsLastModified, source: "import" },
+    ]);
+  });
+
+  it("records a sync row only when the price changed", () => {
+    const changed = priceHistoryEntriesFor(
+      { price: 650_000 },
+      { price: 618_000, originalListPrice: null, listDate: null, mlsLastModified: null, syncedAt },
+    );
+    expect(changed).toEqual([{ price: 618_000, observedAt: syncedAt, source: "sync" }]);
+
+    const unchanged = priceHistoryEntriesFor(
+      { price: 618_000 },
+      { price: 618_000, originalListPrice: null, listDate: null, mlsLastModified: null, syncedAt },
+    );
+    expect(unchanged).toEqual([]);
   });
 });

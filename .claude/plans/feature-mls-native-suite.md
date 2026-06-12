@@ -36,7 +36,10 @@ existing direct MLS Grid connection. No third-party IDX vendor anywhere. Back-Of
 
 ## PHASES (in order; each ends with roadmap update + checkpoint + full verify)
 
-### Phase 1 — Listing-page data features
+### Phase 1 — Listing-page data features ✅ COMPLETE (2026-06-12)
+> Note: (c) open-house search filter pre-existed (schema param + checkbox + provider where-clause);
+> verified rather than rebuilt. No docs/ roadmap file exists in this repo — phase status is
+> tracked in this spec per Rule 7 fallback.
 Build: (a) **Price history**: new additive `PriceHistory` model (listingId, price, observedAt,
 source); sync writes a row on detected price change + first-import row from `originalListPrice`;
 timeline chart section on property detail page (render only when ≥2 points). (b) **Total cost of

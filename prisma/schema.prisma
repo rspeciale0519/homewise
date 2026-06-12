@@ -267,6 +267,7 @@ model Listing {
   syncedAt           DateTime  @default(now())
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  priceHistory       PriceHistory[]
 
   @@index([city])
   @@index([status])
@@ -281,6 +282,18 @@ model Listing {
   @@index([latitude, longitude])
   @@index([beds])
   @@index([daysOnMarket])
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  price      Float
+  observedAt DateTime @default(now())
+  source     String   @default("sync")
+  createdAt  DateTime @default(now())
+
+  @@index([listingId, observedAt])
 }
 
 model WalkScoreCache {
