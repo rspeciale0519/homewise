@@ -21,10 +21,17 @@ const IDX_READ_SURFACES = [
 ];
 
 describe("MLS IDX visibility integration", () => {
-  it("keeps the central IDX clause intact", () => {
+  it("keeps the central visibility clause intact", () => {
     expect(withIdx({ status: "Active" })).toEqual({
-      status: "Active",
-      mlgCanUse: { has: "IDX" },
+      AND: [
+        { status: "Active" },
+        {
+          OR: [
+            { mlgCanUse: { has: "IDX" } },
+            { mlsSource: "manual", manualStatus: "approved" },
+          ],
+        },
+      ],
     });
   });
 

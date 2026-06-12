@@ -11,8 +11,11 @@ import { propertyProvider } from "@/providers";
 import type { PropertyFilters } from "@/providers/property-provider";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
 import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
+import { CompareBar } from "@/components/properties/compare-bar";
 import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
 import { createMetadata } from "@/lib/metadata";
+import { createClient } from "@/lib/supabase/server";
+import { matchProfileForUser, scoreProperties } from "@/lib/match-score";
 
 export const metadata: Metadata = createMetadata({
   title: "Property Search",
@@ -51,6 +54,31 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
   }
 
   const result = await propertyProvider.search(filters);
+
+  let matchScores: Record<string, number> | undefined;
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const profile = await matchProfileForUser(user.id);
+      if (profile) {
+        matchScores = scoreProperties(
+          profile,
+          result.properties.map((p) => ({
+            id: p.id,
+            price: p.price,
+            city: p.city,
+            beds: p.beds,
+            status: p.status,
+            hasPool: p.hasPool,
+            hasWaterfront: p.hasWaterfront,
+          })),
+        );
+      }
+    }
+  } catch {
+    matchScores = undefined;
+  }
 
   return (
     <>
@@ -146,13 +174,14 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
             currentHasGatedCommunity={parsed.success ? parsed.data.hasGatedCommunity : undefined}
             currentOpenHousesOnly={parsed.success ? parsed.data.openHousesOnly : undefined}
             currentSchoolDistrict={parsed.success ? parsed.data.schoolDistrict : undefined}
+            currentHasPolygon={parsed.success ? Boolean(parsed.data.polygon) : undefined}
             totalResults={result.total}
           />
 
           <div className="mt-8">
             <MlsGridSourceLine className="mb-4" showSoldDisclaimer />
             <PropertySearchShell properties={result.properties}>
-              <ListingGrid properties={result.properties} />
+              <ListingGrid properties={result.properties} matchScores={matchScores} />
               <Pagination
                 currentPage={result.currentPage}
                 totalPages={result.totalPages}
@@ -168,6 +197,8 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
           <IdxDisclaimer />
         </Container>
       </section>
+
+      <CompareBar />
 
       <CtaBanner
         eyebrow="Can&apos;t Find What You&apos;re Looking For?"

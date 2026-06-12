@@ -33,6 +33,7 @@ export const propertyFilterSchema = z.object({
   hasGatedCommunity: z.coerce.boolean().optional(),
   openHousesOnly: z.coerce.boolean().optional(),
   schoolDistrict: z.string().optional(),
+  tag: z.string().max(40).optional(),
   featured: z.coerce.boolean().optional(),
   // Sorting
   sortBy: z.enum(["price_asc", "price_desc", "newest", "dom_asc", "dom_desc", "sqft_desc"]).optional(),

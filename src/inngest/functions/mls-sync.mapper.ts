@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { isHomewiseOffice } from "@/lib/mls-featured";
+import { deriveListingTags } from "@/lib/listing-tags";
 import { proxyPhotoUrl } from "@/lib/mls-image";
 import { limitMlsPhotoSources } from "@/lib/mls-media-budget";
 import type { ResoProperty } from "@/types/reso";
@@ -20,6 +21,46 @@ function sortedPhotoSources(reso: ResoProperty): string[] {
   return limitMlsPhotoSources([...(reso.Media ?? [])]
     .sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
     .map((media) => media.MediaURL));
+}
+
+export type PriceHistoryEntry = {
+  price: number;
+  observedAt: Date;
+  source: string;
+};
+
+export type PriceSnapshotInput = {
+  price: number;
+  originalListPrice?: number | null;
+  listDate?: Date | null;
+  mlsLastModified?: Date | null;
+  syncedAt: Date;
+};
+
+export function priceHistoryEntriesFor(
+  existing: ExistingListingPrice,
+  snapshot: PriceSnapshotInput,
+): PriceHistoryEntry[] {
+  const observedAt = snapshot.mlsLastModified ?? snapshot.syncedAt;
+
+  if (!existing) {
+    const entries: PriceHistoryEntry[] = [];
+    if (snapshot.originalListPrice != null && snapshot.originalListPrice !== snapshot.price) {
+      entries.push({
+        price: snapshot.originalListPrice,
+        observedAt: snapshot.listDate ?? observedAt,
+        source: "import",
+      });
+    }
+    entries.push({ price: snapshot.price, observedAt, source: "import" });
+    return entries;
+  }
+
+  if (existing.price !== snapshot.price) {
+    return [{ price: snapshot.price, observedAt, source: "sync" }];
+  }
+
+  return [];
 }
 
 export function mapStatus(resoStatus: string): string {
@@ -129,6 +170,17 @@ export function mapResoToListingData(reso: ResoProperty): ListingSyncData {
     virtualTourUrl: reso.VirtualTourURLUnbranded ?? null,
     featured: isHomewiseOffice(reso.ListOfficeMlsId),
     mlgCanUse: reso.MlgCanUse ?? [],
+    tags: deriveListingTags({
+      hasPool: reso.PoolPrivateYN ?? false,
+      hasWaterfront: reso.WaterfrontYN ?? false,
+      isNewConstruction: reso.NewConstructionYN ?? false,
+      hasGatedCommunity: (reso.CommunityFeatures ?? []).some((feature) =>
+        feature.toLowerCase().includes("gated"),
+      ),
+      yearBuilt: reso.YearBuilt ?? null,
+      communityFeatures: reso.CommunityFeatures ?? [],
+      propertyType: reso.PropertyType,
+    }),
     mlsLastModified: new Date(reso.ModificationTimestamp),
     syncedAt: new Date(),
   };

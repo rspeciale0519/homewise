@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/properties/favorite-button";
+import { CompareToggle } from "@/components/properties/compare-toggle";
 import { ListingAttribution } from "@/components/properties/listing-attribution";
 import type { Property } from "@/providers/property-provider";
 import { formatPrice } from "@/lib/format";
@@ -10,6 +11,7 @@ interface ListingCardProps {
   property: Property;
   isFavorited?: boolean;
   showFavorite?: boolean;
+  matchScore?: number;
 }
 
 const statusVariant: Record<string, "success" | "crimson" | "gold" | "default"> = {
@@ -25,7 +27,7 @@ const statusLabel: Record<string, string> = {
   "Pending": "Under Contract",
 };
 
-export function ListingCard({ property, isFavorited = false, showFavorite = true }: ListingCardProps) {
+export function ListingCard({ property, isFavorited = false, showFavorite = true, matchScore }: ListingCardProps) {
   return (
     <article className="group relative bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden transition-all duration-300 hover:shadow-elevated hover:-translate-y-0.5">
       {/* Image */}
@@ -42,7 +44,7 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         {/* Status badge */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex items-center gap-1.5">
           <Badge
             variant={statusVariant[property.status] ?? "default"}
             size="sm"
@@ -50,6 +52,16 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
           >
             {statusLabel[property.status] ?? property.status}
           </Badge>
+          {property.mlsSource === "manual" && (
+            <Badge variant="crimson" size="sm" className="shadow-sm backdrop-blur-sm">
+              Exclusive
+            </Badge>
+          )}
+          {matchScore != null && matchScore >= 60 && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-600/90 text-white text-[11px] font-semibold shadow-sm backdrop-blur-sm">
+              {matchScore}% match
+            </span>
+          )}
         </div>
 
         {/* Days on market */}
@@ -66,6 +78,10 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
         {showFavorite && (
           <FavoriteButton propertyId={property.id} isFavorited={isFavorited} />
         )}
+
+        {/* Compare toggle */}
+        <CompareToggle propertyId={property.id} />
+
 
         {/* Price overlay on hover */}
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

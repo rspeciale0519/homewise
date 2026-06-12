@@ -40,6 +40,7 @@ export interface PropertyFilters {
   hasGatedCommunity?: boolean;
   openHousesOnly?: boolean;
   schoolDistrict?: string;
+  tag?: string;
   featured?: boolean;
   listingAgentMlsId?: string;
   listingOfficeMlsId?: string;
@@ -64,6 +65,7 @@ export interface Property {
   daysOnMarket: number;
   // Extended fields (optional for backward compat with mock data)
   mlsId?: string;
+  mlsSource?: string;
   listingId?: string;
   closePrice?: number;
   originalListPrice?: number;
@@ -95,6 +97,7 @@ export interface Property {
   listingAgentEmail?: string;
   listingOfficeName?: string;
   listingOfficeMlsId?: string;
+  tags?: string[];
   walkScore?: number;
   walkScoreDescription?: string;
   transitScore?: number;

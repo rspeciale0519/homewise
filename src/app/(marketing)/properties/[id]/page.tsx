@@ -11,7 +11,11 @@ import { ListingDetailOverview } from "@/components/properties/listing-detail-ov
 import { ListingDetailLocation } from "@/components/properties/listing-detail-location";
 import { ListingDetailSidebar } from "@/components/properties/listing-detail-sidebar";
 import { propertyProvider } from "@/providers";
+import { prisma } from "@/lib/prisma";
+import { recordListingView } from "@/lib/listing-views";
 import { formatPrice } from "@/lib/format";
+import { calculateTco } from "@/lib/tco";
+import { PriceHistoryTimeline } from "@/components/properties/price-history-timeline";
 import { getWalkScore } from "@/lib/walk-score";
 import { getNearbySchools } from "@/lib/great-schools";
 import { createMetadata } from "@/lib/metadata";
@@ -54,17 +58,24 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
 
   if (!property) notFound();
 
+  recordListingView(id).catch(() => undefined);
+
   // Fetch third-party data in parallel (graceful if unavailable)
   const hasCoordinates = property.latitude != null && property.longitude != null;
   console.log("[PropertyDetailPage] Has coordinates:", hasCoordinates);
 
-  const [walkScoreResult, schools] = await Promise.all([
+  const [walkScoreResult, schools, priceHistory] = await Promise.all([
     hasCoordinates && property.latitude != null && property.longitude != null
       ? getWalkScore(`${property.address}, ${property.city}, ${property.state} ${property.zip}`, property.latitude, property.longitude)
       : Promise.resolve(null),
     hasCoordinates && property.latitude != null && property.longitude != null
       ? getNearbySchools(property.latitude, property.longitude)
       : Promise.resolve(null),
+    prisma.priceHistory.findMany({
+      where: { listingId: id },
+      orderBy: { observedAt: "asc" },
+      select: { observedAt: true, price: true },
+    }),
   ]);
 
   console.log("[PropertyDetailPage] Walk score result:", walkScoreResult);
@@ -123,9 +134,14 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
         <Container>
           <div className="flex items-end justify-between gap-4 flex-wrap py-5">
             <div>
-              <Badge variant={statusVariant[property.status] ?? "default"} size="lg" className="mb-2">
-                {property.status}
-              </Badge>
+              <span className="inline-flex items-center gap-2 mb-2">
+                <Badge variant={statusVariant[property.status] ?? "default"} size="lg">
+                  {property.status}
+                </Badge>
+                {property.mlsSource === "manual" && (
+                  <Badge variant="crimson" size="lg">Exclusive</Badge>
+                )}
+              </span>
               <h1 className="font-serif text-3xl sm:text-4xl font-bold text-navy-700">
                 {formatPrice(property.closePrice ?? property.price)}
               </h1>
@@ -192,12 +208,36 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
             {/* Left: Details */}
             <div className="space-y-8">
               <ListingDetailOverview property={enrichedProperty} />
+              {property.tags && property.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {property.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/properties?tag=${encodeURIComponent(tag)}`}
+                      className="px-3 py-1 rounded-full bg-navy-50 text-navy-700 text-xs font-semibold capitalize hover:bg-navy-100 transition-colors"
+                    >
+                      {tag.replaceAll("-", " ")}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <PriceHistoryTimeline
+                points={priceHistory.map((point) => ({
+                  observedAt: point.observedAt.toISOString(),
+                  price: point.price,
+                }))}
+              />
               <ListingDetailLocation property={enrichedProperty} schools={schools} />
 
-              {/* Payment estimate */}
+              {/* Cost of ownership estimate */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-card p-6 sm:p-8">
-                <h2 className="font-serif text-2xl font-semibold text-navy-700 mb-4">Estimated Monthly Payment</h2>
-                <PaymentEstimate price={property.price} />
+                <h2 className="font-serif text-2xl font-semibold text-navy-700 mb-4">Estimated Monthly Cost of Ownership</h2>
+                <PaymentEstimate
+                  price={property.price}
+                  taxAmount={property.taxAmount}
+                  hoaFee={property.hoaFee}
+                  hoaFrequency={property.hoaFrequency}
+                />
               </div>
             </div>
 
@@ -237,38 +277,48 @@ function Divider() {
   return <div className="h-8 w-px bg-slate-200 shrink-0" />;
 }
 
-function PaymentEstimate({ price }: { price: number }) {
-  const downPayment = price * 0.2;
-  const loanAmount = price - downPayment;
-  const monthlyRate = 0.065 / 12;
-  const numPayments = 30 * 12;
-  const monthly = (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
-  const tax = (price * 0.01) / 12;
-  const insurance = 250;
-  const total = monthly + tax + insurance;
+function PaymentEstimate({
+  price,
+  taxAmount,
+  hoaFee,
+  hoaFrequency,
+}: {
+  price: number;
+  taxAmount?: number | null;
+  hoaFee?: number | null;
+  hoaFrequency?: string | null;
+}) {
+  const tco = calculateTco({ price, taxAmount, hoaFee, hoaFrequency });
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center py-2 border-b border-slate-100">
-        <span className="text-sm text-slate-600">Principal & Interest</span>
-        <span className="text-sm font-semibold text-navy-700">${Math.round(monthly).toLocaleString()}/mo</span>
-      </div>
-      <div className="flex justify-between items-center py-2 border-b border-slate-100">
-        <span className="text-sm text-slate-600">Property Taxes (est.)</span>
-        <span className="text-sm font-semibold text-navy-700">${Math.round(tax).toLocaleString()}/mo</span>
-      </div>
-      <div className="flex justify-between items-center py-2 border-b border-slate-100">
-        <span className="text-sm text-slate-600">Insurance (est.)</span>
-        <span className="text-sm font-semibold text-navy-700">${insurance}/mo</span>
-      </div>
+      <CostRow label="Principal & Interest" amount={tco.principalAndInterest} />
+      <CostRow
+        label={tco.taxIsEstimate ? "Property Taxes (est.)" : "Property Taxes"}
+        amount={tco.propertyTax}
+      />
+      <CostRow label="Insurance (est.)" amount={tco.insurance} />
+      {tco.hoa > 0 && <CostRow label="HOA" amount={tco.hoa} />}
       <div className="flex justify-between items-center py-3 bg-navy-50 rounded-xl px-4 -mx-1">
         <span className="text-sm font-semibold text-navy-700">Estimated Total</span>
-        <span className="font-serif text-xl font-bold text-crimson-600">${Math.round(total).toLocaleString()}/mo</span>
+        <span className="font-serif text-xl font-bold text-crimson-600">${Math.round(tco.total).toLocaleString()}/mo</span>
       </div>
       <p className="text-xs text-slate-400 leading-relaxed">
-        Based on 20% down ({formatPrice(downPayment)}), 6.5% interest rate, 30-year fixed mortgage.
-        Actual payments will vary. Does not include HOA fees.
+        Based on 20% down ({formatPrice(tco.downPayment)}), 6.5% interest rate, 30-year fixed mortgage.
+        {tco.taxIsEstimate
+          ? " Taxes estimated at 1% of list price annually."
+          : " Taxes from the most recent assessment on record."}{" "}
+        Insurance estimated at 0.5% of list price annually. All figures are estimates — actual costs will vary.
       </p>
+    </div>
+  );
+}
+
+function CostRow({ label, amount }: { label: string; amount: number }) {
+  return (
+    <div className="flex justify-between items-center py-2 border-b border-slate-100">
+      <span className="text-sm text-slate-600">{label}</span>
+      <span className="text-sm font-semibold text-navy-700">${Math.round(amount).toLocaleString()}/mo</span>
     </div>
   );
 }

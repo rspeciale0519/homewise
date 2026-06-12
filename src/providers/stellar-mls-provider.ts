@@ -89,6 +89,7 @@ export class StellarMlsProvider implements PropertyProvider {
     if (isNewConstruction) where.isNewConstruction = true;
     if (hasGatedCommunity) where.hasGatedCommunity = true;
     if (schoolDistrict) where.schoolDistrict = { contains: schoolDistrict, mode: "insensitive" };
+    if (filters.tag) where.tags = { has: filters.tag.toLowerCase() };
 
     if (openHousesOnly) {
       where.openHouseSchedule = { not: Prisma.JsonNull };
@@ -206,6 +207,8 @@ function mapListingToProperty(listing: ListingPropertyRow): Property {
   return {
     id: listing.id,
     mlsId: listing.mlsId,
+    mlsSource: listing.mlsSource,
+    tags: listing.tags,
     listingId: listing.listingId ?? undefined,
     price: listing.price,
     closePrice: listing.closePrice ?? undefined,

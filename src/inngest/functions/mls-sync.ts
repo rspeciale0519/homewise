@@ -2,6 +2,7 @@ import type { Prisma, SyncState } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildPropertyUrl, fetchPage, hasCredentials } from "@/lib/mls-grid";
 import { storageKeyFor } from "@/lib/mls-image";
+import { aiStyleTags } from "@/lib/listing-tags";
 import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { withIdx } from "@/lib/mls-visibility";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,6 +12,7 @@ import { syncOpenHouses } from "./mls-openhouse";
 import {
   detectPriceChange,
   mapResoToListingData,
+  priceHistoryEntriesFor,
   type ListingSyncData,
 } from "./mls-sync.mapper";
 
@@ -225,6 +227,11 @@ function syncRunMetadata(initialImport: boolean): Prisma.InputJsonObject {
   };
 }
 
+function toDateOrNull(value: Date | string | null | undefined): Date | null {
+  if (value == null) return null;
+  return value instanceof Date ? value : new Date(value);
+}
+
 function updateDataFor(mapped: ListingSyncData): Prisma.ListingUncheckedUpdateInput {
   const { mlsId: _mlsId, mlsSource: _mlsSource, ...update } = mapped;
   return update;
@@ -297,6 +304,16 @@ async function upsertListing(
   options: { initialImport: boolean },
 ): Promise<void> {
   const mapped = mapResoToListingData(reso);
+
+  // AI styling tags only on incremental syncs (low volume) and only when the key exists.
+  if (!options.initialImport && process.env.OPENAI_API_KEY) {
+    const styleTags = await aiStyleTags({
+      description: reso.PublicRemarks,
+      propertyType: reso.PropertyType,
+    }).catch(() => []);
+    mapped.tags = [...new Set([...(mapped.tags as string[]), ...styleTags])].sort();
+  }
+
   const existing = await prisma.listing.findUnique({
     where: { mlsId: mapped.mlsId },
     select: { id: true, price: true },
@@ -307,6 +324,19 @@ async function upsertListing(
     create: mapped,
     select: { id: true },
   });
+
+  const historyEntries = priceHistoryEntriesFor(existing, {
+    price: mapped.price as number,
+    originalListPrice: mapped.originalListPrice as number | null,
+    listDate: toDateOrNull(mapped.listDate),
+    mlsLastModified: toDateOrNull(mapped.mlsLastModified),
+    syncedAt: toDateOrNull(mapped.syncedAt) ?? new Date(),
+  });
+  if (historyEntries.length > 0) {
+    await prisma.priceHistory.createMany({
+      data: historyEntries.map((entry) => ({ ...entry, listingId: saved.id })),
+    });
+  }
 
   if (options.initialImport) return;
 

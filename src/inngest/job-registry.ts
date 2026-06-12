@@ -101,4 +101,28 @@ export const JOB_REGISTRY: Record<string, JobMeta> = {
     schedule: null,
     type: "event",
   },
+  "client-listing-matcher": {
+    name: "Client-Listing Matcher",
+    description: "Match newly synced listings against client buying preferences",
+    schedule: null,
+    type: "event",
+  },
+  "daily-client-match-sweep": {
+    name: "Client Match Sweep",
+    description: "Daily sweep matching recent listings to client preferences",
+    schedule: "Daily at 6 AM",
+    type: "cron",
+  },
+  "listing-anomaly-scan": {
+    name: "Listing Anomaly Scan",
+    description: "Flag sharp price drops, stale listings, duplicates, and missing photos",
+    schedule: "Daily at 5:30 AM",
+    type: "cron",
+  },
+  "weekly-open-house-digest": {
+    name: "Open House Digest",
+    description: "Weekly email of upcoming open houses matching subscriber alert areas",
+    schedule: "Thursdays at 8 AM",
+    type: "cron",
+  },
 };

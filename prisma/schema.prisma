@@ -263,10 +263,18 @@ model Listing {
   embeddingVector    Unsupported("vector(1536)")?
   embeddingText      String?
   mlgCanUse          String[]  @default([])
+  tags               String[]  @default([])
+  manualStatus       String?
+  createdByAgentId   String?
   mlsLastModified    DateTime?
   syncedAt           DateTime  @default(now())
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  priceHistory       PriceHistory[]
+  openHouseRsvps     OpenHouseRsvp[]
+  clientMatches      ClientListingMatch[]
+  viewDaily          ListingViewDaily[]
+  anomalies          ListingAnomaly[]
 
   @@index([city])
   @@index([status])
@@ -281,6 +289,73 @@ model Listing {
   @@index([latitude, longitude])
   @@index([beds])
   @@index([daysOnMarket])
+  @@index([mlsSource, manualStatus])
+  @@index([createdByAgentId])
+  @@index([tags], type: Gin)
+}
+
+model ClientListingMatch {
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  agentId   String
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([contactId, listingId])
+  @@index([agentId, dismissed, createdAt])
+}
+
+model ListingViewDaily {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  date      String
+  count     Int      @default(0)
+
+  @@unique([listingId, date])
+}
+
+model ListingAnomaly {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  kind      String
+  detail    String?
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([listingId, kind])
+  @@index([dismissed, createdAt])
+}
+
+model OpenHouseRsvp {
+  id           String   @id @default(cuid())
+  listingId    String
+  listing      Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  openHouseKey String?
+  slotDate     String?
+  name         String
+  email        String
+  phone        String?
+  createdAt    DateTime @default(now())
+
+  @@index([listingId, createdAt])
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  price      Float
+  observedAt DateTime @default(now())
+  source     String   @default("sync")
+  createdAt  DateTime @default(now())
+
+  @@index([listingId, observedAt])
 }
 
 model WalkScoreCache {
@@ -338,6 +413,10 @@ model Contact {
   notes            String?
   birthday         DateTime?
   closeAnniversary DateTime?
+  prefBudgetMin    Float?
+  prefBudgetMax    Float?
+  prefCities       String[]  @default([])
+  prefMinBeds      Int?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -348,6 +427,7 @@ model Contact {
   transactions  Transaction[]
   enrollments   CampaignEnrollment[]
   emailEvents   EmailEvent[]
+  listingMatches ClientListingMatch[]
 
   @@index([email])
   @@index([assignedAgentId])

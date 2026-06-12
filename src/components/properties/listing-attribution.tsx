@@ -23,7 +23,8 @@ export function ListingAttribution({
   className,
   compact = false,
 }: ListingAttributionProps) {
-  const listingNumber = listingId ?? mlsId;
+  const rawListingNumber = listingId ?? mlsId;
+  const listingNumber = rawListingNumber?.startsWith("MANUAL-") ? null : rawListingNumber;
   const statusLabel = status ? STATUS_LABELS[status] ?? status : null;
 
   if (!listingOfficeName && !listingAgentName && !listingNumber) return null;

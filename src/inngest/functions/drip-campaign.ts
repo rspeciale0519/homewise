@@ -1,6 +1,10 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
+import {
+  RECOMMENDED_LISTINGS_TOKEN,
+  recommendedListingsHtmlForContact,
+} from "@/lib/recommendation-email";
 import { sendSms } from "@/lib/sms";
 import { pickVariant } from "@/lib/email/ab-testing";
 import { buildAgentBrandedEmailHtml, getAgentBrandTokens } from "@/lib/email/agent-branded";
@@ -71,6 +75,16 @@ export const processDripCampaigns = inngest.createFunction(
           property_address: "",
           ...(agent ? getAgentBrandTokens(agent, siteUrl) : {}),
         };
+
+        if (email.body.includes(RECOMMENDED_LISTINGS_TOKEN)) {
+          tokens[RECOMMENDED_LISTINGS_TOKEN] = await recommendedListingsHtmlForContact(
+            contact,
+            siteUrl,
+          ).catch((error) => {
+            console.error("[drip-campaign] recommendations failed:", error);
+            return "";
+          });
+        }
 
         if (email.channel === "sms" && email.smsBody && contact.phone) {
           const smsText = personalizeTemplate(email.smsBody, tokens);

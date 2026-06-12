@@ -34,6 +34,7 @@ interface SearchFiltersProps {
   currentHasGatedCommunity?: boolean;
   currentOpenHousesOnly?: boolean;
   currentSchoolDistrict?: string;
+  currentHasPolygon?: boolean;
   totalResults: number;
 }
 
@@ -67,6 +68,7 @@ export function SearchFilters({
   currentHasGatedCommunity,
   currentOpenHousesOnly,
   currentSchoolDistrict,
+  currentHasPolygon,
   totalResults,
 }: SearchFiltersProps) {
   const router = useRouter();
@@ -294,6 +296,7 @@ export function SearchFilters({
             currentHasGatedCommunity={currentHasGatedCommunity}
             currentOpenHousesOnly={currentOpenHousesOnly}
             currentSchoolDistrict={currentSchoolDistrict}
+            currentHasPolygon={currentHasPolygon}
             onUpdate={updateParams}
           />
         </div>
