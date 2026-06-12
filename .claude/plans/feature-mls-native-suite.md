@@ -128,7 +128,13 @@ EXIT CRITERIA: scoring + tagging unit tests pass (mocked AI never called when ke
 asserted); sync still green (run one incremental sync locally, SyncState idle, no error — shown);
 full verify suite exit 0.
 
-### Phase 8 — Ship
+### Phase 8 — Ship ✅ COMPLETE (2026-06-12)
+> PR #56 squash-merged (ffa478f); develop == main; production deployment dpl_65XkiD54…
+> READY at ffa478f on app.homewisefl.com. Prod smoke: compare page renders real DB rows;
+> mock-gated detail page shows the new TCO panel; provider-driven MLS surfaces stay
+> mock-gated on prod until launch flags flip (by design — pre-launch gate). Local smoke
+> against 12.8k demo listings covered every feature end-to-end. Agent/admin dashboards
+> behind login: visual pass is Rob's.
 `/git-workflow-planning:finish` → PR → squash to develop → promote main. Verify production
 deployment READY (get_project → get_deployment, sha matching). chrome-devtools smoke on
 production: /properties (open-house + tag filters present), one detail page (price history, TCO,
