@@ -11,6 +11,7 @@ import { propertyProvider } from "@/providers";
 import type { PropertyFilters } from "@/providers/property-provider";
 import { propertyFilterSchema } from "@/schemas/property-filter.schema";
 import { IdxDisclaimer } from "@/components/properties/idx-disclaimer";
+import { CompareBar } from "@/components/properties/compare-bar";
 import { MlsGridSourceLine } from "@/components/properties/mls-grid-source-line";
 import { createMetadata } from "@/lib/metadata";
 
@@ -168,6 +169,8 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
           <IdxDisclaimer />
         </Container>
       </section>
+
+      <CompareBar />
 
       <CtaBanner
         eyebrow="Can&apos;t Find What You&apos;re Looking For?"

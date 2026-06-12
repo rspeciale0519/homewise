@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/properties/favorite-button";
+import { CompareToggle } from "@/components/properties/compare-toggle";
 import { ListingAttribution } from "@/components/properties/listing-attribution";
 import type { Property } from "@/providers/property-provider";
 import { formatPrice } from "@/lib/format";
@@ -66,6 +67,10 @@ export function ListingCard({ property, isFavorited = false, showFavorite = true
         {showFavorite && (
           <FavoriteButton propertyId={property.id} isFavorited={isFavorited} />
         )}
+
+        {/* Compare toggle */}
+        <CompareToggle propertyId={property.id} />
+
 
         {/* Price overlay on hover */}
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

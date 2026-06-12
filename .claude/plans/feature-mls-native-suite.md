@@ -53,7 +53,7 @@ open-house filter logic pass in `npx vitest run` (shown); type-check/lint/vitest
 page renders both new sections locally (chrome-devtools screenshot or innerText check surfaced for
 a listing with seeded history).
 
-### Phase 2 — Comparison tool + Open House RSVP
+### Phase 2 — Comparison tool + Open House RSVP ✅ COMPLETE (2026-06-12)
 Build: (a) **/properties/compare?ids=a,b,c,d** page (2–4 listings): side-by-side table — price,
 $/sqft, beds, baths, sqft, lot, year, HOA, tax, walk/transit/bike scores, DOM, status, photo;
 "Compare" entry points from favorites and listing cards (client state, no schema change). IDX

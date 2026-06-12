@@ -268,6 +268,7 @@ model Listing {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   priceHistory       PriceHistory[]
+  openHouseRsvps     OpenHouseRsvp[]
 
   @@index([city])
   @@index([status])
@@ -282,6 +283,20 @@ model Listing {
   @@index([latitude, longitude])
   @@index([beds])
   @@index([daysOnMarket])
+}
+
+model OpenHouseRsvp {
+  id           String   @id @default(cuid())
+  listingId    String
+  listing      Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  openHouseKey String?
+  slotDate     String?
+  name         String
+  email        String
+  phone        String?
+  createdAt    DateTime @default(now())
+
+  @@index([listingId, createdAt])
 }
 
 model PriceHistory {

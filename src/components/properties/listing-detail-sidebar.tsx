@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Property } from "@/providers/property-provider";
 import { PHONE } from "@/lib/constants";
 import { ListingAttribution } from "./listing-attribution";
+import { OpenHouseRsvpForm } from "./open-house-rsvp-form";
 
 interface ListingDetailSidebarProps {
   property: Property;
@@ -85,6 +86,7 @@ export function ListingDetailSidebar({ property }: ListingDetailSidebarProps) {
               </div>
             ))}
           </div>
+          <OpenHouseRsvpForm listingId={property.id} slots={property.openHouseSchedule} />
         </div>
       )}
 
