@@ -102,7 +102,7 @@ DOM >180, duplicate address+city actives, zero photos; admin panel listing flags
 EXIT CRITERIA: matcher + anomaly unit tests (mocked prisma) pass; agent dashboard renders
 performance panel locally (evidence); full verify suite exit 0.
 
-### Phase 6 — Email features
+### Phase 6 — Email features ✅ COMPLETE (2026-06-12)
 Build: (a) **Weekly open-house digest**: weekly Inngest cron emailing users who have saved
 searches with alerts enabled a digest of upcoming open houses matching their saved-search areas;
 reuse alert-suppression + absolute-image-URL email patterns; skip send when zero matches (demo

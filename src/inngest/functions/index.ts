@@ -19,6 +19,7 @@ import { dispatchMailOrder } from "./dispatch-mail-order";
 import { purgeOldMailOrders } from "./purge-old-mail-orders";
 import { clientListingMatcher, dailyClientMatchSweep } from "./client-listing-matcher";
 import { listingAnomalyScan } from "./listing-anomaly-scan";
+import { weeklyOpenHouseDigest } from "./open-house-digest";
 
 export const ALL_INNGEST_FUNCTIONS = [
   mlsSync,
@@ -42,4 +43,5 @@ export const ALL_INNGEST_FUNCTIONS = [
   clientListingMatcher,
   dailyClientMatchSweep,
   listingAnomalyScan,
+  weeklyOpenHouseDigest,
 ];

@@ -119,4 +119,10 @@ export const JOB_REGISTRY: Record<string, JobMeta> = {
     schedule: "Daily at 5:30 AM",
     type: "cron",
   },
+  "weekly-open-house-digest": {
+    name: "Open House Digest",
+    description: "Weekly email of upcoming open houses matching subscriber alert areas",
+    schedule: "Thursdays at 8 AM",
+    type: "cron",
+  },
 };
