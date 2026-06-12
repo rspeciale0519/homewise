@@ -86,7 +86,10 @@ EXIT CRITERIA: unit tests for isochrone→polygon adapter (mocked Mapbox) pass; 
 a commute search returns fewer results than unfiltered (counts surfaced in transcript); full
 verify suite exit 0.
 
-### Phase 5 — Agent intelligence (performance, matcher, anomalies)
+### Phase 5 — Agent intelligence (performance, matcher, anomalies) ✅ COMPLETE (2026-06-12)
+> Contact preference fields added (prefBudgetMin/Max, prefCities, prefMinBeds); CRM UI for
+> editing them deferred (no existing contact-form component found — small follow-up).
+> Agent dashboard pages live behind auth; underlying queries integration-verified, visual pass = Rob.
 Build: (a) **Listing performance**: additive view counter (e.g. `ListingViewDaily` listingId+date
 unique, count) incremented server-side on detail-page views; agent dashboard panel per matched
 listing (views, favorites count, RSVP count, inquiries via existing contact submissions if

@@ -17,6 +17,8 @@ import { processBehavioralTrigger } from "./behavioral-triggers";
 import { trainingReminders } from "./training-reminders";
 import { dispatchMailOrder } from "./dispatch-mail-order";
 import { purgeOldMailOrders } from "./purge-old-mail-orders";
+import { clientListingMatcher, dailyClientMatchSweep } from "./client-listing-matcher";
+import { listingAnomalyScan } from "./listing-anomaly-scan";
 
 export const ALL_INNGEST_FUNCTIONS = [
   mlsSync,
@@ -37,4 +39,7 @@ export const ALL_INNGEST_FUNCTIONS = [
   trainingReminders,
   dispatchMailOrder,
   purgeOldMailOrders,
+  clientListingMatcher,
+  dailyClientMatchSweep,
+  listingAnomalyScan,
 ];

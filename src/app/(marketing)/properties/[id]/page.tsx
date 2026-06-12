@@ -12,6 +12,7 @@ import { ListingDetailLocation } from "@/components/properties/listing-detail-lo
 import { ListingDetailSidebar } from "@/components/properties/listing-detail-sidebar";
 import { propertyProvider } from "@/providers";
 import { prisma } from "@/lib/prisma";
+import { recordListingView } from "@/lib/listing-views";
 import { formatPrice } from "@/lib/format";
 import { calculateTco } from "@/lib/tco";
 import { PriceHistoryTimeline } from "@/components/properties/price-history-timeline";
@@ -56,6 +57,8 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
   console.log("[PropertyDetailPage] Property found:", !!property, { address: property?.address, lat: property?.latitude, lng: property?.longitude });
 
   if (!property) notFound();
+
+  recordListingView(id).catch(() => undefined);
 
   // Fetch third-party data in parallel (graceful if unavailable)
   const hasCoordinates = property.latitude != null && property.longitude != null;
