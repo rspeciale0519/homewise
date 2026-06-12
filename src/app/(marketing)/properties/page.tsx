@@ -147,6 +147,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
             currentHasGatedCommunity={parsed.success ? parsed.data.hasGatedCommunity : undefined}
             currentOpenHousesOnly={parsed.success ? parsed.data.openHousesOnly : undefined}
             currentSchoolDistrict={parsed.success ? parsed.data.schoolDistrict : undefined}
+            currentHasPolygon={parsed.success ? Boolean(parsed.data.polygon) : undefined}
             totalResults={result.total}
           />
 

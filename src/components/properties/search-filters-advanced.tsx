@@ -1,5 +1,7 @@
 "use client";
 
+import { CommuteFilter } from "./commute-filter";
+
 interface SearchFiltersAdvancedProps {
   currentMinYearBuilt?: number;
   currentMaxYearBuilt?: number;
@@ -14,6 +16,7 @@ interface SearchFiltersAdvancedProps {
   currentHasGatedCommunity?: boolean;
   currentOpenHousesOnly?: boolean;
   currentSchoolDistrict?: string;
+  currentHasPolygon?: boolean;
   onUpdate: (updates: Record<string, string | undefined>) => void;
 }
 
@@ -31,6 +34,7 @@ export function SearchFiltersAdvanced({
   currentHasGatedCommunity,
   currentOpenHousesOnly,
   currentSchoolDistrict,
+  currentHasPolygon,
   onUpdate,
 }: SearchFiltersAdvancedProps) {
   return (
@@ -98,6 +102,9 @@ export function SearchFiltersAdvanced({
         <Checkbox label="Gated" checked={currentHasGatedCommunity} onChange={(v) => onUpdate({ hasGatedCommunity: v ? "true" : undefined })} />
         <Checkbox label="Open Houses Only" checked={currentOpenHousesOnly} onChange={(v) => onUpdate({ openHousesOnly: v ? "true" : undefined })} />
       </div>
+
+      {/* Commute-time search */}
+      <CommuteFilter active={Boolean(currentHasPolygon)} onUpdate={onUpdate} />
     </div>
   );
 }

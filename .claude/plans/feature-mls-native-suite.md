@@ -77,7 +77,7 @@ manual-pending hidden, non-IDX MLS hidden); route tests prove agents cannot edit
 agents' manual rows; full verify suite exit 0; created manual listing visible in local /properties
 search with badge (evidence surfaced).
 
-### Phase 4 — Commute-time search
+### Phase 4 — Commute-time search ✅ COMPLETE (2026-06-12)
 Build: search filter "max drive time to address": geocode input via Mapbox Geocoding, fetch Mapbox
 Isochrone polygon for N minutes driving, feed polygon into the EXISTING polygon/bbox search path.
 Server route proxies Mapbox calls (no token logic change client-side beyond existing patterns).
