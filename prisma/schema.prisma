@@ -1045,6 +1045,40 @@ model AiFeatureConfig {
   @@index([featureKey])
 }
 
+// ─── MLS Grid VOW compliance (registered-consumer tier) ────────
+// Records the established broker-consumer relationship + affirmative VOW
+// terms assent required before a consumer may search VOW data (MLS Grid
+// Data License Agreement VOW definition; IDX Rules §35 assent pattern).
+model VowRegistration {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  termsVersion String
+  acceptedAt   DateTime @default(now())
+  ipAddress    String?
+  userAgent    String?
+  revokedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Access trail for MLS Grid data, demonstrable to auditors (License
+// Agreement §VIII). Tiers: "idx" (public), "vow" (registered), "bo" (staff).
+model MlsAccessLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  tier      String
+  action    String
+  listingId String?
+  detail    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([tier, createdAt])
+  @@index([createdAt])
+}
+
 // ─── Billing & Subscriptions ───────────────────────────────────
 
 model StripeCustomer {

@@ -68,6 +68,7 @@ const ADMIN_SECTIONS: NavSection[] = [
       { href: "/admin/submissions", label: "Submissions", icon: "inbox" },
       { href: "/admin/alerts", label: "Property Alerts", icon: "bell" },
       { href: "/admin/sync", label: "MLS Sync", icon: "sync" },
+      { href: "/admin/mls-compliance", label: "MLS Compliance", icon: "globe" },
       { href: "/admin/cma", label: "CMA Tool", icon: "document" },
       { href: "/admin/ai-usage", label: "AI Usage", icon: "sparkle" },
       { href: "/admin/jobs", label: "Background Jobs", icon: "jobs" },

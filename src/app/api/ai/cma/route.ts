@@ -3,6 +3,7 @@ import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
 import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
+import { logMlsAccess } from "@/lib/mls-access-log";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -35,6 +36,13 @@ export async function POST(request: NextRequest) {
     if (!analyticsBoEnabled()) {
       return NextResponse.json(analyticsUnavailable("cma_report"), { status: 503 });
     }
+
+    await logMlsAccess({
+      userId: auth.profile.id,
+      tier: "bo",
+      action: "cma",
+      detail: `${body.address}, ${body.city} ${body.zip}`,
+    });
 
     const comps = await prisma.listing.findMany({
       where: withBo({
