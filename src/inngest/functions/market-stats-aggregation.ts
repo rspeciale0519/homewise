@@ -32,7 +32,9 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
             where: withBo({
               city: { equals: city, mode: "insensitive" },
               status: "Sold",
-              closeDate: { gte: new Date(now.getFullYear(), now.getMonth(), 1) },
+              // Trailing 12 months — standard window for absorption / months-of-
+              // inventory; a single calendar month is too noisy per city.
+              closeDate: { gte: new Date(now.getTime() - 365 * 86400000) },
             }),
             _count: true,
             _avg: { price: true, closePrice: true },
@@ -53,7 +55,9 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
         const avgSqft = activeStats._avg.sqft ?? 1;
         const avgSoldPrice = soldStats._avg.closePrice ?? soldStats._avg.price ?? 0;
         const saleToListRatio = avgPrice > 0 && avgSoldPrice > 0 ? avgSoldPrice / avgPrice : 0;
-        const monthsOfInventory = soldCount > 0 ? activeCount / soldCount : 0;
+        // soldCount is a trailing-12-month figure, so the monthly absorption
+        // rate is soldCount/12.
+        const monthsOfInventory = soldCount > 0 ? activeCount / (soldCount / 12) : 0;
         const pricePerSqft = avgSqft > 0 ? avgPrice / avgSqft : 0;
 
         // Compute median price

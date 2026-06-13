@@ -11,7 +11,8 @@ export function IdxDisclaimer() {
             All data is obtained from various sources and may not have been verified
             by broker or MLS GRID. Supplied Open House Information is subject to
             change without notice. All information should be independently reviewed
-            and verified for accuracy.
+            and verified for accuracy. Properties may or may not be listed by the
+            office/agent presenting the information.
           </p>
           <p>
             &copy; {new Date().getFullYear()} Stellar MLS. All rights reserved.
@@ -22,9 +23,14 @@ export function IdxDisclaimer() {
             properties consumers may be interested in purchasing.
           </p>
           <p className="mt-1">
-            Some IDX listings have been excluded from this website. Sold listing
-            information, when shown, is provided for informational use only and may
-            not reflect all market activity.
+            Some IDX listings have been excluded from this website. When a sold
+            listing is shown, properties displayed may be listed or sold by various
+            participants in the MLS.
+          </p>
+          <p className="mt-1">
+            Any use or search of the data on this website, other than by a consumer
+            looking to purchase real estate, is prohibited. Listings courtesy of
+            Stellar MLS as distributed by MLS GRID.
           </p>
         </div>
       </div>

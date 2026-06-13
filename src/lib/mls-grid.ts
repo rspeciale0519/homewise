@@ -18,7 +18,13 @@ function baseUrl(): string {
 }
 
 function token(): string {
-  return process.env.MLS_GRID_TOKEN ?? "";
+  // Prefer the Broker Back Office token when present: it is a strict superset
+  // that returns MlgCanUse=["BO","IDX","VOW"] on each record, so a single sync
+  // stamps every applicable permission flag. Public surfaces still gate on
+  // withIdx() (IDX flag present); BO analytics gate on withBo(). Without this
+  // preference, an IDX-only token would re-stamp mlgCanUse=["IDX"] on every
+  // modified row and silently strip the BO/VOW flags over time.
+  return process.env.MLS_GRID_BO_TOKEN ?? process.env.BBO_ACCESS_TOKEN ?? process.env.MLS_GRID_TOKEN ?? "";
 }
 
 function originatingSystem(): string {

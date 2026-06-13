@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { IDX_WHERE, MANUAL_VISIBLE_WHERE, withIdx } from "./mls-visibility";
+import { IDX_WHERE, VOW_WHERE, MANUAL_VISIBLE_WHERE, withIdx, withVow } from "./mls-visibility";
 
 type ListingShape = {
   city?: string;
@@ -43,5 +43,22 @@ describe("MLS public visibility helpers", () => {
     expect(matches(nonIdxMlsRow)).toBe(false);
     expect(matches(pendingManual)).toBe(false);
     expect(matches(archivedManual)).toBe(false);
+  });
+});
+
+describe("MLS VOW (registered-consumer) visibility helper", () => {
+  it("exposes the VOW clause", () => {
+    expect(VOW_WHERE).toEqual({ mlgCanUse: { has: "VOW" } });
+  });
+
+  it("combines caller filters with the VOW-or-manual OR", () => {
+    expect(withVow({ status: "Sold" })).toEqual({
+      AND: [{ status: "Sold" }, { OR: [VOW_WHERE, MANUAL_VISIBLE_WHERE] }],
+    });
+    expect(withVow()).toEqual({ AND: [{}, { OR: [VOW_WHERE, MANUAL_VISIBLE_WHERE] }] });
+  });
+
+  it("is a distinct clause from IDX (VOW-only rows are not public)", () => {
+    expect(VOW_WHERE).not.toEqual(IDX_WHERE);
   });
 });

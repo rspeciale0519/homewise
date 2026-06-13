@@ -16,6 +16,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/favorites", label: "Favorites", icon: "heart" },
   { href: "/dashboard/saved-searches", label: "Saved Searches", icon: "search" },
   { href: "/dashboard/recently-viewed", label: "Recently Viewed", icon: "clock" },
+  { href: "/vow", label: "Registered Search (VOW)", icon: "search" },
   { href: "/dashboard/profile", label: "Profile", icon: "user" },
   { href: "/dashboard/agent", label: "My Agent", icon: "agent" },
   { href: "/dashboard/settings", label: "Settings", icon: "settings" },

@@ -24,14 +24,14 @@ export function MlsGridSourceLine({
           MLS GRID
         </span>
         <p>
-          Listing data is displayed as distributed by MLS GRID. Some IDX
+          Listings courtesy of Stellar MLS as distributed by MLS GRID. Some IDX
           listings have been excluded from this website.
         </p>
       </div>
       {showSoldDisclaimer && (
         <p className="mt-2">
-          Sold listing information, when shown, is provided for informational
-          use only and may not reflect all market activity.
+          Properties displayed may be listed or sold by various participants in
+          the MLS.
         </p>
       )}
     </div>
