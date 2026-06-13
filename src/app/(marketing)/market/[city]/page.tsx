@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import DOMPurify from "isomorphic-dompurify";
 import { prisma } from "@/lib/prisma";
 import { analyticsBoEnabled } from "@/lib/analytics-flags";
+import { SanitizedHtml } from "@/components/shared/sanitized-html";
 import { MarketStatsView } from "./market-stats-view";
 
 interface MarketPageProps {
@@ -59,8 +59,6 @@ function MarketAnalyticsUnavailable({
   city: string;
   seoContent: string | null;
 }) {
-  const sanitizedSeoContent = seoContent ? DOMPurify.sanitize(seoContent) : null;
-
   return (
     <div className="space-y-8">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
@@ -73,10 +71,10 @@ function MarketAnalyticsUnavailable({
           private, agent-prepared market review.
         </p>
       </div>
-      {sanitizedSeoContent && (
-        <div
+      {seoContent && (
+        <SanitizedHtml
+          html={seoContent}
           className="prose prose-slate max-w-none rounded-xl border border-slate-200 bg-white p-4 sm:p-6"
-          dangerouslySetInnerHTML={{ __html: sanitizedSeoContent }}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { MarketTrendChart } from "@/components/market/market-trend-chart";
-import DOMPurify from "isomorphic-dompurify";
+import { SanitizedHtml } from "@/components/shared/sanitized-html";
 
 interface StatPeriod {
   id: string;
@@ -25,7 +25,6 @@ interface MarketStatsViewProps {
 
 export function MarketStatsView({ city, stats, seoContent }: MarketStatsViewProps) {
   const latest = stats[0];
-  const sanitizedSeoContent = seoContent ? DOMPurify.sanitize(seoContent) : null;
 
   if (!latest) {
     return (
@@ -87,9 +86,9 @@ export function MarketStatsView({ city, stats, seoContent }: MarketStatsViewProp
       )}
 
       {/* SEO Content / Neighborhood Guide */}
-      {sanitizedSeoContent && (
+      {seoContent && (
         <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 mb-8">
-          <div className="prose prose-slate prose-sm sm:prose-base max-w-none" dangerouslySetInnerHTML={{ __html: sanitizedSeoContent }} />
+          <SanitizedHtml className="prose prose-slate prose-sm sm:prose-base max-w-none" html={seoContent} />
         </div>
       )}
 
