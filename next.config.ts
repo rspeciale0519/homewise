@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 import { OLD_SITE_REDIRECTS } from "./src/config/redirects";
 
 const nextConfig: NextConfig = {
+  // isomorphic-dompurify lazy-requires jsdom at server module-load. Keep these
+  // external so Next traces them into the Vercel lambda instead of bundling
+  // (bundling drops jsdom's dynamic require → "Failed to load external module").
+  serverExternalPackages: ["isomorphic-dompurify", "jsdom"],
   images: {
     localPatterns: [
       { pathname: "/api/mls-photo" },
