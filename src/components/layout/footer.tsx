@@ -175,6 +175,8 @@ export function Footer() {
               <Link href="/terms-of-service" className="text-slate-400 hover:text-slate-300 transition-colors">Terms of Service</Link>
               <span className="text-navy-500">·</span>
               <Link href="/privacy-policy" className="text-slate-400 hover:text-slate-300 transition-colors">Privacy Policy</Link>
+              <span className="text-navy-500">·</span>
+              <Link href="/dmca" className="text-slate-400 hover:text-slate-300 transition-colors">DMCA</Link>
             </div>
             <div className="flex items-center gap-5">
               <span className="text-slate-400 font-medium">REALTOR<sup>®</sup></span>

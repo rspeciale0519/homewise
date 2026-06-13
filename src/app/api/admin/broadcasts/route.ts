@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import DOMPurify from "isomorphic-dompurify";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
 
 export async function GET() {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name, subject, and body are required" }, { status: 400 });
     }
 
-    const sanitizedBody = DOMPurify.sanitize(body.body);
+    const sanitizedBody = sanitizeRichHtml(body.body);
 
     // Resolve audience
     let recipientIds = Array.from(new Set(body.audienceIds ?? []));

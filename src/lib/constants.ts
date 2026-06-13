@@ -8,6 +8,10 @@ export const PHONE = "(407) 712-2000";
 export const FAX = "(407) 712-2001";
 export const EMAIL = "info@homewisefl.com";
 
+// DMCA designated agent address (MLS Grid IDX Rules §30). TODO(Rob): confirm
+// the brokerage's real registered DMCA agent email before the audit.
+export const DMCA_AGENT_EMAIL = "dmca@homewisefl.com";
+
 export const ADDRESS = {
   street: "1234 Real Estate Blvd, Suite 100",
   city: "Orlando",
