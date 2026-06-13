@@ -1,5 +1,12 @@
 # SPEC: Browser E2E Smoke — MLS Feature Suite (no-email scope)
 
+> **STATUS: ✅ COMPLETE (2026-06-12).** All phases A–J PASS; full results table in
+> `docs/temp/e2e-smoke-results.md`. Six real defects found and fixed (PR #57, squash
+> `726ecb7`, develop = main, prod deployment dpl_DZaejR3LkgneCbV9Mppx45upAHL7 READY):
+> type filter dead vs RESO values, mock-era status options, no Save Search UI,
+> useTrackView never mounted, raw-cuid favorites/recently-viewed cards, exclusive-edit
+> 400 on null optional strings. No email actions executed anywhere.
+
 ## GOAL
 Thoroughly smoke-test, in a real browser via chrome-devtools MCP, every feature on the
 2026-06-12 checklist EXCEPT anything that sends or receives email. Fix any failure found

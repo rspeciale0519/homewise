@@ -1,8 +1,16 @@
 # homewise brain — STATE
-Updated: 2026-06-10
+Updated: 2026-06-12
 
 ## Current focus
-**MLS native feature suite SHIPPED (2026-06-12, PR #56, develop=main=ffa478f, prod READY).**
+**Browser E2E smoke of the MLS suite: 100% PASS (2026-06-12, PR #57, develop=main=726ecb7,
+prod READY).** Full no-email-scope smoke per `.claude/plans/test-e2e-browser-smoke.md`
+(phases A–J, chrome-devtools MCP, results in `docs/temp/e2e-smoke-results.md`). Six real
+defects found & shipped: RESO propertySubType synonym mapping for the type filter, real
+status options, missing Save Search UI, unmounted useTrackView (Recently Viewed was always
+empty), raw-cuid favorites/recently-viewed cards, exclusive-edit 400 on null optionals.
+e2e-* test accounts + listings remain in the shared DB (clearly labeled).
+
+**MLS native feature suite SHIPPED (2026-06-12, PR #56, ffa478f, prod READY).**
 14 features built natively on the direct MLS Grid connection per
 `.claude/plans/feature-mls-native-suite.md` (all 8 phases ✅ in-file): price history +
 TCO panel, compare tool, open-house RSVP, exclusive (pocket) listings w/ admin approval,
