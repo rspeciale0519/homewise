@@ -51,10 +51,9 @@ export const PROPERTY_TYPES = [
 
 export const LISTING_STATUSES = [
   "Active",
-  "For Sale",
+  "Coming Soon",
   "Pending",
   "Sold",
-  "New Listing",
 ] as const;
 
 export const PRICE_RANGES = [

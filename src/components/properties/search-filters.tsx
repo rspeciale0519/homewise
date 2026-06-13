@@ -11,6 +11,7 @@ import {
   SORT_OPTIONS,
 } from "@/schemas/property-filter.schema";
 import { SearchFiltersAdvanced } from "./search-filters-advanced";
+import { SaveSearchButton } from "./save-search-button";
 
 interface SearchFiltersProps {
   currentLocation?: string;
@@ -317,7 +318,9 @@ export function SearchFilters({
           )}
         </p>
 
-        {hasFilters && (
+        <div className="flex items-center gap-4">
+          {hasFilters && <SaveSearchButton />}
+          {hasFilters && (
           <button
             onClick={clearAll}
             className="text-xs font-medium text-crimson-600 hover:text-crimson-700 transition-colors flex items-center gap-1"
@@ -337,7 +340,8 @@ export function SearchFilters({
             </svg>
             Clear all
           </button>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
