@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { PhotoGallery } from "@/components/properties/photo-gallery";
+import { TrackView } from "@/components/properties/track-view";
 import { ListingDetailOverview } from "@/components/properties/listing-detail-overview";
 import { ListingDetailLocation } from "@/components/properties/listing-detail-location";
 import { ListingDetailSidebar } from "@/components/properties/listing-detail-sidebar";
@@ -51,10 +52,7 @@ const statusVariant: Record<string, "success" | "crimson" | "gold" | "default"> 
 
 export default async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const { id } = await params;
-  console.log("[PropertyDetailPage] Fetching property with id:", id);
   const property = await propertyProvider.getProperty(id);
-
-  console.log("[PropertyDetailPage] Property found:", !!property, { address: property?.address, lat: property?.latitude, lng: property?.longitude });
 
   if (!property) notFound();
 
@@ -62,7 +60,6 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
 
   // Fetch third-party data in parallel (graceful if unavailable)
   const hasCoordinates = property.latitude != null && property.longitude != null;
-  console.log("[PropertyDetailPage] Has coordinates:", hasCoordinates);
 
   const [walkScoreResult, schools, priceHistory] = await Promise.all([
     hasCoordinates && property.latitude != null && property.longitude != null
@@ -121,6 +118,8 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
           </nav>
         </Container>
       </div>
+
+      <TrackView propertyId={property.id} />
 
       {/* Photo Gallery */}
       <div className="bg-white">

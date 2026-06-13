@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { FavoritesGrid } from "./favorites-grid";
+import { withIdx } from "@/lib/mls-visibility";
+import { FavoritesGrid, type FavoriteListingDetail } from "./favorites-grid";
 
 export default async function FavoritesPage() {
   const supabase = await createClient();
@@ -13,6 +14,40 @@ export default async function FavoritesPage() {
     where: { userId: user.id },
     orderBy: { savedAt: "desc" },
   });
+
+  const listings = favorites.length
+    ? await prisma.listing.findMany({
+        where: withIdx({ id: { in: favorites.map((f) => f.propertyId) } }),
+        select: {
+          id: true,
+          address: true,
+          city: true,
+          state: true,
+          zip: true,
+          price: true,
+          status: true,
+          beds: true,
+          baths: true,
+          imageUrl: true,
+          photos: true,
+        },
+      })
+    : [];
+
+  const details: Record<string, FavoriteListingDetail> = {};
+  for (const l of listings) {
+    details[l.id] = {
+      address: l.address,
+      city: l.city,
+      state: l.state,
+      zip: l.zip,
+      price: l.price,
+      status: l.status,
+      beds: l.beds,
+      baths: l.baths,
+      imageUrl: l.imageUrl ?? l.photos[0] ?? null,
+    };
+  }
 
   return (
     <div className="p-6 sm:p-8 lg:p-10">
@@ -52,7 +87,7 @@ export default async function FavoritesPage() {
           </Link>
         </div>
       ) : (
-        <FavoritesGrid favorites={favorites} />
+        <FavoritesGrid favorites={favorites} details={details} />
       )}
     </div>
   );

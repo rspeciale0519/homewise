@@ -14,6 +14,16 @@ import type {
 } from "./property-provider";
 import { Prisma } from "@prisma/client";
 
+// UI filter labels vs RESO feed values: MLS rows store PropertyType "Residential"
+// with the user-facing kind in propertySubType (e.g. "Single Family Residence"),
+// while manual/mock listings store the label directly in propertyType.
+const PROPERTY_TYPE_SYNONYMS: Record<string, string[]> = {
+  "Single Family": ["Single Family", "Single Family Residence"],
+  Townhome: ["Townhome", "Townhouse"],
+  Condo: ["Condo", "Condominium"],
+  Villa: ["Villa"],
+};
+
 export class StellarMlsProvider implements PropertyProvider {
   async search(filters: PropertyFilters): Promise<PropertySearchResult> {
     const {
@@ -65,7 +75,13 @@ export class StellarMlsProvider implements PropertyProvider {
     if (baths !== undefined) where.baths = { gte: baths };
     if (minSqft !== undefined) where.sqft = { ...((where.sqft as Prisma.IntFilter) ?? {}), gte: minSqft };
     if (maxSqft !== undefined) where.sqft = { ...((where.sqft as Prisma.IntFilter) ?? {}), lte: maxSqft };
-    if (propertyType) where.propertyType = propertyType;
+    if (propertyType) {
+      const synonyms = PROPERTY_TYPE_SYNONYMS[propertyType] ?? [propertyType];
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        { OR: [{ propertyType: { in: synonyms } }, { propertySubType: { in: synonyms } }] },
+      ];
+    }
     if (status) where.status = status;
     if (featured !== undefined) where.featured = featured;
     const normalizedAgentMlsId = normalizeMlsAgentId(listingAgentMlsId);
