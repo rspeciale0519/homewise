@@ -1,21 +1,16 @@
-import DOMPurify from "isomorphic-dompurify";
+import { SanitizedHtml } from "@/components/shared/sanitized-html";
 
 interface AdminAuthoredHtmlProps {
   html: string;
   className?: string;
 }
 
-const INNER_HTML_KEY = "dangerouslySet" + "InnerHTML";
-
 /**
- * Renders admin-authored TipTap HTML. The body is sanitized with DOMPurify at
- * render time: training content can be edited via the PATCH API, so the stored
- * HTML is treated as untrusted here (mirrors the public /learn sanitize path).
+ * Renders admin-authored TipTap HTML. Sanitization happens browser-side via
+ * SanitizedHtml (deferred DOMPurify import), so isomorphic-dompurify/jsdom never
+ * enters the server module graph — training content can be edited via the PATCH
+ * API, so the stored HTML is still treated as untrusted at render time.
  */
 export function AdminAuthoredHtml({ html, className }: AdminAuthoredHtmlProps) {
-  const props: Record<string, unknown> = {
-    className,
-    [INNER_HTML_KEY]: { __html: DOMPurify.sanitize(html) },
-  };
-  return <div {...props} />;
+  return <SanitizedHtml html={html} className={className} />;
 }

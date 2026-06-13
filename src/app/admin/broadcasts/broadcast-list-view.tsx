@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import DOMPurify from "isomorphic-dompurify";
 import { useRouter } from "next/navigation";
+import { SanitizedHtml } from "@/components/shared/sanitized-html";
 import { useToast } from "@/components/admin/admin-toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { TiptapEditor } from "@/components/admin/tiptap-editor";
@@ -43,7 +43,6 @@ export function BroadcastListView({ broadcasts, tags }: BroadcastListViewProps) 
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
-  const sanitizedPreview = body.trim() ? DOMPurify.sanitize(body) : "";
 
   const handleSend = async (send: boolean) => {
     if (!name.trim() || !subject.trim() || !body.trim()) return;
@@ -102,7 +101,7 @@ export function BroadcastListView({ broadcasts, tags }: BroadcastListViewProps) 
                   <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
                     <p className="text-xs text-slate-500">Subject: <span className="font-medium text-navy-700">{subject || "(no subject)"}</span></p>
                   </div>
-                  <div className="p-4 bg-white prose prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: sanitizedPreview }} />
+                  <SanitizedHtml className="p-4 bg-white prose prose-sm max-w-none text-sm" html={body.trim() ? body : ""} />
                 </div>
               )}
             </div>

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import DOMPurify from "isomorphic-dompurify";
 import { prisma } from "@/lib/prisma";
 import { JsonLdScript } from "@/components/shared/json-ld-script";
+import { SanitizedHtml } from "@/components/shared/sanitized-html";
 
 interface PageProps {
   params: Promise<{ slug: string; contentSlug: string }>;
@@ -120,10 +120,9 @@ export default async function ContentPage({ params }: PageProps) {
 
   const bodyHtml = content.body ?? "";
   const toc = extractToc(bodyHtml);
-  // Sanitize FIRST (DOMPurify), then inject heading ids. Tiptap output is
-  // already well-formed but the body could in principle be edited via raw
-  // PATCH by an admin, so we treat it as untrusted at render time.
-  const sanitizedBody = DOMPurify.sanitize(injectHeadingIds(bodyHtml));
+  // Inject heading ids (for the TOC anchors), then sanitize browser-side via
+  // SanitizedHtml so isomorphic-dompurify/jsdom never enters the server lambda.
+  const bodyWithIds = injectHeadingIds(bodyHtml);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
@@ -195,9 +194,9 @@ export default async function ContentPage({ params }: PageProps) {
         </aside>
       )}
 
-      <article
+      <SanitizedHtml
         className="prose prose-slate max-w-none prose-headings:font-serif prose-headings:text-navy-700 prose-a:text-navy-600"
-        dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+        html={bodyWithIds}
       />
 
       {related.length > 0 && content.categoryRef && (
