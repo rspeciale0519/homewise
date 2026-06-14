@@ -1,4 +1,22 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__wait_for",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__get_network_request",
+      "mcp__plugin_vercel_vercel__get_project",
+      "mcp__plugin_vercel_vercel__get_deployment",
+      "mcp__plugin_vercel_vercel__get_runtime_logs",
+      "mcp__plugin_vercel_vercel__list_deployments",
+      "mcp__brave__brave_web_search",
+      "mcp__firecrawl__firecrawl_search",
+      "Bash(git fetch *)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -10,6 +28,17 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-db-commands.js\""
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit|Bash",
@@ -17,6 +46,19 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.js\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-file-size.js\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-changed.js\""
           }
         ]
       }
