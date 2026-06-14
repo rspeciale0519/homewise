@@ -2,13 +2,15 @@
 kind: knowledge
 slug: features
 status: current
-updated: 2026-06-07
+updated: 2026-06-14
 layer: reference
 sources:
   - code:src/app
   - code:src/components
   - code:prisma/schema.prisma
   - git:PR-history
+  - journal:2026-06-12
+  - journal:2026-06-13
 ---
 
 # Features — homewise (evidence-gated build status)
@@ -18,10 +20,23 @@ Status rule: **BUILT** = entrypoint exists AND non-stub logic AND wired end-to-e
 impl. Statuses verified against code paths on 2026-06-07, not doc checkboxes.
 
 ## Public marketing site
-- **MLS / property listings + photo gallery** — BUILT — `src/app/(marketing)/properties/[id]/page.tsx`;
-  `Listing` model + `lib/mls-grid.ts` sync (admin/sync); mosaic `photo-gallery/`, map
-  panel, walk-score/school ratings. ⚠ runs on SEED data — real **Stellar MLS
-  credentials not yet wired** (research only in `docs/temp/`). See [[knowledge/roadmap]].
+- **MLS / property listings + photo gallery** — BUILT, **demo-data proven** —
+  `(marketing)/properties/[id]/page.tsx`; `Listing` model + `lib/mls-grid.ts` direct MLS
+  Grid sync; mosaic `photo-gallery/`, interactive Mapbox **location map**
+  (`listing-location-map.tsx`), walk-score/school ratings. Backfilled 12,793 listings from
+  the MLS Grid **demo** feed and browser-verified end-to-end. ⚠ Public search GATED OFF in
+  prod until live (non-demo) Stellar creds land. See [[knowledge/roadmap]].
+- **MLS native feature suite** — BUILT (prod-gated by launch flags) — price history + TCO,
+  compare tool, open-house RSVP, exclusive/pocket listings (admin approval), commute-time
+  search (Mapbox isochrones), listing analytics + client-listing matcher + anomaly scan,
+  weekly digest, auto-tags + match scores. Tables: PriceHistory, OpenHouseRsvp,
+  ClientListingMatch, ListingViewDaily, ListingAnomaly. Public visibility = IDX OR
+  approved-manual. (PR #56)
+- **MLS compliance tiers (IDX/VOW/BBO)** — BUILT, **LIVE in prod** — `/vow` consent portal
+  (`lib/vow.ts`, `VowRegistration`), market-stats/CMA (BBO), `/admin/mls-compliance` audit
+  dashboard (`MlsAccessLog`), `/dmca` page. Server HTML sanitized via `sanitize-html`
+  (jsdom kept out of the lambda — see [[skill-build-vercel-jsdom-lambda]]). Token-superset
+  rule + tier gating: [[skill-integrations-mls-grid-data-tiers]]. (PR #58)
 - **Mortgage calculators** — BUILT — `(marketing)/mortgage-calculator/` — 11 pages
   (affordability, APR, refinance, points, …) on a shared engine (`lib/calculators`).
 - **AI assistant / chatbots** — BUILT — `api/chat/route.ts` (Zod-validated; public/

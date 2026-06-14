@@ -2,13 +2,16 @@
 kind: knowledge
 slug: roadmap
 status: current
-updated: 2026-06-07
+updated: 2026-06-14
 layer: roadmap
 sources:
   - git:log-all
   - code:.claude/plans
   - code:docs/plans
   - code:docs/ideas
+  - journal:2026-06-10
+  - journal:2026-06-12
+  - journal:2026-06-13
 ---
 
 # Roadmap — homewise
@@ -45,6 +48,19 @@ maps 1:1 to a merged PR. 31 of ~34 plans are shipped.
 - Direct Mail Ordering — `feature-direct-mail-ordering.md` — PR #34
 - Document Library bulk delete / upload / drag-categorize — `feature-{document-library,bulk-upload,bulk-drag-categorize,bulk-drag-on-section-boards}.md` — PR #35, #37, #39, #47, #49
 - Training Hub **v1** — `feature-training-hub-v1.md` — PR #51 + consistency PR #53 + security gate `7fe8dad`
+- **MLS native feature suite** (14 features: price history/TCO, compare, open-house RSVP,
+  exclusive/pocket listings, commute-time search, listing analytics + matcher + anomaly,
+  open-house digest, auto-tags/match scores) — `feature-mls-native-suite.md` — PR #56, `ffa478f`
+- **MLS go-live (demo-proven)** — `feature-mls-go-live` — `9275b53` — full Inngest backfill of
+  12,793 listings against the MLS Grid **demo** feed; search/detail/featured/attribution/photo
+  proxy browser-verified. (Live non-demo creds still pending — see gap below.)
+- **IDX/VOW/BBO compliance tiers** — `feature-mls-compliance-tiers.md` — PR #58, `a7d196d` —
+  built to MLS Grid Data License + IDX Rules; flipped LIVE in prod (`ANALYTICS_BO_ENABLED=true`).
+  See [[skill-integrations-mls-grid-data-tiers]]. Includes /vow, /admin/mls-compliance, /dmca.
+- **Interactive listing location map** (Mapbox GL) — `55590a4`, `14f05c1`
+- **Browser E2E smoke of the MLS suite** (100% pass, 6 defects fixed) — PR #57, `726ecb7`
+- **.claude automation suite** (DB-safety/file-size/lint hooks, audit subagents, workflow
+  skills) — `7421162`, `336424f` (tooling, not app feature)
 
 ## Planned / not started
 - **Training Hub v2** — Compliance teeth, certificates, quizzes — `feature-training-hub-v2.md`.
@@ -55,10 +71,14 @@ maps 1:1 to a merged PR. 31 of ~34 plans are shipped.
 - **Chrome CDP MCP server** — `docs/plans/2026-03-10-chrome-cdp-mcp-server-plan.md` — external
   tooling, not app code; likely obsoleted by the mandated `chrome-devtools` MCP (CLAUDE.md Rule 4).
 
-## Largest real gap (non-plan)
-- **Live Stellar MLS data integration.** MLS foundation shipped on SEED data; real
-  credentials/feed not wired. Only research docs exist (`docs/temp/stellar-mls-*`,
-  `idx-vendor-vs-direct-api-research.md`, `mls-grid-setup-*`). No feature plan yet.
+## Largest remaining gap (RECONCILED 2026-06-14 — was "no plan / seed data")
+- **Live (non-demo) Stellar MLS credentials.** The full MLS integration is BUILT and
+  demo-proven end-to-end against the MLS Grid demo feed; compliance tiers are live in prod.
+  All that remains for true public launch: a live non-demo MLS Grid token + real
+  `OriginatingSystemName`, set the Vercel prod env, flip `PROPERTY_PROVIDER=stellar` +
+  `MLS_PUBLIC_SEARCH_ENABLED=true` (currently gated OFF), re-backfill, re-run E2E. Public
+  search is intentionally gated off until then. `OPENAI_API_KEY` missing locally → NL
+  search/embeddings still unproven.
 
 ## Idea backlog (uncommitted)
 - `docs/ideas/master-ideas.md` — AI buyer/seller tools, "Ask This Home" chatbot, NL search,

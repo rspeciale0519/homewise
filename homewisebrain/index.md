@@ -5,21 +5,24 @@ Catalog of the homewise brain. SessionStart reads this.
 - [[skill-supabase-prisma-db-push]] — supabase · established — schema via `db push`, never `migrate dev`; shared prod DB
 - [[skill-ui-dnd-kit-drag-overlay]] — ui · established — dnd-kit overlay that tracks the cursor; verify mid-drag
 - [[skill-build-vercel-monitor]] — build · established — monitor Vercel deploys to READY after every push
+- [[skill-build-vercel-jsdom-lambda]] — build · established — keep jsdom/isomorphic-dompurify out of the lambda; sanitize-html server, SanitizedHtml client
+- [[skill-integrations-mls-grid-data-tiers]] — integrations · provisional — BBO token returns BO/IDX/VOW superset; IDX-only re-sync strips flags; tier gating + access log
 - [[skill-api-route-variant-auth-audit]] — api · provisional — gate EVERY route variant; explicit `select` on public reads
+- [[skill-build-claude-hook-input-untrusted]] — build · provisional — hook input is untrusted; anchor command guards, validate file_path/cwd
 - [[skill-testing-mock-manual-smoke]] — testing · provisional — tests mock Prisma+Supabase; manual smoke is real validation
 
 ## Knowledge
 - [[knowledge/orientation]] — current — stack, layout, entry points, conventions
-- [[knowledge/features]] — current — feature inventory with evidence-gated build status
-- [[knowledge/roadmap]] — current — shipped (31 plans) vs planned (training v2/v3, CDP MCP); MLS gap
+- [[knowledge/features]] — current (recon 06-14) — feature inventory; MLS suite + IDX/VOW/BBO tiers now shipped
+- [[knowledge/roadmap]] — current (recon 06-14) — shipped vs planned; MLS now shipped/demo-proven, gap = live non-demo creds
 - [[knowledge/superseded]] — current — doc/comment/assumption overrides (proxy.ts, jsdom, db push, pricing intent)
 
 ## Recent journal
+- [[journal/2026-06-14]] — .claude automation suite (hooks/subagents/skills) + security hardening
+- [[journal/2026-06-13]] — IDX/VOW/BBO compliance tiers + prod go-live + dompurify/jsdom lambda fixes
+- [[journal/2026-06-12]] — browser E2E smoke 100%, MLS native suite, location map
+- [[journal/2026-06-10]] — MLS go-live demo-data proof (12,793 listings)
 - [[journal/2026-06-07]] — brain initialized + backfilled
-- [[journal/2026-05-28]] — security pass: gate training routes, agent/billing leaks
-- [[journal/2026-05-27]] — Training Hub v1
-- [[journal/2026-05-26]] — bulk drag-categorize + dnd-kit overlay saga
-- [[journal/2026-05-19]] — admin bulk-delete (count-drift 409, db push discovery)
 
 ## Journal backfill (historical milestones, git-reconstructed)
 - [[journal/2026-05-03]] — direct mail ordering (PR #34)
