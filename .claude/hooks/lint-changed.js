@@ -11,13 +11,21 @@ try {
   if (!/^(Edit|Write|MultiEdit)$/.test(tool)) process.exit(0);
   const fp = input.tool_input && input.tool_input.file_path;
   if (!fp || !/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(fp)) process.exit(0);
-  const root = input.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  // Reject flag-smuggling: a path starting with '-' could be parsed as an option.
+  if (fp.startsWith('-')) process.exit(0);
+  // Don't trust input.cwd to locate the linter binary; use the harness-set project
+  // dir (or process cwd), then confirm the resolved binary lives under that root.
+  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const eslintJs = path.join(root, 'node_modules', 'eslint', 'bin', 'eslint.js');
   if (!fs.existsSync(eslintJs)) process.exit(0);
+  let realEslint, realRoot;
+  try { realEslint = fs.realpathSync(eslintJs); realRoot = fs.realpathSync(root); } catch { process.exit(0); }
+  if (!realEslint.startsWith(realRoot + path.sep)) process.exit(0);
 
   let out = '';
   try {
-    execFileSync(process.execPath, [eslintJs, fp, '--format', 'compact'],
+    // `--` marks end-of-options so the validated path can't be read as a flag.
+    execFileSync(process.execPath, [realEslint, '--format', 'compact', '--', fp],
       { cwd: root, timeout: 20000, stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) {
     out = ((e.stdout && e.stdout.toString()) || '') + ((e.stderr && e.stderr.toString()) || '');
