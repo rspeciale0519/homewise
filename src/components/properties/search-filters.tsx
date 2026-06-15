@@ -119,22 +119,25 @@ export function SearchFilters(props: SearchFiltersProps) {
           maxPrice={currentMaxPrice}
           onApply={(minPrice, maxPrice) => updateParams({ minPrice, maxPrice })}
         />
-        <FilterSelect
+        <StyledSelect
           label="Beds"
-          placeholderLabel="Any Beds"
+          className="w-full h-11"
           value={currentBeds !== undefined ? String(currentBeds) : ""}
+          active={currentBeds !== undefined}
           onChange={(val) => updateParams({ beds: val || undefined })}
-          options={BED_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          options={BED_OPTIONS.map((o) => ({ value: o.value, label: o.value === "" ? "Any Beds" : o.label }))}
         />
-        <FilterSelect
+        <StyledSelect
           label="Baths"
-          placeholderLabel="Any Baths"
+          className="w-full h-11"
           value={currentBaths !== undefined ? String(currentBaths) : ""}
+          active={currentBaths !== undefined}
           onChange={(val) => updateParams({ baths: val || undefined })}
-          options={BATH_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          options={BATH_OPTIONS.map((o) => ({ value: o.value, label: o.value === "" ? "Any Baths" : o.label }))}
         />
         <StyledSelect
           label="Sort By"
+          className="w-full h-11"
           value={props.currentSortBy ?? ""}
           active={Boolean(props.currentSortBy)}
           onChange={(val) => updateParams({ sortBy: val || undefined })}
@@ -168,43 +171,6 @@ export function SearchFilters(props: SearchFiltersProps) {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-  placeholderLabel,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  placeholderLabel?: string;
-}) {
-  const renderedOptions = placeholderLabel
-    ? options.map((opt) => (opt.value === "" ? { ...opt, label: placeholderLabel } : opt))
-    : options;
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={label}
-        className="w-full h-11 pl-4 pr-9 text-sm bg-white border border-slate-200 rounded-xl text-navy-700 appearance-none focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all cursor-pointer"
-      >
-        {renderedOptions.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <svg className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
     </div>
   );
 }

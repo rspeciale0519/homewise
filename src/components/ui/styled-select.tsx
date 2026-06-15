@@ -29,7 +29,7 @@ export function StyledSelect({ label, value, onChange, options, active, classNam
           type="button"
           aria-label={label}
           className={cn(
-            "group w-full h-11 pl-4 pr-9 text-sm rounded-xl border text-left relative transition-all",
+            "group pl-4 pr-9 text-sm rounded-xl border text-left relative transition-all",
             "focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent",
             "data-[state=open]:ring-2 data-[state=open]:ring-navy-600 data-[state=open]:border-transparent",
             active ? "border-navy-300 bg-navy-50 text-navy-700" : "border-slate-200 bg-white text-navy-700",

@@ -7,6 +7,7 @@ import {
   PROPERTY_TYPES,
   LISTING_STATUSES,
 } from "@/schemas/property-filter.schema";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { CommuteFilter } from "./commute-filter";
 
 interface FilterDrawerProps {
@@ -92,10 +93,18 @@ export function FilterDrawer(props: FilterDrawerProps) {
           <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
             <Section title="Listing">
               <div className="grid grid-cols-2 gap-3">
-                <Select label="Property Type" value={props.currentPropertyType ?? ""} onChange={(v) => onUpdate({ propertyType: v || undefined })}
-                  options={[{ value: "", label: "All Types" }, ...PROPERTY_TYPES.map((t) => ({ value: t, label: t }))]} />
-                <Select label="Status" value={props.currentStatus ?? ""} onChange={(v) => onUpdate({ status: v || undefined })}
-                  options={[{ value: "", label: "All Statuses" }, ...LISTING_STATUSES.map((s) => ({ value: s, label: s }))]} />
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Property Type</label>
+                  <StyledSelect label="Property Type" className="w-full h-10" value={props.currentPropertyType ?? ""} active={Boolean(props.currentPropertyType)}
+                    onChange={(v) => onUpdate({ propertyType: v || undefined })}
+                    options={[{ value: "", label: "All Types" }, ...PROPERTY_TYPES.map((t) => ({ value: t, label: t }))]} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
+                  <StyledSelect label="Status" className="w-full h-10" value={props.currentStatus ?? ""} active={Boolean(props.currentStatus)}
+                    onChange={(v) => onUpdate({ status: v || undefined })}
+                    options={[{ value: "", label: "All Statuses" }, ...LISTING_STATUSES.map((s) => ({ value: s, label: s }))]} />
+                </div>
                 <NumberField label="Max Days on Market" placeholder="e.g. 30" value={props.currentMaxDom} onChange={(v) => onUpdate({ maxDom: v })} />
                 <div className="flex items-end">
                   <ToggleChip className="h-10 w-full" label="Open Houses Only" checked={props.currentOpenHousesOnly} onChange={(v) => onUpdate({ openHousesOnly: v ? "true" : undefined })} />
@@ -156,19 +165,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div className="space-y-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">{title}</h3>
       {children}
-    </div>
-  );
-}
-
-function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
-  return (
-    <div className="relative">
-      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full h-10 pl-3 pr-8 text-sm bg-white border border-slate-200 rounded-xl text-navy-700 appearance-none focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent cursor-pointer">
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <svg className="absolute right-2.5 bottom-3 h-4 w-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
     </div>
   );
 }

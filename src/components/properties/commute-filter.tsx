@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 const MINUTE_OPTIONS = [10, 15, 20, 30, 45, 60];
 
@@ -49,15 +50,13 @@ export function CommuteFilter({
           onChange={(e) => setAddress(e.target.value)}
           className="flex-1 min-w-[220px] h-10 px-3 text-sm bg-white border border-slate-200 rounded-xl text-navy-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all"
         />
-        <select
-          value={minutes}
-          onChange={(e) => setMinutes(Number(e.target.value))}
-          className="h-10 px-3 text-sm bg-white border border-slate-200 rounded-xl text-navy-700 focus:outline-none focus:ring-2 focus:ring-navy-600"
-        >
-          {MINUTE_OPTIONS.map((m) => (
-            <option key={m} value={m}>{m} min</option>
-          ))}
-        </select>
+        <StyledSelect
+          label="Drive time"
+          className="w-32 h-10 shrink-0"
+          value={String(minutes)}
+          onChange={(v) => setMinutes(Number(v))}
+          options={MINUTE_OPTIONS.map((m) => ({ value: String(m), label: `${m} min` }))}
+        />
         <button
           type="button"
           onClick={() => void apply()}
