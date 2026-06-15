@@ -97,8 +97,10 @@ export function FilterDrawer(props: FilterDrawerProps) {
                 <Select label="Status" value={props.currentStatus ?? ""} onChange={(v) => onUpdate({ status: v || undefined })}
                   options={[{ value: "", label: "All Statuses" }, ...LISTING_STATUSES.map((s) => ({ value: s, label: s }))]} />
                 <NumberField label="Max Days on Market" placeholder="e.g. 30" value={props.currentMaxDom} onChange={(v) => onUpdate({ maxDom: v })} />
+                <div className="flex items-end">
+                  <ToggleChip label="Open Houses Only" checked={props.currentOpenHousesOnly} onChange={(v) => onUpdate({ openHousesOnly: v ? "true" : undefined })} />
+                </div>
               </div>
-              <ToggleChip label="Open Houses Only" checked={props.currentOpenHousesOnly} onChange={(v) => onUpdate({ openHousesOnly: v ? "true" : undefined })} />
             </Section>
 
             <Section title="Home Details">
