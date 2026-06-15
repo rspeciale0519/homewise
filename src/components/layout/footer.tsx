@@ -27,6 +27,7 @@ const quickLinks = [
   { label: "About Us", href: "/about" },
   { label: "Contact Us", href: "/about#contact" },
   { label: "Free Home Evaluation", href: "/home-evaluation" },
+  { label: "Become an Agent", href: "/become-an-agent" },
 ];
 
 export function Footer() {
