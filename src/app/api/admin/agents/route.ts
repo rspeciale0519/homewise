@@ -3,8 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { adminAgentFilterSchema, adminAgentCreateSchema } from "@/schemas/admin-agent.schema";
-import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
-import { generateSlug } from "@/lib/utils";
+import { createAgentRecord } from "@/lib/agents";
 import type { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
@@ -78,25 +77,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = parsed.data;
-    let slug = generateSlug(data.firstName, data.lastName);
-
-    const existing = await prisma.agent.findUnique({ where: { slug } });
-    if (existing) {
-      slug = `${slug}-${Date.now().toString(36)}`;
-    }
-
-    const agent = await prisma.agent.create({
-      data: {
-        ...data,
-        email: data.email || null,
-        phone: data.phone || null,
-        photoUrl: data.photoUrl || null,
-        bio: data.bio || null,
-        mlsAgentId: normalizeMlsAgentId(data.mlsAgentId),
-        slug,
-      },
-    });
+    const agent = await createAgentRecord(parsed.data);
 
     revalidatePath("/agents");
     revalidatePath(`/agents/${agent.slug}`);

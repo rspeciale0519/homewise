@@ -167,11 +167,27 @@ interface AgentApplicationSummary {
   message?: string | null;
 }
 
+// Escape applicant-controlled values before interpolating into email HTML.
+function esc(value: string | null | undefined): string {
+  if (value == null) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Collapse newlines so applicant input can't inject email subject headers.
+function subjectSafe(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").trim();
+}
+
 export function agentApplicationReceivedEmail(firstName: string): { subject: string; html: string } {
   return {
     subject: "We received your HomeWise Agent application",
     html: buildEmailHtml(`
-      <h2>Thanks, ${firstName}!</h2>
+      <h2>Thanks, ${esc(firstName)}!</h2>
       <p>We&apos;ve received your application to become a HomeWise Agent. Our corporate office reviews every application personally.</p>
       <p>If you&apos;re approved, we&apos;ll email you a secure registration link to set up your agent account. Membership is always free for HomeWise Agents.</p>
       <p style="margin-top:24px;font-size:13px;color:#64748b">No action is needed right now — we&apos;ll be in touch soon.</p>
@@ -184,9 +200,9 @@ export function agentApplicationAdminNotificationEmail(
   reviewUrl: string,
 ): { subject: string; html: string } {
   const row = (label: string, value?: string | null) =>
-    value ? `<p style="margin:4px 0"><strong>${label}:</strong> ${value}</p>` : "";
+    value ? `<p style="margin:4px 0"><strong>${esc(label)}:</strong> ${esc(value)}</p>` : "";
   return {
-    subject: `New agent application — ${app.firstName} ${app.lastName}`,
+    subject: subjectSafe(`New agent application — ${app.firstName} ${app.lastName}`),
     html: buildEmailHtml(`
       <h2>New Agent Application</h2>
       <div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0">
@@ -208,7 +224,7 @@ export function agentApplicationApprovedEmail(firstName: string, inviteUrl: stri
   return {
     subject: "You're approved — welcome to HomeWise",
     html: buildEmailHtml(`
-      <h2>Congratulations, ${firstName}!</h2>
+      <h2>Congratulations, ${esc(firstName)}!</h2>
       <p>Your application has been approved by the HomeWise corporate office. You&apos;re ready to set up your agent account.</p>
       <p style="text-align:center;margin-top:24px">
         <a href="${inviteUrl}" class="btn">Set Up Your Agent Account</a>
@@ -222,9 +238,9 @@ export function agentApplicationRejectedEmail(firstName: string, notes?: string 
   return {
     subject: "Update on your HomeWise Agent application",
     html: buildEmailHtml(`
-      <h2>Hi ${firstName},</h2>
+      <h2>Hi ${esc(firstName)},</h2>
       <p>Thank you for your interest in joining HomeWise. After review, we&apos;re not able to move forward with your application at this time.</p>
-      ${notes ? `<div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0"><p style="margin:0">${notes}</p></div>` : ""}
+      ${notes ? `<div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0"><p style="margin:0">${esc(notes)}</p></div>` : ""}
       <p>We appreciate the time you took to apply and wish you the best.</p>
     `, "An update on your HomeWise Agent application"),
   };

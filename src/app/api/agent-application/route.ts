@@ -6,6 +6,7 @@ import {
   agentApplicationReceivedEmail,
   agentApplicationAdminNotificationEmail,
 } from "@/lib/email/templates";
+import { SITE_URL } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,7 +58,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Notifications are best-effort — a delivery failure must not fail the submission.
-    const reviewUrl = `${request.nextUrl.origin}/admin/agent-applications/${application.id}`;
+    // Build links from the trusted configured base URL, never the request Host header.
+    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? SITE_URL).replace(/\/$/, "");
+    const reviewUrl = `${baseUrl}/admin/agent-applications/${application.id}`;
     const adminTo = process.env.ADMIN_NOTIFICATION_EMAIL ?? process.env.RESEND_FROM_EMAIL;
 
     try {
