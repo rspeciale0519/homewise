@@ -86,7 +86,7 @@ export default function BuyersPage() {
               From financing prep to moving day — everything you need to navigate Central Florida&apos;s real estate market with confidence.
             </p>
           </div>
-          <ServiceGrid items={BUYERS_RESOURCES} columns={2} />
+          <ServiceGrid items={BUYERS_RESOURCES} columns={3} center />
         </Container>
       </section>
 
