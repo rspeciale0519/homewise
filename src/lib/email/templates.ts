@@ -156,3 +156,76 @@ export function priceChangeAlertEmail(): { subject: string; html: string } {
     `),
   };
 }
+
+interface AgentApplicationSummary {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  licenseNumber?: string | null;
+  mlsAgentId?: string | null;
+  message?: string | null;
+}
+
+export function agentApplicationReceivedEmail(firstName: string): { subject: string; html: string } {
+  return {
+    subject: "We received your HomeWise Agent application",
+    html: buildEmailHtml(`
+      <h2>Thanks, ${firstName}!</h2>
+      <p>We&apos;ve received your application to become a HomeWise Agent. Our corporate office reviews every application personally.</p>
+      <p>If you&apos;re approved, we&apos;ll email you a secure registration link to set up your agent account. Membership is always free for HomeWise Agents.</p>
+      <p style="margin-top:24px;font-size:13px;color:#64748b">No action is needed right now — we&apos;ll be in touch soon.</p>
+    `, "Your HomeWise Agent application was received"),
+  };
+}
+
+export function agentApplicationAdminNotificationEmail(
+  app: AgentApplicationSummary,
+  reviewUrl: string,
+): { subject: string; html: string } {
+  const row = (label: string, value?: string | null) =>
+    value ? `<p style="margin:4px 0"><strong>${label}:</strong> ${value}</p>` : "";
+  return {
+    subject: `New agent application — ${app.firstName} ${app.lastName}`,
+    html: buildEmailHtml(`
+      <h2>New Agent Application</h2>
+      <div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0">
+        ${row("Name", `${app.firstName} ${app.lastName}`)}
+        ${row("Email", app.email)}
+        ${row("Phone", app.phone)}
+        ${row("License #", app.licenseNumber)}
+        ${row("MLS Agent ID", app.mlsAgentId)}
+        ${row("Message", app.message)}
+      </div>
+      <p style="text-align:center;margin-top:24px">
+        <a href="${reviewUrl}" class="btn">Review Application</a>
+      </p>
+    `, "A prospective agent has applied"),
+  };
+}
+
+export function agentApplicationApprovedEmail(firstName: string, inviteUrl: string): { subject: string; html: string } {
+  return {
+    subject: "You're approved — welcome to HomeWise",
+    html: buildEmailHtml(`
+      <h2>Congratulations, ${firstName}!</h2>
+      <p>Your application has been approved by the HomeWise corporate office. You&apos;re ready to set up your agent account.</p>
+      <p style="text-align:center;margin-top:24px">
+        <a href="${inviteUrl}" class="btn">Set Up Your Agent Account</a>
+      </p>
+      <p style="margin-top:24px;font-size:13px;color:#64748b">This invitation link expires in 7 days. If it expires, reply to this email and we&apos;ll send a new one.</p>
+    `, "Your HomeWise Agent application was approved"),
+  };
+}
+
+export function agentApplicationRejectedEmail(firstName: string, notes?: string | null): { subject: string; html: string } {
+  return {
+    subject: "Update on your HomeWise Agent application",
+    html: buildEmailHtml(`
+      <h2>Hi ${firstName},</h2>
+      <p>Thank you for your interest in joining HomeWise. After review, we&apos;re not able to move forward with your application at this time.</p>
+      ${notes ? `<div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0"><p style="margin:0">${notes}</p></div>` : ""}
+      <p>We appreciate the time you took to apply and wish you the best.</p>
+    `, "An update on your HomeWise Agent application"),
+  };
+}
