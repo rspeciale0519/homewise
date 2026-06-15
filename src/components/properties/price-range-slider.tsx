@@ -1,5 +1,6 @@
 "use client";
 
+import * as Slider from "@radix-ui/react-slider";
 import { cn } from "@/lib/utils";
 
 interface PriceRangeSliderProps {
@@ -11,43 +12,29 @@ interface PriceRangeSliderProps {
   className?: string;
 }
 
-/**
- * Dual-thumb range slider built from two overlaid native range inputs.
- * The inputs are pointer-events:none; only their thumbs are interactive
- * (see `.range-thumb` rules in globals.css), so both handles stay grabbable.
- */
+/** Two-thumb range slider built on Radix (no crossing / no thumb-reset bugs). */
 export function PriceRangeSlider({ max, low, high, onChange, className }: PriceRangeSliderProps) {
-  const pct = (v: number) => (max === 0 ? 0 : (v / max) * 100);
-
   return (
-    <div className={cn("relative h-6 w-full", className)}>
-      <div className="absolute top-1/2 -translate-y-1/2 h-1.5 w-full rounded-full bg-slate-200" />
-      <div
-        className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-navy-600"
-        style={{ left: `${pct(low)}%`, right: `${100 - pct(high)}%` }}
-      />
-      <input
-        type="range"
-        min={0}
-        max={max}
-        step={1}
-        value={low}
+    <Slider.Root
+      className={cn("relative flex items-center w-full h-6 touch-none select-none", className)}
+      min={0}
+      max={max}
+      step={1}
+      value={[low, high]}
+      onValueChange={(vals) => onChange(vals[0] ?? 0, vals[1] ?? max)}
+      minStepsBetweenThumbs={0}
+    >
+      <Slider.Track className="relative h-1.5 grow rounded-full bg-slate-200">
+        <Slider.Range className="absolute h-full rounded-full bg-navy-600" />
+      </Slider.Track>
+      <Slider.Thumb
         aria-label="Minimum price"
-        onChange={(e) => onChange(Math.min(Number(e.target.value), high), high)}
-        className="range-thumb absolute top-0 left-0 h-6 w-full appearance-none bg-transparent"
-        style={{ zIndex: low >= max ? 5 : 3 }}
+        className="block h-4 w-4 rounded-full bg-white border-2 border-slate-600 shadow cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-400"
       />
-      <input
-        type="range"
-        min={0}
-        max={max}
-        step={1}
-        value={high}
+      <Slider.Thumb
         aria-label="Maximum price"
-        onChange={(e) => onChange(low, Math.max(Number(e.target.value), low))}
-        className="range-thumb absolute top-0 left-0 h-6 w-full appearance-none bg-transparent"
-        style={{ zIndex: 4 }}
+        className="block h-4 w-4 rounded-full bg-white border-2 border-slate-600 shadow cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-400"
       />
-    </div>
+    </Slider.Root>
   );
 }
