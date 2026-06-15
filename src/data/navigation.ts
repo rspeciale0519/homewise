@@ -12,10 +12,6 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    label: "About",
-    href: "/about",
-  },
-  {
     label: "Find an Agent",
     href: "/agents",
   },
@@ -98,5 +94,9 @@ export const NAV_ITEMS: NavItem[] = [
   {
     label: "Communities",
     href: "/communities",
+  },
+  {
+    label: "About",
+    href: "/about",
   },
 ];
