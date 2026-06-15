@@ -62,20 +62,31 @@ export function Header() {
             )}
           >
 
-            {/* Logo */}
-            <Link href="/" className="-ml-2.5 shrink-0 flex items-center" aria-label="Home Wise Realty Group — Home">
-              <Image
-                src="/images/logo.png"
-                alt="Home Wise Realty Group"
-                width={220}
-                height={72}
-                className={cn(
-                  "w-auto transition-all duration-500",
-                  scrolled ? "h-12 md:h-14" : "h-16 md:h-[72px]"
-                )}
-                priority
-              />
-            </Link>
+            {/* Left: Logo + Phone */}
+            <div className="flex items-center gap-4 lg:gap-6 lg:flex-1 min-w-0">
+              <Link href="/" className="-ml-2.5 shrink-0 flex items-center" aria-label="Home Wise Realty Group — Home">
+                <Image
+                  src="/images/logo.png"
+                  alt="Home Wise Realty Group"
+                  width={220}
+                  height={72}
+                  className={cn(
+                    "w-auto transition-all duration-500",
+                    scrolled ? "h-12 md:h-14" : "h-16 md:h-[72px]"
+                  )}
+                  priority
+                />
+              </Link>
+              <a
+                href={`tel:${PHONE.replace(/\D/g, "")}`}
+                className="hidden lg:flex items-center gap-2 text-sm text-slate-600 hover:text-navy-700 transition-colors shrink-0"
+              >
+                <svg className="h-4 w-4 text-crimson-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <span className="font-medium">{PHONE}</span>
+              </a>
+            </div>
 
             {/* Desktop Navigation */}
             <nav
@@ -160,17 +171,8 @@ export function Header() {
               ))}
             </nav>
 
-            {/* Right Side: Phone + CTA + Auth */}
-            <div className="hidden lg:flex items-center gap-4">
-              <a
-                href={`tel:${PHONE.replace(/\D/g, "")}`}
-                className="flex items-center gap-2 text-sm text-slate-600 hover:text-navy-700 transition-colors"
-              >
-                <svg className="h-4 w-4 text-crimson-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                <span className="font-medium">{PHONE}</span>
-              </a>
+            {/* Right Side: CTA + Auth */}
+            <div className="hidden lg:flex items-center gap-4 lg:flex-1 justify-end">
               <Link
                 href="/home-evaluation"
                 className="inline-flex items-center px-4 py-2 rounded-md bg-crimson-600 text-white text-sm font-medium tracking-wide hover:bg-crimson-700 transition-colors duration-200 shadow-sm"
