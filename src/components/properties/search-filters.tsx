@@ -169,6 +169,7 @@ export function SearchFilters({
         {/* Price Range */}
         <FilterSelect
           label="Price"
+          placeholderLabel="Any Price"
           value={
             currentMinPrice !== undefined || currentMaxPrice !== undefined
               ? `${currentMinPrice ?? "0"}-${currentMaxPrice ?? ""}`
@@ -194,6 +195,7 @@ export function SearchFilters({
         {/* Beds */}
         <FilterSelect
           label="Beds"
+          placeholderLabel="Any Beds"
           value={currentBeds !== undefined ? String(currentBeds) : ""}
           onChange={(val) => updateParams({ beds: val || undefined })}
           options={BED_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
@@ -202,6 +204,7 @@ export function SearchFilters({
         {/* Baths */}
         <FilterSelect
           label="Baths"
+          placeholderLabel="Any Baths"
           value={currentBaths !== undefined ? String(currentBaths) : ""}
           onChange={(val) => updateParams({ baths: val || undefined })}
           options={BATH_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
@@ -352,12 +355,17 @@ function FilterSelect({
   value,
   onChange,
   options,
+  placeholderLabel,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
+  placeholderLabel?: string;
 }) {
+  const renderedOptions = placeholderLabel
+    ? options.map((opt) => (opt.value === "" ? { ...opt, label: placeholderLabel } : opt))
+    : options;
   return (
     <div className="relative">
       <select
@@ -366,7 +374,7 @@ function FilterSelect({
         aria-label={label}
         className="w-full h-11 pl-4 pr-9 text-sm bg-white border border-slate-200 rounded-xl text-navy-700 appearance-none focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all cursor-pointer"
       >
-        {options.map((opt) => (
+        {renderedOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
