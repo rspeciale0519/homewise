@@ -150,7 +150,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
       </div>
 
       {/* Filters + Results */}
-      <section className="section-padding bg-cream-50">
+      <section className="pt-6 md:pt-8 pb-16 md:pb-20 lg:pb-24 bg-cream-50">
         <Container>
           <SearchFilters
             currentLocation={parsed.success ? parsed.data.location : undefined}
