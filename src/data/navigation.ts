@@ -12,6 +12,10 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   {
+    label: "Find a Property",
+    href: "/properties",
+  },
+  {
     label: "Find an Agent",
     href: "/agents",
   },
@@ -86,10 +90,6 @@ export const NAV_ITEMS: NavItem[] = [
         description: "Estimate your monthly payments instantly",
       },
     ],
-  },
-  {
-    label: "Properties",
-    href: "/properties",
   },
   {
     label: "Communities",
