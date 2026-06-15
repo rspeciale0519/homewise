@@ -62,7 +62,7 @@ export function StyledSelect({ label, value, onChange, options, active, classNam
                 value={o.value}
                 className={cn(
                   "block px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer select-none outline-none transition-colors duration-150",
-                  "text-slate-700 hover:bg-slate-100 hover:text-navy-700 data-[highlighted]:bg-slate-100 data-[highlighted]:text-navy-700",
+                  "text-slate-700 hover:bg-[#e9edf3] hover:text-navy-700 data-[highlighted]:bg-[#e9edf3] data-[highlighted]:text-navy-700",
                   "data-[state=checked]:bg-navy-50 data-[state=checked]:text-navy-700"
                 )}
               >
