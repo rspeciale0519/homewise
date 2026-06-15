@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
-import { BED_OPTIONS, BATH_OPTIONS } from "@/schemas/property-filter.schema";
+import { BED_OPTIONS, BATH_OPTIONS, SORT_OPTIONS } from "@/schemas/property-filter.schema";
 import { PriceFilter } from "./price-filter";
 import { FilterDrawer } from "./filter-drawer";
 import { ActiveFilterChips } from "./active-filter-chips";
@@ -112,7 +112,7 @@ export function SearchFilters(props: SearchFiltersProps) {
       </form>
 
       {/* Row 2: Quick filters */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <PriceFilter
           minPrice={currentMinPrice}
           maxPrice={currentMaxPrice}
@@ -131,6 +131,15 @@ export function SearchFilters(props: SearchFiltersProps) {
           value={currentBaths !== undefined ? String(currentBaths) : ""}
           onChange={(val) => updateParams({ baths: val || undefined })}
           options={BATH_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        />
+        <FilterSelect
+          label="Sort By"
+          value={props.currentSortBy ?? ""}
+          onChange={(val) => updateParams({ sortBy: val || undefined })}
+          options={[
+            { value: "", label: "Recommended" },
+            ...SORT_OPTIONS.map((s) => ({ value: s.value, label: s.label })),
+          ]}
         />
         <FilterDrawer {...props} onUpdate={updateParams} />
       </div>

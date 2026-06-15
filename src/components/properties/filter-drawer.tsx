@@ -6,14 +6,12 @@ import { cn } from "@/lib/utils";
 import {
   PROPERTY_TYPES,
   LISTING_STATUSES,
-  SORT_OPTIONS,
 } from "@/schemas/property-filter.schema";
 import { CommuteFilter } from "./commute-filter";
 
 interface FilterDrawerProps {
   currentPropertyType?: string;
   currentStatus?: string;
-  currentSortBy?: string;
   currentMaxDom?: number;
   currentOpenHousesOnly?: boolean;
   currentMinYearBuilt?: number;
@@ -33,7 +31,7 @@ interface FilterDrawerProps {
 }
 
 const ADVANCED_KEYS = [
-  "propertyType", "status", "sortBy", "maxDom", "openHousesOnly",
+  "propertyType", "status", "maxDom", "openHousesOnly",
   "minYearBuilt", "maxYearBuilt", "minLotSize", "maxLotSize", "maxHoa",
   "hasPool", "hasWaterfront", "hasGarage", "isNewConstruction",
   "hasGatedCommunity", "schoolDistrict", "north", "south", "east", "west", "polygon",
@@ -98,8 +96,6 @@ export function FilterDrawer(props: FilterDrawerProps) {
                   options={[{ value: "", label: "All Types" }, ...PROPERTY_TYPES.map((t) => ({ value: t, label: t }))]} />
                 <Select label="Status" value={props.currentStatus ?? ""} onChange={(v) => onUpdate({ status: v || undefined })}
                   options={[{ value: "", label: "All Statuses" }, ...LISTING_STATUSES.map((s) => ({ value: s, label: s }))]} />
-                <Select label="Sort By" value={props.currentSortBy ?? ""} onChange={(v) => onUpdate({ sortBy: v || undefined })}
-                  options={[{ value: "", label: "Recommended" }, ...SORT_OPTIONS.map((s) => ({ value: s.value, label: s.label }))]} />
                 <NumberField label="Max Days on Market" placeholder="e.g. 30" value={props.currentMaxDom} onChange={(v) => onUpdate({ maxDom: v })} />
               </div>
               <ToggleChip label="Open Houses Only" checked={props.currentOpenHousesOnly} onChange={(v) => onUpdate({ openHousesOnly: v ? "true" : undefined })} />
