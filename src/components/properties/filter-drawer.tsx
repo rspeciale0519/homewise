@@ -98,7 +98,7 @@ export function FilterDrawer(props: FilterDrawerProps) {
                   options={[{ value: "", label: "All Statuses" }, ...LISTING_STATUSES.map((s) => ({ value: s, label: s }))]} />
                 <NumberField label="Max Days on Market" placeholder="e.g. 30" value={props.currentMaxDom} onChange={(v) => onUpdate({ maxDom: v })} />
                 <div className="flex items-end">
-                  <ToggleChip label="Open Houses Only" checked={props.currentOpenHousesOnly} onChange={(v) => onUpdate({ openHousesOnly: v ? "true" : undefined })} />
+                  <ToggleChip className="h-10 w-full" label="Open Houses Only" checked={props.currentOpenHousesOnly} onChange={(v) => onUpdate({ openHousesOnly: v ? "true" : undefined })} />
                 </div>
               </div>
             </Section>
@@ -184,12 +184,13 @@ function NumberField({ label, placeholder, value, onChange }: { label: string; p
   );
 }
 
-function ToggleChip({ label, checked, onChange }: { label: string; checked?: boolean; onChange: (checked: boolean) => void }) {
+function ToggleChip({ label, checked, onChange, className }: { label: string; checked?: boolean; onChange: (checked: boolean) => void; className?: string }) {
   return (
     <button type="button" onClick={() => onChange(!checked)}
       className={cn(
-        "px-3 py-2 rounded-lg border text-xs font-medium transition-colors",
-        checked ? "bg-navy-600 border-navy-600 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-navy-300"
+        "inline-flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-medium transition-colors",
+        checked ? "bg-navy-600 border-navy-600 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-navy-300",
+        className
       )}>
       {label}
     </button>
