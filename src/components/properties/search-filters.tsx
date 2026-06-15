@@ -8,6 +8,7 @@ import { PriceFilter } from "./price-filter";
 import { FilterDrawer } from "./filter-drawer";
 import { ActiveFilterChips } from "./active-filter-chips";
 import { SaveSearchButton } from "./save-search-button";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 interface SearchFiltersProps {
   currentLocation?: string;
@@ -132,9 +133,10 @@ export function SearchFilters(props: SearchFiltersProps) {
           onChange={(val) => updateParams({ baths: val || undefined })}
           options={BATH_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
         />
-        <FilterSelect
+        <StyledSelect
           label="Sort By"
           value={props.currentSortBy ?? ""}
+          active={Boolean(props.currentSortBy)}
           onChange={(val) => updateParams({ sortBy: val || undefined })}
           options={[
             { value: "", label: "Recommended" },
