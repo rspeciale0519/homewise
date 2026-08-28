@@ -44,6 +44,9 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
         <Dialog.Overlay className="fixed inset-0 z-50 bg-navy-950/60 backdrop-blur-sm lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 duration-300" />
         <Dialog.Content className="fixed top-0 right-0 bottom-0 z-50 w-[85vw] max-w-sm bg-white shadow-2xl flex flex-col outline-none lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right duration-300 ease-out">
           <Dialog.Title className="sr-only">Navigation menu</Dialog.Title>
+          <Dialog.Description className="sr-only">
+            Browse site pages and account options.
+          </Dialog.Description>
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">

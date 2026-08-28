@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { CircleAlert } from "lucide-react";
 import { EmailActionConfirmation } from "@/components/email/email-action-confirmation";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -35,6 +36,10 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
         });
       }
     }
+  }
+
+  if (value !== undefined && !valid) {
+    redirect("/unsubscribe");
   }
 
   return (
