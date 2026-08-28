@@ -1,19 +1,18 @@
 import { prisma } from "@/lib/prisma";
-import { appendFileSync } from "fs";
+import { z } from "zod";
 
-const API_KEY = process.env.WALK_SCORE_API_KEY ?? "";
 const BASE_URL = "https://api.walkscore.com/score";
-const LOG_FILE = "/tmp/walkscore-debug.log";
-
-function debug(message: string, data?: unknown) {
-  const timestamp = new Date().toISOString();
-  const logMessage = data ? `${timestamp} - ${message}: ${JSON.stringify(data)}` : `${timestamp} - ${message}`;
-  try {
-    appendFileSync(LOG_FILE, logMessage + "\n");
-  } catch {
-    // Ignore file write errors
-  }
-}
+const scoreSchema = z.number().int().min(0).max(100).nullable().optional();
+const scoreDetailSchema = z.object({
+  score: scoreSchema,
+  description: z.string().max(200).nullable().optional(),
+});
+const walkScoreResponseSchema = z.object({
+  walkscore: scoreSchema,
+  description: z.string().max(200).nullable().optional(),
+  transit: scoreDetailSchema.nullable().optional(),
+  bike: scoreDetailSchema.nullable().optional(),
+});
 
 interface WalkScoreResult {
   walkScore: number | null;
@@ -25,10 +24,8 @@ interface WalkScoreResult {
 }
 
 export async function getWalkScore(address: string, lat: number, lng: number): Promise<WalkScoreResult | null> {
-  debug("getWalkScore called", { address, lat, lng });
-
-  if (!API_KEY) {
-    debug("API_KEY is not set");
+  const apiKey = process.env.WALK_SCORE_API_KEY?.trim();
+  if (!apiKey) {
     return null;
   }
 
@@ -36,7 +33,6 @@ export async function getWalkScore(address: string, lat: number, lng: number): P
 
   const cached = await prisma.walkScoreCache.findUnique({ where: { addressKey } });
   if (cached && cached.expiresAt > new Date()) {
-    debug("Using cached result", { address, walkScore: cached.walkScore });
     return {
       walkScore: cached.walkScore,
       walkScoreDescription: (cached.rawResponse as Record<string, unknown> | null)?.description as string ?? null,
@@ -55,25 +51,19 @@ export async function getWalkScore(address: string, lat: number, lng: number): P
     url.searchParams.set("lon", String(lng));
     url.searchParams.set("transit", "1");
     url.searchParams.set("bike", "1");
-    url.searchParams.set("wsapikey", API_KEY);
+    url.searchParams.set("wsapikey", apiKey);
 
-    debug("Fetching from URL", { url: url.toString() });
     const res = await fetch(url.toString());
-    debug("Response received", { status: res.status, statusText: res.statusText });
 
     if (!res.ok) {
-      debug("Response not ok", { status: res.status });
       return null;
     }
 
-    const data = (await res.json()) as {
-      walkscore?: number;
-      description?: string;
-      transit?: { score?: number; description?: string };
-      bike?: { score?: number; description?: string };
-    };
-
-    debug("API response data", data);
+    const parsed = walkScoreResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      return null;
+    }
+    const data = parsed.data;
 
     const result: WalkScoreResult = {
       walkScore: data.walkscore ?? null,
@@ -84,29 +74,34 @@ export async function getWalkScore(address: string, lat: number, lng: number): P
       bikeScoreDescription: data.bike?.description ?? null,
     };
 
-    debug("Parsed result", result);
-
     const thirtyDays = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await prisma.walkScoreCache.upsert({
       where: { addressKey },
       update: {
-        ...result,
+        walkScore: result.walkScore,
+        transitScore: result.transitScore,
+        bikeScore: result.bikeScore,
+        description: result.walkScoreDescription,
         rawResponse: data as object,
         fetchedAt: new Date(),
         expiresAt: thirtyDays,
       },
       create: {
         addressKey,
-        ...result,
+        walkScore: result.walkScore,
+        transitScore: result.transitScore,
+        bikeScore: result.bikeScore,
+        description: result.walkScoreDescription,
         rawResponse: data as object,
         expiresAt: thirtyDays,
       },
     });
 
-    debug("Cached result", { address, walkScore: result.walkScore });
     return result;
   } catch (error) {
-    debug("Error fetching data", error instanceof Error ? error.message : String(error));
+    console.error("[walk-score] request failed", {
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
     return null;
   }
 }

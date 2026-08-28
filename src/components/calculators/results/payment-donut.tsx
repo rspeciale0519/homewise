@@ -23,7 +23,11 @@ export function PaymentDonut({
   return (
     <div className="relative w-full max-w-[280px] mx-auto">
       {hasMounted ? (
-        <ResponsiveContainer width="100%" aspect={1}>
+        <ResponsiveContainer
+          width="100%"
+          aspect={1}
+          initialDimension={{ width: 280, height: 280 }}
+        >
           <PieChart>
             <Pie
               data={filteredSegments}

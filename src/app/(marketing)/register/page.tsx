@@ -15,8 +15,7 @@ export default async function RegisterPage({
   searchParams: Promise<{ code?: string; invite?: string }>;
 }) {
   const { code, invite } = await searchParams;
-  const isLegacyAgent = !!code && code === process.env.AGENT_INVITE_CODE;
-  const isAgentRegistration = isLegacyAgent || !!invite;
+  const isAgentRegistration = !!(invite ?? code);
 
   return (
     <section className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center py-12 px-4">

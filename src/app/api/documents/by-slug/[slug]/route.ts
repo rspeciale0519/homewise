@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { resolveDocumentSlug } from "@/lib/slug/resolve";
 import { readFile } from "fs/promises";
 import path from "path";
+import {
+  resolveContainedPath,
+  resolveRealContainedPath,
+} from "@/lib/documents/safe-path";
 
 const MIME_TYPES: Record<string, string> = {
   ".pdf": "application/pdf",
@@ -54,7 +58,11 @@ export async function GET(
   const document = await prisma.document.findUnique({
     where: { id: resolved.record.id },
   });
-  if (!document || !document.published) {
+  if (
+    !document ||
+    !document.published ||
+    !document.platforms.includes("homewise")
+  ) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
@@ -82,19 +90,24 @@ export async function GET(
 
   // Local filesystem (legacy seeded docs)
   const documentsDir = path.join(process.cwd(), "private", "documents");
-  const fullPath = path.resolve(documentsDir, document.storageKey);
-  if (!fullPath.startsWith(documentsDir)) {
+  const fullPath = resolveContainedPath(documentsDir, document.storageKey);
+  if (!fullPath) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
   try {
-    const fileBuffer = await readFile(fullPath);
-    const ext = path.extname(fullPath).toLowerCase();
+    const realPath = await resolveRealContainedPath(documentsDir, fullPath);
+    if (!realPath) {
+      return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+    }
+
+    const fileBuffer = await readFile(realPath);
+    const ext = path.extname(realPath).toLowerCase();
     const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
     return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": `inline; filename="${path.basename(fullPath)}"`,
+        "Content-Disposition": `inline; filename="${path.basename(realPath)}"`,
         "Cache-Control": "private, max-age=3600",
       },
     });

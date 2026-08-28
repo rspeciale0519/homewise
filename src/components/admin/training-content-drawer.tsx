@@ -38,6 +38,17 @@ const FILE_LIMITS: Record<string, number> = {
   ".jpeg": 5 * 1024 * 1024,
 };
 
+const FILE_CONTENT_TYPES: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xls": "application/vnd.ms-excel",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".doc": "application/msword",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+};
+
 function getFileExtension(name: string): string {
   const idx = name.lastIndexOf(".");
   return idx === -1 ? "" : name.slice(idx).toLowerCase();
@@ -120,19 +131,53 @@ export function TrainingContentDrawer({ open, onClose, item, categoryOptions, on
     const ext = getFileExtension(file.name);
     const limit = FILE_LIMITS[ext];
     if (!limit) { toast("File type not allowed", "error"); return; }
+    if (FILE_CONTENT_TYPES[ext] !== file.type) {
+      toast("File extension and content type do not match", "error"); return;
+    }
     if (file.size > limit) { toast(`File exceeds ${formatFileSize(limit)} limit`, "error"); return; }
 
     setUploading(true);
     try {
-      const { uploadUrl, fileKey } = await adminFetch<{ uploadUrl: string; fileKey: string }>(
+      const { uploadUrl, pendingKey } = await adminFetch<{
+        uploadUrl: string;
+        pendingKey: string;
+      }>(
         "/api/admin/training/upload",
-        { method: "POST", body: JSON.stringify({ filename: file.name, contentType: file.type }) },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            byteSize: file.size,
+          }),
+        },
       );
-      await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-      setUploadedFile({ name: file.name, size: file.size, fileKey });
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadResponse.ok) throw new Error("File upload failed");
+      const finalized = await adminFetch<{
+        fileKey: string;
+        mimeType: string;
+        sizeBytes: number;
+      }>("/api/admin/training/upload", {
+        method: "PUT",
+        body: JSON.stringify({
+          pendingKey,
+          contentType: file.type,
+          byteSize: file.size,
+        }),
+      });
+      setUploadedFile({
+        name: file.name,
+        size: finalized.sizeBytes,
+        fileKey: finalized.fileKey,
+      });
       toast("File uploaded", "success");
     } catch (err) { toast((err as Error).message, "error"); }
-    setUploading(false);
+    finally { setUploading(false); }
   }, [toast]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {

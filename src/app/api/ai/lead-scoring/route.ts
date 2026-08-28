@@ -2,20 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
+import { parseLeadScoringResult } from "@/lib/ai/lead-scoring-result";
+import { InvalidJsonBodyError, readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const leadScoringSchema = z.object({
-  contactId: z.string().min(1, "contactId is required"),
-});
+  contactId: z.string().trim().min(1, "contactId is required").max(100),
+}).strict();
 
 export async function POST(request: NextRequest) {
   const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
-    const raw: unknown = await request.json();
+    const raw: unknown = await readJsonBodyWithLimit(request, 2_000);
     const input = leadScoringSchema.safeParse(raw);
     if (!input.success) {
       return NextResponse.json(
@@ -64,6 +67,9 @@ Generate a JSON response:
   "suggestedAction": "<recommended next step>"
 }`;
 
+    const entitlementError = await reserveStaffFeature(auth, "ai_lead_scoring");
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("lead_scoring", {
       feature: "lead_scoring",
       systemPrompt: "You are a real estate CRM analyst. Score leads based on engagement, recency, and buying signals. Output valid JSON only.",
@@ -72,13 +78,7 @@ Generate a JSON response:
       temperature: 0.3,
     });
 
-    let parsed: { score: number; brief: string; suggestedAction: string };
-    try {
-      const match = result.content.match(/\{[\s\S]*\}/);
-      parsed = match ? JSON.parse(match[0]) : { score: contact.score, brief: "Unable to generate brief.", suggestedAction: "Review manually." };
-    } catch {
-      parsed = { score: contact.score, brief: "Unable to generate brief.", suggestedAction: "Review manually." };
-    }
+    const parsed = parseLeadScoringResult(result.content, contact.score);
 
     await prisma.contact.update({
       where: { id: contact.id },
@@ -87,6 +87,12 @@ Generate a JSON response:
 
     return NextResponse.json(parsed);
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/lead-scoring] error:", err);
     return NextResponse.json({ error: "Failed to score lead" }, { status: 500 });
   }

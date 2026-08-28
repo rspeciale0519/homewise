@@ -33,9 +33,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       ? (firstEmail.delayDays * 86400000) + (firstEmail.delayHours * 3600000)
       : 0;
     const nextSendAt = new Date(Date.now() + delayMs);
+    const contacts = await prisma.contact.findMany({
+      where: {
+        id: { in: body.contactIds },
+        marketingEmailOptOutAt: null,
+      },
+      select: { id: true },
+    });
 
     const results = await Promise.allSettled(
-      body.contactIds.map((contactId) =>
+      contacts.map(({ id: contactId }) =>
         prisma.campaignEnrollment.upsert({
           where: { campaignId_contactId: { campaignId, contactId } },
           create: { campaignId, contactId, currentStep: 0, nextSendAt },

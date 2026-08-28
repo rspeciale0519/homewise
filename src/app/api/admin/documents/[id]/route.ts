@@ -8,12 +8,14 @@ import {
   isSlugTakenForDocument,
   recordDocumentSlugChange,
 } from "@/lib/slug/resolve";
+import { isFinalAdminUploadKey } from "@/lib/http/admin-upload";
+import { httpUrlSchema } from "@/schemas/http-url.schema";
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
   slug: z.string().optional(),
   description: z.string().optional().nullable(),
-  url: z.string().url().optional().nullable(),
+  url: httpUrlSchema.optional().nullable(),
   external: z.boolean().optional(),
   storageKey: z.string().optional().nullable(),
   storageProvider: z.enum(["local", "supabase"]).optional(),
@@ -44,6 +46,27 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const existing = await prisma.document.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const nextStorageProvider = parsed.data.storageProvider ?? existing.storageProvider;
+  const nextStorageKey = parsed.data.storageKey !== undefined
+    ? parsed.data.storageKey
+    : existing.storageKey;
+  const replacesStoredFile =
+    (parsed.data.storageKey !== undefined &&
+      parsed.data.storageKey !== existing.storageKey) ||
+    (parsed.data.storageProvider !== undefined &&
+      parsed.data.storageProvider !== existing.storageProvider);
+  if (
+    replacesStoredFile &&
+    nextStorageProvider === "supabase" &&
+    nextStorageKey &&
+    !isFinalAdminUploadKey(nextStorageKey, "documents")
+  ) {
+    return NextResponse.json(
+      { error: "Upload validation is required", field: "storageKey" },
+      { status: 400 },
+    );
   }
 
   const { categoryIds, ...rest } = parsed.data;

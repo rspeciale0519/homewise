@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { north, south, east, west, polygon: polygonStr, ...rest } = parsed.data;
+  const { north, south, east, west, polygon, ...rest } = parsed.data;
 
   const filters: PropertyFilters = { ...rest };
 
@@ -22,16 +22,7 @@ export async function GET(request: NextRequest) {
     filters.bounds = { north, south, east, west };
   }
 
-  if (polygonStr) {
-    try {
-      const coords = JSON.parse(polygonStr) as [number, number][];
-      if (Array.isArray(coords) && coords.length >= 3) {
-        filters.polygon = coords;
-      }
-    } catch {
-      // ignore invalid polygon JSON
-    }
-  }
+  if (polygon) filters.polygon = polygon;
 
   const result = await propertyProvider.search(filters);
 

@@ -16,10 +16,9 @@ function isError(result: AdminApiResult): result is AdminApiError {
 
 export { isError };
 
-async function findAgentIdForUser(userId: string, email?: string): Promise<string | null> {
-  const matches = email ? [{ userId }, { email }] : [{ userId }];
-  const agent = await prisma.agent.findFirst({
-    where: { OR: matches },
+async function findAgentIdForUser(userId: string): Promise<string | null> {
+  const agent = await prisma.agent.findUnique({
+    where: { userId },
     select: { id: true },
   });
 
@@ -74,7 +73,7 @@ export async function requireStaffApi(): Promise<StaffApiResult> {
     };
   }
 
-  const agentId = await findAgentIdForUser(auth.user.id, auth.user.email ?? undefined);
+  const agentId = await findAgentIdForUser(auth.user.id);
 
   if (!agentId) {
     return {

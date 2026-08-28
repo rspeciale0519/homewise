@@ -1,7 +1,14 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, personalizeTemplate } from "@/lib/email";
+import {
+  escapeHtml,
+  escapeHttpUrl,
+  personalizeTemplate,
+  sendEmail,
+} from "@/lib/email";
 import { listingAlertEmail } from "@/lib/email/templates";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 import { areMlsBackfillAlertsSuppressed } from "@/lib/mls-alert-suppression";
 import { withIdx } from "@/lib/mls-visibility";
 import { getSiteUrl, toAbsoluteSiteUrl } from "@/lib/site-url";
@@ -64,11 +71,14 @@ export const dailyListingAlerts = inngest.createFunction(
 
         const listingsHtml = matching.slice(0, 6).map((l) => {
           const imageUrl = toAbsoluteSiteUrl(l.imageUrl, siteUrl);
+          const safeImageUrl = imageUrl ? escapeHttpUrl(imageUrl) : null;
+          const safeAddress = escapeHtml(l.address);
+          const safeCity = escapeHtml(l.city);
           return `
             <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:12px">
-              ${imageUrl ? `<img src="${imageUrl}" alt="${l.address}" style="width:100%;height:160px;object-fit:cover">` : ""}
+              ${safeImageUrl ? `<img src="${safeImageUrl}" alt="${safeAddress}" style="width:100%;height:160px;object-fit:cover">` : ""}
               <div style="padding:12px">
-                <p style="margin:0;font-weight:600">${l.address}, ${l.city}</p>
+                <p style="margin:0;font-weight:600">${safeAddress}, ${safeCity}</p>
                 <p style="margin:4px 0;color:#2563eb;font-weight:700">$${l.price.toLocaleString()}</p>
                 <p style="margin:0;font-size:13px;color:#64748b">${l.beds} bed · ${l.baths} bath · ${l.sqft.toLocaleString()} sqft</p>
               </div>
@@ -78,13 +88,25 @@ export const dailyListingAlerts = inngest.createFunction(
 
         const template = listingAlertEmail();
         const firstName = alert.user?.firstName ?? alert.name ?? "there";
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "property_alert", id: alert.id },
+          alert.email,
+        );
         const tokens: Record<string, string> = {
-          first_name: firstName,
+          first_name: escapeHtml(firstName),
           count: String(matching.length),
           listings_html: listingsHtml,
-          site_url: siteUrl,
-          unsubscribe_url: `${siteUrl}/unsubscribe?alert=${alert.id}`,
+          site_url: escapeHttpUrl(siteUrl),
+          unsubscribe_url: escapeHttpUrl(
+            `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
+          ),
         };
+
+        if (!await canSendPreferenceEmail({
+          kind: "property_alert",
+          id: alert.id,
+          recipientEmail: alert.email,
+        })) return;
 
         await sendEmail({
           to: alert.email,

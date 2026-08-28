@@ -33,8 +33,9 @@ export function ListingLocationMap({
     mapboxgl.accessToken = token;
     const center: [number, number] = [longitude, latitude];
 
+    const container = mapContainer.current;
     const map = new mapboxgl.Map({
-      container: mapContainer.current,
+      container,
       style: "mapbox://styles/mapbox/streets-v12",
       center,
       zoom: 14,
@@ -59,6 +60,7 @@ export function ListingLocationMap({
 
     return () => {
       map.remove();
+      container.replaceChildren();
       mapRef.current = null;
     };
   }, [token, hasCoordinates, latitude, longitude, address, city, state, zip]);

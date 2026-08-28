@@ -1,6 +1,10 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
 import { analyticsBoEnabled, withBo } from "@/lib/analytics-flags";
+import {
+  calculateMedian,
+  calculateSaleToListRatio,
+} from "@/lib/market-stats";
 
 const TRACKED_CITIES = [
   "Orlando", "Winter Park", "Oviedo", "Sanford", "Kissimmee",
@@ -54,7 +58,11 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
         const avgDom = Math.round(activeStats._avg.daysOnMarket ?? 0);
         const avgSqft = activeStats._avg.sqft ?? 1;
         const avgSoldPrice = soldStats._avg.closePrice ?? soldStats._avg.price ?? 0;
-        const saleToListRatio = avgPrice > 0 && avgSoldPrice > 0 ? avgSoldPrice / avgPrice : 0;
+        const avgSoldListPrice = soldStats._avg.price ?? 0;
+        const saleToListRatio = calculateSaleToListRatio(
+          avgSoldPrice,
+          avgSoldListPrice,
+        );
         // soldCount is a trailing-12-month figure, so the monthly absorption
         // rate is soldCount/12.
         const monthsOfInventory = soldCount > 0 ? activeCount / (soldCount / 12) : 0;
@@ -66,9 +74,7 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
           select: { price: true },
           orderBy: { price: "asc" },
         });
-        const medianPrice = prices.length > 0
-          ? prices[Math.floor(prices.length / 2)]!.price
-          : 0;
+        const medianPrice = calculateMedian(prices.map(({ price }) => price));
 
         await prisma.marketStats.upsert({
           where: { area_areaType_period: { area: city, areaType: "city", period } },
@@ -80,7 +86,7 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
             soldCount,
             medianPrice,
             avgPrice: Math.round(avgPrice),
-            saleToListRatio: Math.round(saleToListRatio * 1000) / 1000,
+            saleToListRatio,
             avgDom,
             monthsOfInventory: Math.round(monthsOfInventory * 10) / 10,
             newListings,
@@ -91,7 +97,7 @@ export const dailyMarketStatsAggregation = inngest.createFunction(
             soldCount,
             medianPrice,
             avgPrice: Math.round(avgPrice),
-            saleToListRatio: Math.round(saleToListRatio * 1000) / 1000,
+            saleToListRatio,
             avgDom,
             monthsOfInventory: Math.round(monthsOfInventory * 10) / 10,
             newListings,

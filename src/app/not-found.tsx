@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { SkipLink } from "@/components/layout/skip-link";
 
 export default function NotFound() {
   return (
     <>
+      <SkipLink />
       <Header />
-      <main className="min-h-screen pt-[70px] flex items-center">
+      <main id="main-content" tabIndex={-1} className="min-h-screen pt-[70px] flex items-center">
         <Container size="sm" className="py-24 text-center">
           <p className="text-8xl font-serif font-bold text-navy-600 opacity-20 leading-none mb-6">
             404
@@ -20,11 +22,17 @@ export default function NotFound() {
             The page you&apos;re looking for doesn&apos;t exist or has been moved. Let&apos;s get you back on track.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/">
-              <Button variant="primary" size="lg">Back to Home</Button>
+            <Link
+              href="/"
+              className={buttonVariants({ variant: "primary", size: "lg" })}
+            >
+              Back to Home
             </Link>
-            <Link href="/properties">
-              <Button variant="outline" size="lg">Search Properties</Button>
+            <Link
+              href="/properties"
+              className={buttonVariants({ variant: "outline", size: "lg" })}
+            >
+              Search Properties
             </Link>
           </div>
         </Container>

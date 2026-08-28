@@ -34,14 +34,21 @@ describe("BulkUploadDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     xhrPutMock.mockResolvedValue(undefined);
-    adminFetchMock.mockImplementation((url: string) =>
-      url.endsWith("/upload")
-        ? Promise.resolve({
-            uploadUrl: "https://signed",
-            storageKey: "documents/k",
-            storageProvider: "supabase",
-          })
-        : Promise.resolve({
+    adminFetchMock.mockImplementation(
+      (url: string, init?: { method?: string }) =>
+        url.endsWith("/upload")
+          ? init?.method === "POST"
+            ? Promise.resolve({
+                uploadUrl: "https://signed",
+                pendingKey: "pending/k",
+              })
+            : Promise.resolve({
+                storageKey: "documents/k",
+                storageProvider: "supabase",
+                mimeType: "application/pdf",
+                sizeBytes: 100,
+              })
+          : Promise.resolve({
             created: [{ id: "1", name: "a", slug: "a" }],
             failed: [],
           }),
@@ -69,6 +76,17 @@ describe("BulkUploadDialog", () => {
       }),
     );
     expect(xhrPutMock).toHaveBeenCalledTimes(1);
+    expect(adminFetchMock).toHaveBeenCalledWith(
+      "/api/admin/documents/upload",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          pendingKey: "pending/k",
+          contentType: "application/pdf",
+          byteSize: 100,
+        }),
+      }),
+    );
   });
 
   it("lets you remove a queued file", () => {

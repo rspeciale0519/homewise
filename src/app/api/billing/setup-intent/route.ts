@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
+import { logApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 
@@ -7,8 +8,8 @@ export async function POST() {
   const auth = await requireAuthApi();
   if (isError(auth)) return auth.error;
 
-  const agent = await prisma.agent.findFirst({
-    where: { email: auth.profile.email ?? undefined },
+  const agent = await prisma.agent.findUnique({
+    where: { userId: auth.user.id },
     include: { stripeCustomer: true },
   });
 
@@ -26,9 +27,9 @@ export async function POST() {
 
     return NextResponse.json({ clientSecret: setupIntent.client_secret });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    logApiError("billing/setup-intent", err);
     return NextResponse.json(
-      { error: "Failed to create setup intent", detail: message },
+      { error: "Failed to create setup intent" },
       { status: 500 },
     );
   }

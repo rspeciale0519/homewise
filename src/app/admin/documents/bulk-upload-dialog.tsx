@@ -124,26 +124,39 @@ export function BulkUploadDialog({
           setRow(row.id, { status: { kind: "uploading", pct: 0 } });
           const signed = await adminFetch<{
             uploadUrl: string;
-            storageKey: string;
-            storageProvider: "supabase";
+            pendingKey: string;
           }>("/api/admin/documents/upload", {
             method: "POST",
             body: JSON.stringify({
               filename: row.file.name,
               contentType: row.file.type,
+              byteSize: row.file.size,
             }),
           });
           await xhrPut(signed.uploadUrl, row.file, {
             onProgress: (pct) =>
               setRow(row.id, { status: { kind: "uploading", pct } }),
           });
+          const finalized = await adminFetch<{
+            storageKey: string;
+            storageProvider: "supabase";
+            mimeType: string;
+            sizeBytes: number;
+          }>("/api/admin/documents/upload", {
+            method: "PUT",
+            body: JSON.stringify({
+              pendingKey: signed.pendingKey,
+              contentType: row.file.type,
+              byteSize: row.file.size,
+            }),
+          });
           setRow(row.id, { status: { kind: "done" } });
           return {
             name: row.name.trim() || nameFromFilename(row.file.name),
-            storageKey: signed.storageKey,
-            storageProvider: "supabase",
-            mimeType: row.file.type || null,
-            sizeBytes: row.file.size,
+            storageKey: finalized.storageKey,
+            storageProvider: finalized.storageProvider,
+            mimeType: finalized.mimeType,
+            sizeBytes: finalized.sizeBytes,
           };
         } catch (e) {
           setRow(row.id, {

@@ -1,22 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { listingFindFirstMock, rsvpCreateMock, agentFindFirstMock, sendEmailMock } = vi.hoisted(() => ({
+const {
+  listingFindFirstMock,
+  rsvpFindFirstMock,
+  rsvpCreateMock,
+  agentFindFirstMock,
+  sendEmailMock,
+  rateLimitConsumeMock,
+} = vi.hoisted(() => ({
   listingFindFirstMock: vi.fn(),
+  rsvpFindFirstMock: vi.fn(),
   rsvpCreateMock: vi.fn(),
   agentFindFirstMock: vi.fn(),
   sendEmailMock: vi.fn(),
+  rateLimitConsumeMock: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     listing: { findFirst: listingFindFirstMock },
-    openHouseRsvp: { create: rsvpCreateMock },
+    openHouseRsvp: { findFirst: rsvpFindFirstMock, create: rsvpCreateMock },
     agent: { findFirst: agentFindFirstMock },
   },
 }));
 
 vi.mock("@/lib/email", () => ({ sendEmail: sendEmailMock }));
+
+vi.mock("@/lib/public-rate-limit", () => ({
+  clientIpRateRule: vi.fn(() => ({ key: "ip:test", limit: 60 })),
+  publicMutationRateLimiter: { consume: rateLimitConsumeMock },
+}));
 
 import { POST } from "./route";
 
@@ -38,7 +52,9 @@ const validBody = {
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.DIRECT_MAIL_ADMIN_ALERT_EMAIL = "admin@homewisefl.com";
+  rsvpFindFirstMock.mockResolvedValue(null);
   sendEmailMock.mockResolvedValue({ id: "email-1", error: null });
+  rateLimitConsumeMock.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 });
 });
 
 describe("POST /api/open-house-rsvp", () => {
@@ -82,6 +98,55 @@ describe("POST /api/open-house-rsvp", () => {
     );
   });
 
+  it("reuses a recent duplicate without sending another email", async () => {
+    listingFindFirstMock.mockResolvedValue({
+      id: "listing-1",
+      address: "117 Dinner Lake Ave",
+      city: "Lake Wales",
+      listingAgentMlsId: "MFR123",
+    });
+    rsvpFindFirstMock.mockResolvedValue({ id: "rsvp-existing" });
+
+    const res = await POST(req({ ...validBody, email: "duplicate@example.com" }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ id: "rsvp-existing" });
+    expect(rsvpFindFirstMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ slotDate: validBody.slotDate }),
+      }),
+    );
+    expect(rsvpCreateMock).not.toHaveBeenCalled();
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a separate RSVP for a different open-house date", async () => {
+    listingFindFirstMock.mockResolvedValue({
+      id: "listing-1",
+      address: "117 Dinner Lake Ave",
+      city: "Lake Wales",
+      listingAgentMlsId: null,
+    });
+    rsvpFindFirstMock.mockImplementation(({ where }) => (
+      Promise.resolve(where.slotDate === undefined ? { id: "rsvp-old-date" } : null)
+    ));
+    rsvpCreateMock.mockResolvedValue({ id: "rsvp-new-date" });
+
+    const res = await POST(req({ ...validBody, slotDate: "2026-06-21" }));
+
+    expect(res.status).toBe(201);
+    expect(rsvpFindFirstMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ slotDate: "2026-06-21" }),
+      }),
+    );
+    expect(rsvpCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ slotDate: "2026-06-21" }),
+      }),
+    );
+  });
+
   it("falls back to the admin alert address when no agent matches", async () => {
     listingFindFirstMock.mockResolvedValue({
       id: "listing-1",
@@ -113,5 +178,45 @@ describe("POST /api/open-house-rsvp", () => {
     const res = await POST(req(validBody));
 
     expect(res.status).toBe(201);
+  });
+
+  it("returns 503 before listing access when the shared limiter is unavailable", async () => {
+    rateLimitConsumeMock.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 5,
+      unavailable: true,
+    });
+
+    const res = await POST(req(validBody));
+
+    expect(res.status).toBe(503);
+    expect(listingFindFirstMock).not.toHaveBeenCalled();
+    expect(rsvpCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 before creating an RSVP when notification limiting is unavailable", async () => {
+    listingFindFirstMock.mockResolvedValue({
+      id: "listing-1",
+      address: "117 Dinner Lake Ave",
+      city: "Lake Wales",
+      listingAgentMlsId: "MFR123",
+    });
+    agentFindFirstMock.mockResolvedValue({
+      email: "maria@homewisefl.com",
+      firstName: "Maria",
+    });
+    rateLimitConsumeMock
+      .mockResolvedValueOnce({ allowed: true, retryAfterSeconds: 0 })
+      .mockResolvedValueOnce({
+        allowed: false,
+        retryAfterSeconds: 5,
+        unavailable: true,
+      });
+
+    const res = await POST(req(validBody));
+
+    expect(res.status).toBe(503);
+    expect(rsvpCreateMock).not.toHaveBeenCalled();
+    expect(sendEmailMock).not.toHaveBeenCalled();
   });
 });

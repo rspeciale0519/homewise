@@ -5,6 +5,7 @@ import {
   duplicateKey,
   isStaleListing,
   priceDropFraction,
+  resolvedAnomalyListingIds,
 } from "@/lib/listing-anomalies";
 import { inngest } from "../client";
 
@@ -17,15 +18,28 @@ async function upsertAnomaly(listingId: string, kind: string, detail: string): P
 }
 
 async function scanPriceDrops(now: Date): Promise<number> {
-  const recentDrops = await prisma.priceHistory.findMany({
-    where: { observedAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-    select: { listingId: true },
-    distinct: ["listingId"],
-    take: 2000,
-  });
+  const [recentDrops, existingAnomalies] = await Promise.all([
+    prisma.priceHistory.findMany({
+      where: { observedAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+      select: { listingId: true },
+      distinct: ["listingId"],
+      take: 2000,
+    }),
+    prisma.listingAnomaly.findMany({
+      where: { kind: ANOMALY_KINDS.priceDrop },
+      select: { listingId: true },
+      take: 2000,
+    }),
+  ]);
+
+  const candidateIds = new Set([
+    ...recentDrops.map(({ listingId }) => listingId),
+    ...existingAnomalies.map(({ listingId }) => listingId),
+  ]);
 
   let flagged = 0;
-  for (const { listingId } of recentDrops) {
+  const flaggedIds = new Set<string>();
+  for (const listingId of candidateIds) {
     const listing = await prisma.listing.findUnique({
       where: { id: listingId },
       select: {
@@ -44,18 +58,42 @@ async function scanPriceDrops(now: Date): Promise<number> {
         ANOMALY_KINDS.priceDrop,
         `Price dropped ${(drop * 100).toFixed(1)}% within 7 days`,
       );
+      flaggedIds.add(listing.id);
       flagged++;
     }
+  }
+
+  const resolvedIds = resolvedAnomalyListingIds(
+    existingAnomalies.map(({ listingId }) => listingId),
+    flaggedIds,
+  );
+  if (resolvedIds.length > 0) {
+    await prisma.listingAnomaly.deleteMany({
+      where: {
+        kind: ANOMALY_KINDS.priceDrop,
+        listingId: { in: resolvedIds },
+      },
+    });
   }
   return flagged;
 }
 
 async function scanStaleListings(): Promise<number> {
-  const stale = await prisma.listing.findMany({
-    where: { status: "Active", daysOnMarket: { gt: 180 } },
-    select: { id: true, daysOnMarket: true, status: true },
-    take: 2000,
-  });
+  const [stale, existingAnomalies] = await Promise.all([
+    prisma.listing.findMany({
+      where: { status: "Active", daysOnMarket: { gt: 180 } },
+      select: { id: true, daysOnMarket: true, status: true },
+      take: 2000,
+    }),
+    prisma.listingAnomaly.findMany({
+      where: { kind: ANOMALY_KINDS.staleDom },
+      select: {
+        listingId: true,
+        listing: { select: { daysOnMarket: true, status: true } },
+      },
+      take: 2000,
+    }),
+  ]);
 
   let flagged = 0;
   for (const listing of stale) {
@@ -66,6 +104,18 @@ async function scanStaleListings(): Promise<number> {
       `${listing.daysOnMarket} days on market`,
     );
     flagged++;
+  }
+
+  const resolvedIds = existingAnomalies
+    .filter(({ listing }) => !isStaleListing(listing.daysOnMarket, listing.status))
+    .map(({ listingId }) => listingId);
+  if (resolvedIds.length > 0) {
+    await prisma.listingAnomaly.deleteMany({
+      where: {
+        kind: ANOMALY_KINDS.staleDom,
+        listingId: { in: resolvedIds },
+      },
+    });
   }
   return flagged;
 }
@@ -83,20 +133,61 @@ async function scanDuplicatesAndMissingPhotos(): Promise<{ duplicates: number; n
   }
 
   let duplicates = 0;
+  const duplicateIds = new Set<string>();
   for (const [key, ids] of byKey) {
     if (ids.length < 2) continue;
     for (const id of ids) {
       await upsertAnomaly(id, ANOMALY_KINDS.duplicateAddress, `${ids.length} active listings at ${key.split("|")[0]}`);
+      duplicateIds.add(id);
       duplicates++;
     }
   }
 
   let noPhotos = 0;
+  const noPhotoIds = new Set<string>();
   for (const listing of actives) {
     if (listing.photos.length > 0) continue;
     await upsertAnomaly(listing.id, ANOMALY_KINDS.noPhotos, "Active listing has no photos");
+    noPhotoIds.add(listing.id);
     noPhotos++;
   }
+
+  const existingAnomalies = await prisma.listingAnomaly.findMany({
+    where: {
+      kind: { in: [ANOMALY_KINDS.duplicateAddress, ANOMALY_KINDS.noPhotos] },
+    },
+    select: { kind: true, listingId: true },
+  });
+  const resolvedDuplicates = resolvedAnomalyListingIds(
+    existingAnomalies
+      .filter(({ kind }) => kind === ANOMALY_KINDS.duplicateAddress)
+      .map(({ listingId }) => listingId),
+    duplicateIds,
+  );
+  const resolvedNoPhotos = resolvedAnomalyListingIds(
+    existingAnomalies
+      .filter(({ kind }) => kind === ANOMALY_KINDS.noPhotos)
+      .map(({ listingId }) => listingId),
+    noPhotoIds,
+  );
+  await Promise.all([
+    resolvedDuplicates.length > 0
+      ? prisma.listingAnomaly.deleteMany({
+          where: {
+            kind: ANOMALY_KINDS.duplicateAddress,
+            listingId: { in: resolvedDuplicates },
+          },
+        })
+      : Promise.resolve(),
+    resolvedNoPhotos.length > 0
+      ? prisma.listingAnomaly.deleteMany({
+          where: {
+            kind: ANOMALY_KINDS.noPhotos,
+            listingId: { in: resolvedNoPhotos },
+          },
+        })
+      : Promise.resolve(),
+  ]);
 
   return { duplicates, noPhotos };
 }

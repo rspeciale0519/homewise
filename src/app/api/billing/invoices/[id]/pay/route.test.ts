@@ -1,14 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const {
   requireAuthApiMock,
-  agentFindFirstMock,
+  agentFindUniqueMock,
   invoiceRetrieveMock,
   invoicePayMock,
 } = vi.hoisted(() => ({
   requireAuthApiMock: vi.fn(),
-  agentFindFirstMock: vi.fn(),
+  agentFindUniqueMock: vi.fn(),
   invoiceRetrieveMock: vi.fn(),
   invoicePayMock: vi.fn(),
 }));
@@ -19,7 +19,7 @@ vi.mock("@/lib/admin-api", () => ({
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { agent: { findFirst: agentFindFirstMock } },
+  prisma: { agent: { findUnique: agentFindUniqueMock } },
 }));
 
 vi.mock("@/lib/stripe", () => ({
@@ -46,9 +46,13 @@ function req(): NextRequest {
 beforeEach(() => {
   vi.clearAllMocks();
   requireAuthApiMock.mockResolvedValue(authed);
-  agentFindFirstMock.mockResolvedValue({
+  agentFindUniqueMock.mockResolvedValue({
     stripeCustomer: { stripeCustomerId: "cus_me" },
   });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("POST /api/billing/invoices/[id]/pay", () => {
@@ -57,6 +61,9 @@ describe("POST /api/billing/invoices/[id]/pay", () => {
     const res = await POST(req(), ctx("in_victim"));
     expect(res.status).toBe(404);
     expect(invoicePayMock).not.toHaveBeenCalled();
+    expect(agentFindUniqueMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: "u1" } }),
+    );
   });
 
   it("pays the invoice when it belongs to the caller", async () => {
@@ -65,5 +72,18 @@ describe("POST /api/billing/invoices/[id]/pay", () => {
     const res = await POST(req(), ctx("in_mine"));
     expect(res.status).toBe(200);
     expect(invoicePayMock).toHaveBeenCalledWith("in_mine");
+  });
+
+  it("does not expose Stripe exception details", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    invoiceRetrieveMock.mockResolvedValue({ customer: "cus_me" });
+    invoicePayMock.mockRejectedValue(
+      new Error("Stripe request failed with sk_live_sensitive"),
+    );
+
+    const res = await POST(req(), ctx("in_mine"));
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Failed to pay invoice" });
   });
 });

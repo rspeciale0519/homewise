@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
-import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
+import {
+  sendEmail,
+  personalizeTemplate,
+  buildEmailHtml,
+  escapeHtmlTokens,
+  escapeHttpUrl,
+  sanitizeEmailSubject,
+} from "@/lib/email";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 
 export async function GET() {
   const auth = await requireAdminApi();
@@ -44,6 +53,7 @@ export async function POST(request: NextRequest) {
       recipientIds = [...new Set([...recipientIds, ...tagged.map((t) => t.contactId)])];
     } else if (body.send && recipientIds.length === 0) {
       const contacts = await prisma.contact.findMany({
+        where: { marketingEmailOptOutAt: null },
         select: { id: true },
       });
       recipientIds = contacts.map((contact) => contact.id);
@@ -66,7 +76,10 @@ export async function POST(request: NextRequest) {
 
     if (body.send && recipientIds.length > 0) {
       const contacts = await prisma.contact.findMany({
-        where: { id: { in: recipientIds } },
+        where: {
+          id: { in: recipientIds },
+          marketingEmailOptOutAt: null,
+        },
         select: { id: true, email: true, firstName: true, lastName: true },
       });
 
@@ -74,17 +87,40 @@ export async function POST(request: NextRequest) {
       let sentCount = 0;
 
       for (const contact of contacts) {
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "contact", id: contact.id },
+          contact.email,
+        );
+        const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
         const tokens: Record<string, string> = {
           first_name: contact.firstName,
           last_name: contact.lastName,
           site_url: siteUrl,
-          unsubscribe_url: `${siteUrl}/unsubscribe?id=${contact.id}`,
+          unsubscribe_url: unsubscribeUrl,
         };
+        const subject = sanitizeEmailSubject(
+          personalizeTemplate(body.subject, tokens),
+        );
+        const htmlTokens = escapeHtmlTokens(tokens);
+        htmlTokens.site_url = escapeHttpUrl(siteUrl).replace(/\/$/, "");
+        htmlTokens.unsubscribe_url = escapeHttpUrl(unsubscribeUrl);
+        const emailBody = sanitizeRichHtml(
+          personalizeTemplate(sanitizedBody, htmlTokens),
+        );
+        const html = personalizeTemplate(buildEmailHtml(emailBody), {
+          unsubscribe_url: htmlTokens.unsubscribe_url,
+        });
+
+        if (!await canSendPreferenceEmail({
+          kind: "contact",
+          id: contact.id,
+          recipientEmail: contact.email,
+        })) continue;
 
         const result = await sendEmail({
           to: contact.email,
-          subject: personalizeTemplate(body.subject, tokens),
-          html: buildEmailHtml(personalizeTemplate(sanitizedBody, tokens)),
+          subject,
+          html,
           tags: [
             { name: "type", value: "broadcast" },
             { name: "broadcast_id", value: broadcast.id },

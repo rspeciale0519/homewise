@@ -1,7 +1,16 @@
 import { inngest } from "../client";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
+import {
+  buildEmailHtml,
+  escapeHtml,
+  escapeHttpUrl,
+  personalizeTemplate,
+  sanitizeEmailSubject,
+  sendEmail,
+} from "@/lib/email";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 import { semanticSearch } from "@/lib/ai/embeddings";
 import { areMlsBackfillAlertsSuppressed } from "@/lib/mls-alert-suppression";
 import { withIdx } from "@/lib/mls-visibility";
@@ -91,14 +100,22 @@ export const smartListingAlerts = inngest.createFunction(
         const siteUrl = getSiteUrl();
 
         const formatListings = (listings: typeof exactMatches) => listings.map((l) => {
-          const imageUrl = toAbsoluteSiteUrl(l.imageUrl, siteUrl);
+          const absoluteImageUrl = toAbsoluteSiteUrl(l.imageUrl, siteUrl);
+          const imageUrl = absoluteImageUrl ? escapeHttpUrl(absoluteImageUrl) : "";
+          const address = escapeHtml(l.address);
+          const city = escapeHtml(l.city);
+          const price = escapeHtml(l.price.toLocaleString());
+          const beds = escapeHtml(String(l.beds));
+          const baths = escapeHtml(String(l.baths));
+          const sqft = escapeHtml(l.sqft.toLocaleString());
+
           return `
             <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:12px">
-              ${imageUrl ? `<img src="${imageUrl}" alt="${l.address}" style="width:100%;height:160px;object-fit:cover">` : ""}
+              ${imageUrl ? `<img src="${imageUrl}" alt="${address}" style="width:100%;height:160px;object-fit:cover">` : ""}
               <div style="padding:12px">
-                <p style="margin:0;font-weight:600">${l.address}, ${l.city}</p>
-                <p style="margin:4px 0;color:#2563eb;font-weight:700">$${l.price.toLocaleString()}</p>
-                <p style="margin:0;font-size:13px;color:#64748b">${l.beds} bed · ${l.baths} bath · ${l.sqft.toLocaleString()} sqft</p>
+                <p style="margin:0;font-weight:600">${address}, ${city}</p>
+                <p style="margin:4px 0;color:#2563eb;font-weight:700">$${price}</p>
+                <p style="margin:0;font-size:13px;color:#64748b">${beds} bed · ${baths} bath · ${sqft} sqft</p>
               </div>
             </div>
           `;
@@ -110,25 +127,43 @@ export const smartListingAlerts = inngest.createFunction(
           listingsHtml += formatListings(aiSuggestions);
         }
 
-        const tokens: Record<string, string> = {
-          first_name: search.user.firstName,
-          count: String(totalMatches),
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "saved_search", id: search.id },
+          search.user.email,
+        );
+        const safeTokens: Record<string, string> = {
+          first_name: escapeHtml(search.user.firstName),
+          count: escapeHtml(String(totalMatches)),
+          // This fragment is trusted because formatListings escapes every
+          // dynamic value before it creates the markup.
           listings_html: listingsHtml,
-          site_url: siteUrl,
-          unsubscribe_url: `${siteUrl}/unsubscribe?search=${search.id}`,
+          search_url: escapeHttpUrl(`${siteUrl}/search`),
+          unsubscribe_url: escapeHttpUrl(
+            `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
+          ),
         };
+        const bodyTemplate = buildEmailHtml(`
+          <h2>New Listings for You!</h2>
+          <p>Hi {{first_name}}, we found <strong>{{count}} new listings</strong> matching your saved search.</p>
+          {{listings_html}}
+          <p style="text-align:center;margin-top:24px">
+            <a href="{{search_url}}" class="btn">View All Results</a>
+          </p>
+        `);
+        const personalizedHtml = personalizeTemplate(bodyTemplate, safeTokens);
+
+        if (!await canSendPreferenceEmail({
+          kind: "saved_search",
+          id: search.id,
+          recipientEmail: search.user.email,
+        })) return;
 
         await sendEmail({
           to: search.user.email,
-          subject: personalizeTemplate(`{{count}} new listings match your search`, tokens),
-          html: buildEmailHtml(personalizeTemplate(`
-            <h2>New Listings for You!</h2>
-            <p>Hi {{first_name}}, we found <strong>{{count}} new listings</strong> matching your saved search.</p>
-            {{listings_html}}
-            <p style="text-align:center;margin-top:24px">
-              <a href="{{site_url}}/search" class="btn">View All Results</a>
-            </p>
-          `, tokens)),
+          subject: sanitizeEmailSubject(
+            personalizeTemplate("{{count}} new listings match your search", safeTokens),
+          ),
+          html: personalizedHtml,
           tags: [{ name: "type", value: "smart_alert" }],
         });
 

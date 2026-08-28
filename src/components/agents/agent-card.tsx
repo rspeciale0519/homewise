@@ -4,13 +4,14 @@ import type { Agent } from "@/types/agent";
 
 interface AgentCardProps {
   agent: Agent;
+  eager?: boolean;
 }
 
 function getInitials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
 
-export function AgentCard({ agent }: AgentCardProps) {
+export function AgentCard({ agent, eager = false }: AgentCardProps) {
   const initials = getInitials(agent.firstName, agent.lastName);
   const fullName = `${agent.firstName} ${agent.lastName}`;
 
@@ -26,6 +27,7 @@ export function AgentCard({ agent }: AgentCardProps) {
             src={agent.photoUrl}
             alt={fullName}
             fill
+            loading={eager ? "eager" : "lazy"}
             className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />

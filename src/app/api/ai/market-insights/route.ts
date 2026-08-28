@@ -2,30 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
 import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
+import {
+  InvalidJsonBodyError,
+  readJsonBodyWithLimit,
+  RequestBodyTooLargeError,
+} from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const marketInsightsSchema = z.object({
-  city: z.string().min(1).optional(),
-});
+  city: z.string().trim().min(1).max(120).optional(),
+}).strict();
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
-  const params = Object.fromEntries(request.nextUrl.searchParams.entries());
-  const input = marketInsightsSchema.safeParse(params);
-  if (!input.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: input.error.flatten().fieldErrors },
-      { status: 400 },
-    );
-  }
-  const city = input.data.city ?? "Orlando";
-
   try {
+    const raw = await readJsonBodyWithLimit(request, 2_000);
+    const input = marketInsightsSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const city = input.data.city ?? "Orlando";
+
     if (!analyticsBoEnabled()) {
       return NextResponse.json(analyticsUnavailable("market_insights"), { status: 503 });
     }
@@ -61,6 +67,12 @@ export async function GET(request: NextRequest) {
 
 Make it informative and include a subtle call to action to work with a local agent.`;
 
+    const entitlementError = await reserveStaffFeature(
+      auth,
+      "ai_listing_descriptions",
+    );
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("market_insights", {
       feature: "market_insights",
       systemPrompt: "You are a real estate market analyst for Central Florida. Write concise, data-driven insights. No disclaimers.",
@@ -74,6 +86,12 @@ Make it informative and include a subtle call to action to work with a local age
       insight: result.content,
     });
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/market-insights] error:", err);
     return NextResponse.json({ error: "Failed to generate insights" }, { status: 500 });
   }

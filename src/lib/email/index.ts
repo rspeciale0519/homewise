@@ -27,6 +27,7 @@ interface SendEmailInput {
   replyTo?: string;
   tags?: { name: string; value: string }[];
   attachments?: EmailAttachment[];
+  idempotencyKey?: string;
 }
 
 interface SendEmailResult {
@@ -42,19 +43,23 @@ export async function sendEmail({
   replyTo,
   tags,
   attachments,
+  idempotencyKey,
 }: SendEmailInput): Promise<SendEmailResult> {
-  const { data, error } = await getResend().emails.send({
-    from: from ?? FROM_EMAIL,
-    to,
-    subject,
-    html,
-    replyTo,
-    tags,
-    attachments: attachments?.map((a) => ({
-      filename: a.filename,
-      content: a.content,
-    })),
-  });
+  const { data, error } = await getResend().emails.send(
+    {
+      from: sanitizeEmailSubject(from ?? FROM_EMAIL),
+      to,
+      subject: sanitizeEmailSubject(subject),
+      html,
+      replyTo: replyTo ? sanitizeEmailSubject(replyTo) : undefined,
+      tags,
+      attachments: attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+      })),
+    },
+    idempotencyKey ? { idempotencyKey } : undefined,
+  );
 
   if (error) {
     console.error("[email] send failed:", error);
@@ -68,20 +73,79 @@ export function personalizeTemplate(
   template: string,
   tokens: Record<string, string>,
 ): string {
-  let result = template;
-  for (const [key, value] of Object.entries(tokens)) {
-    result = result.replaceAll(`{{${key}}}`, value);
-  }
-  return result;
+  return template.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, (match, key: string) => (
+    tokens[key] ?? match
+  ));
 }
 
-export function buildEmailHtml(body: string, preheader?: string): string {
+interface VerifyResendWebhookInput {
+  payload: string;
+  headers: {
+    id: string;
+    timestamp: string;
+    signature: string;
+  };
+  webhookSecret: string;
+}
+
+export function verifyResendWebhook(input: VerifyResendWebhookInput): unknown {
+  return getResend().webhooks.verify(input);
+}
+
+export function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      default:
+        return "&#39;";
+    }
+  });
+}
+
+export function escapeHtmlTokens(
+  tokens: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(tokens).map(([key, value]) => [key, escapeHtml(value)]),
+  );
+}
+
+export function escapeHttpUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    return escapeHtml(url.toString());
+  } catch {
+    return "";
+  }
+}
+
+export function sanitizeEmailSubject(value: string): string {
+  return value
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .slice(0, 200);
+}
+
+export function buildEmailHtml(
+  body: string,
+  preheader?: string,
+  includeUnsubscribe = true,
+): string {
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  ${preheader ? `<span style="display:none;max-height:0;overflow:hidden">${preheader}</span>` : ""}
+  ${preheader ? `<span style="display:none;max-height:0;overflow:hidden">${escapeHtml(preheader)}</span>` : ""}
   <style>
     body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; }
@@ -104,7 +168,7 @@ export function buildEmailHtml(body: string, preheader?: string): string {
     </div>
     <div class="footer">
       <p>Homewise FL Real Estate</p>
-      <p><a href="{{unsubscribe_url}}">Unsubscribe</a></p>
+      ${includeUnsubscribe ? '<p><a href="{{unsubscribe_url}}">Unsubscribe</a></p>' : ""}
     </div>
   </div>
 </body>

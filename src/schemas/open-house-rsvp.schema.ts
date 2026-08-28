@@ -7,6 +7,6 @@ export const openHouseRsvpSchema = z.object({
   name: z.string().min(1).max(120).trim(),
   email: z.string().trim().toLowerCase().email().max(255),
   phone: z.string().max(30).trim().optional().or(z.literal("")),
-});
+}).strict();
 
 export type OpenHouseRsvpInput = z.infer<typeof openHouseRsvpSchema>;

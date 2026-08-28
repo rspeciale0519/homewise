@@ -1,8 +1,16 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, personalizeTemplate } from "@/lib/email";
+import {
+  sendEmail,
+  personalizeTemplate,
+  escapeHtmlTokens,
+  escapeHttpUrl,
+  sanitizeEmailSubject,
+} from "@/lib/email";
 import { birthdayGreeting, pastClientAnniversary } from "@/lib/email/templates";
 import { buildAgentBrandedEmailHtml } from "@/lib/email/agent-branded";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 
 const AGENT_SELECT = {
   firstName: true, lastName: true, email: true, phone: true,
@@ -19,7 +27,10 @@ export const dailyBirthdayCheck = inngest.createFunction(
 
     const birthdayIds = await step.run("find-birthday-contacts", async () => {
       const contacts = await prisma.contact.findMany({
-        where: { birthday: { not: null } },
+        where: {
+          birthday: { not: null },
+          marketingEmailOptOutAt: null,
+        },
         select: { id: true, birthday: true },
       });
       return contacts
@@ -29,7 +40,10 @@ export const dailyBirthdayCheck = inngest.createFunction(
 
     const anniversaryIds = await step.run("find-anniversary-contacts", async () => {
       const contacts = await prisma.contact.findMany({
-        where: { closeAnniversary: { not: null } },
+        where: {
+          closeAnniversary: { not: null },
+          marketingEmailOptOutAt: null,
+        },
         select: { id: true, closeAnniversary: true },
       });
       return contacts
@@ -42,8 +56,8 @@ export const dailyBirthdayCheck = inngest.createFunction(
 
     for (const contactId of birthdayIds) {
       await step.run(`birthday-${contactId}`, async () => {
-        const contact = await prisma.contact.findUnique({
-          where: { id: contactId },
+        const contact = await prisma.contact.findFirst({
+          where: { id: contactId, marketingEmailOptOutAt: null },
           include: { assignedAgent: { select: AGENT_SELECT } },
         });
         if (!contact) return;
@@ -51,18 +65,36 @@ export const dailyBirthdayCheck = inngest.createFunction(
         const template = birthdayGreeting();
         const agent = contact.assignedAgent;
         const agentName = agent ? `${agent.firstName} ${agent.lastName}` : "Your Homewise Agent";
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "contact", id: contact.id },
+          contact.email,
+        );
+        const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
 
         const tokens: Record<string, string> = {
           first_name: contact.firstName,
           agent_name: agentName,
           site_url: siteUrl,
-          unsubscribe_url: `${siteUrl}/unsubscribe?id=${contact.id}`,
+          unsubscribe_url: unsubscribeUrl,
         };
 
-        const subject = personalizeTemplate(template.subject, tokens);
-        const bodyHtml = personalizeTemplate(template.html, tokens);
-        const html = agent ? buildAgentBrandedEmailHtml(bodyHtml, agent) : bodyHtml;
+        const subject = sanitizeEmailSubject(
+          personalizeTemplate(template.subject, tokens),
+        );
+        const htmlTokens = escapeHtmlTokens(tokens);
+        htmlTokens.site_url = escapeHttpUrl(siteUrl).replace(/\/$/, "");
+        htmlTokens.unsubscribe_url = escapeHttpUrl(unsubscribeUrl);
+        const wrappedTemplate = agent
+          ? buildAgentBrandedEmailHtml(template.body, agent)
+          : template.html;
+        const html = personalizeTemplate(wrappedTemplate, htmlTokens);
         const fromName = agent ? `${agent.firstName} ${agent.lastName} via Homewise FL` : undefined;
+
+        if (!await canSendPreferenceEmail({
+          kind: "contact",
+          id: contact.id,
+          recipientEmail: contact.email,
+        })) return;
 
         await sendEmail({
           to: contact.email,
@@ -78,24 +110,42 @@ export const dailyBirthdayCheck = inngest.createFunction(
 
     for (const contactId of anniversaryIds) {
       await step.run(`anniversary-${contactId}`, async () => {
-        const contact = await prisma.contact.findUnique({
-          where: { id: contactId },
+        const contact = await prisma.contact.findFirst({
+          where: { id: contactId, marketingEmailOptOutAt: null },
           include: { assignedAgent: { select: AGENT_SELECT } },
         });
         if (!contact) return;
 
         const template = pastClientAnniversary();
         const agent = contact.assignedAgent;
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "contact", id: contact.id },
+          contact.email,
+        );
+        const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
         const tokens: Record<string, string> = {
           first_name: contact.firstName,
           site_url: siteUrl,
-          unsubscribe_url: `${siteUrl}/unsubscribe?id=${contact.id}`,
+          unsubscribe_url: unsubscribeUrl,
         };
 
-        const subject = personalizeTemplate(template.subject, tokens);
-        const bodyHtml = personalizeTemplate(template.html, tokens);
-        const html = agent ? buildAgentBrandedEmailHtml(bodyHtml, agent) : bodyHtml;
+        const subject = sanitizeEmailSubject(
+          personalizeTemplate(template.subject, tokens),
+        );
+        const htmlTokens = escapeHtmlTokens(tokens);
+        htmlTokens.site_url = escapeHttpUrl(siteUrl).replace(/\/$/, "");
+        htmlTokens.unsubscribe_url = escapeHttpUrl(unsubscribeUrl);
+        const wrappedTemplate = agent
+          ? buildAgentBrandedEmailHtml(template.body, agent)
+          : template.html;
+        const html = personalizeTemplate(wrappedTemplate, htmlTokens);
         const fromName = agent ? `${agent.firstName} ${agent.lastName} via Homewise FL` : undefined;
+
+        if (!await canSendPreferenceEmail({
+          kind: "contact",
+          id: contact.id,
+          recipientEmail: contact.email,
+        })) return;
 
         await sendEmail({
           to: contact.email,

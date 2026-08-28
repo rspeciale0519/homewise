@@ -33,10 +33,15 @@ describe("uploadEditorImage", () => {
   });
 
   it("requests a signed upload URL, PUTs the file, returns public URL", async () => {
-    adminFetchMock.mockResolvedValue({
-      uploadUrl: "https://supa.example.com/upload-signed",
-      fileKey: "training/abc-hero.png",
-    });
+    adminFetchMock.mockImplementation(
+      (_url: string, init: { method: string }) =>
+        init.method === "POST"
+          ? Promise.resolve({
+              uploadUrl: "https://supa.example.com/upload-signed",
+              pendingKey: "pending/abc-hero.png",
+            })
+          : Promise.resolve({ fileKey: "training/abc-hero.png" }),
+    );
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -49,6 +54,7 @@ describe("uploadEditorImage", () => {
         body: JSON.stringify({
           filename: "hero.png",
           contentType: "image/png",
+          byteSize: 3,
         }),
       }),
     );
@@ -59,6 +65,17 @@ describe("uploadEditorImage", () => {
         headers: { "Content-Type": "image/png" },
       }),
     );
+    expect(adminFetchMock).toHaveBeenCalledWith(
+      "/api/admin/training/upload",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          pendingKey: "pending/abc-hero.png",
+          contentType: "image/png",
+          byteSize: 3,
+        }),
+      },
+    );
     expect(url).toBe(
       "https://supa.example.com/storage/v1/object/public/training-files/training/abc-hero.png",
     );
@@ -67,7 +84,7 @@ describe("uploadEditorImage", () => {
   it("throws when the PUT fails", async () => {
     adminFetchMock.mockResolvedValue({
       uploadUrl: "https://supa.example.com/upload-signed",
-      fileKey: "training/abc-hero.png",
+      pendingKey: "pending/abc-hero.png",
     });
     vi.stubGlobal(
       "fetch",

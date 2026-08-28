@@ -1,6 +1,16 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
+import {
+  sendEmail,
+  personalizeTemplate,
+  buildEmailHtml,
+  escapeHtmlTokens,
+  escapeHttpUrl,
+  sanitizeEmailSubject,
+} from "@/lib/email";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 
 interface ActionData {
   emailSubject?: string;
@@ -47,12 +57,21 @@ export const processBehavioralTrigger = inngest.createFunction(
 
         switch (rule.actionType) {
           case "send_email": {
-            if (!actionData.emailSubject || !actionData.emailBody) break;
+            if (
+              contact.marketingEmailOptOutAt
+              || !actionData.emailSubject
+              || !actionData.emailBody
+            ) break;
+            const unsubscribeToken = createUnsubscribeToken(
+              { kind: "contact", id: contact.id },
+              contact.email,
+            );
+            const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
             const tokens: Record<string, string> = {
               first_name: contact.firstName,
               last_name: contact.lastName,
               site_url: siteUrl,
-              unsubscribe_url: `${siteUrl}/unsubscribe?id=${contact.id}`,
+              unsubscribe_url: unsubscribeUrl,
             };
 
             if (metadata) {
@@ -61,17 +80,36 @@ export const processBehavioralTrigger = inngest.createFunction(
               }
             }
 
+            const subject = sanitizeEmailSubject(
+              personalizeTemplate(actionData.emailSubject, tokens),
+            );
+            const htmlTokens = escapeHtmlTokens(tokens);
+            htmlTokens.site_url = escapeHttpUrl(siteUrl).replace(/\/$/, "");
+            htmlTokens.unsubscribe_url = escapeHttpUrl(unsubscribeUrl);
+            const body = sanitizeRichHtml(
+              personalizeTemplate(actionData.emailBody, htmlTokens),
+            );
+            const html = personalizeTemplate(buildEmailHtml(body), {
+              unsubscribe_url: htmlTokens.unsubscribe_url,
+            });
+
+            if (!await canSendPreferenceEmail({
+              kind: "contact",
+              id: contact.id,
+              recipientEmail: contact.email,
+            })) break;
+
             await sendEmail({
               to: contact.email,
-              subject: personalizeTemplate(actionData.emailSubject, tokens),
-              html: buildEmailHtml(personalizeTemplate(actionData.emailBody, tokens)),
+              subject,
+              html,
               tags: [{ name: "type", value: "automation" }, { name: "rule_id", value: rule.id }],
             });
             break;
           }
 
           case "enroll_campaign": {
-            if (!actionData.campaignId) break;
+            if (contact.marketingEmailOptOutAt || !actionData.campaignId) break;
             await prisma.campaignEnrollment.upsert({
               where: {
                 campaignId_contactId: { campaignId: actionData.campaignId, contactId: contact.id },

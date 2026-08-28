@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
+import { logApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 
@@ -10,8 +11,8 @@ export async function DELETE(
   const auth = await requireAuthApi();
   if (isError(auth)) return auth.error;
 
-  const agent = await prisma.agent.findFirst({
-    where: { email: auth.profile.email ?? undefined },
+  const agent = await prisma.agent.findUnique({
+    where: { userId: auth.user.id },
     include: { stripeCustomer: true },
   });
 
@@ -32,9 +33,9 @@ export async function DELETE(
     await stripe.paymentMethods.detach(id);
     return NextResponse.json({ success: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    logApiError("billing/payment-methods/detach", err);
     return NextResponse.json(
-      { error: "Failed to detach payment method", detail: message },
+      { error: "Failed to detach payment method" },
       { status: 500 },
     );
   }

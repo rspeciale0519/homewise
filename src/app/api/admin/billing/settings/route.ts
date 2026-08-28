@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
-import { billingSettingsUpdateSchema } from "@/schemas/billing.schema";
+import {
+  billingSettingsSchema,
+  billingSettingsUpdateSchema,
+} from "@/schemas/billing.schema";
 
 const DEFAULTS = {
   gracePeriodWarningDays: 7,
@@ -64,6 +67,18 @@ export async function PUT(request: NextRequest) {
 
   try {
     const existing = await prisma.billingSettings.findFirst();
+    const completeSettings = billingSettingsSchema.safeParse({
+      ...DEFAULTS,
+      ...existing,
+      ...parsed.data,
+    });
+
+    if (!completeSettings.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: completeSettings.error.flatten() },
+        { status: 400 },
+      );
+    }
 
     const settings = existing
       ? await prisma.billingSettings.update({
@@ -71,7 +86,7 @@ export async function PUT(request: NextRequest) {
           data: parsed.data,
         })
       : await prisma.billingSettings.create({
-          data: { ...DEFAULTS, ...parsed.data },
+          data: completeSettings.data,
         });
 
     return NextResponse.json({ settings });

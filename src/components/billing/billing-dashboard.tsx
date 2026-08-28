@@ -6,17 +6,16 @@ import { PlanManager } from "./plan-manager";
 import { PaymentMethodsTab } from "./payment-methods-tab";
 import { InvoicesTab } from "./invoices-tab";
 import { SettingsTab } from "./settings-tab";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import type {
-  ProductWithFeatures,
   FeatureEntitlement,
 } from "@/app/(marketing)/pricing/page";
-
-interface SubscriptionItem {
-  productType: string;
-  productName: string;
-  stripePriceId: string;
-  quantity: number;
-}
+import type {
+  BillingInterval,
+  BillingProduct,
+  BillingSubscriptionItem,
+} from "./types";
 
 interface Subscription {
   status: string;
@@ -24,7 +23,7 @@ interface Subscription {
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
   trialEnd: string | null;
-  items: SubscriptionItem[];
+  items: BillingSubscriptionItem[];
 }
 
 interface PaymentRecord {
@@ -38,13 +37,11 @@ interface PaymentRecord {
 }
 
 type TabKey = "plan" | "payments" | "invoices" | "settings";
-type BillingInterval = "monthly" | "annual";
-
 interface BillingDashboardProps {
   subscription: Subscription | null;
   paymentRecords: PaymentRecord[];
   hasStripeCustomer: boolean;
-  productConfigs: ProductWithFeatures[];
+  productConfigs: BillingProduct[];
   entitlements: FeatureEntitlement[];
 }
 
@@ -113,6 +110,23 @@ function formatAmount(cents: number): string {
   }).format(cents / 100);
 }
 
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatItemAmount(item: BillingSubscriptionItem): string {
+  if (item.billingAmount === null || item.billingInterval === null) {
+    return "Price unavailable";
+  }
+
+  const amount = formatAmount(item.billingAmount * item.quantity);
+  return `${amount}/${item.billingInterval === "annual" ? "year" : "month"}`;
+}
+
 export function BillingDashboard({
   subscription,
   paymentRecords: _paymentRecords,
@@ -124,34 +138,48 @@ export function BillingDashboard({
 
   const billingInterval = useMemo<BillingInterval>(() => {
     if (!subscription) return "monthly";
-    const hasAnnual = subscription.items.some((item) =>
-      productConfigs.some((b) => b.annualPriceId === item.stripePriceId),
+    const hasAnnual = subscription.items.some(
+      (item) => item.billingInterval === "annual",
     );
     return hasAnnual ? "annual" : "monthly";
-  }, [subscription, productConfigs]);
+  }, [subscription]);
 
-  const [currentInterval, setCurrentInterval] =
-    useState<BillingInterval>(billingInterval);
-
-  const activeItemCount = subscription?.items.filter(
-    (i) => i.productType === "bundle",
-  ).length ?? 0;
+  const activeItemCount = subscription?.items.length ?? 0;
 
   const estimatedTotal = useMemo(() => {
     if (!subscription) return 0;
     return subscription.items.reduce((sum, item) => {
-      const config = productConfigs.find(
-        (b) =>
-          b.monthlyPriceId === item.stripePriceId ||
-          b.annualPriceId === item.stripePriceId,
-      );
-      if (!config) return sum;
-      if (currentInterval === "annual") {
-        return sum + Math.round(config.annualAmount / 12);
+      if (item.billingAmount === null || item.billingInterval === null) {
+        return sum;
       }
-      return sum + config.monthlyAmount;
+      const monthlyAmount = item.billingInterval === "annual"
+        ? item.billingAmount / 12
+        : item.billingAmount;
+      return sum + monthlyAmount * item.quantity;
     }, 0);
-  }, [subscription, productConfigs, currentInterval]);
+  }, [subscription]);
+
+  const canChangeBillingInterval = useMemo(() => {
+    if (!subscription || subscription.items.length === 0) return false;
+    const targetInterval = billingInterval === "annual" ? "monthly" : "annual";
+    const matchingProducts = subscription.items.map((item) => ({
+      item,
+      product: productConfigs.find(
+        (product) =>
+          product.monthlyPriceId === item.stripePriceId ||
+          product.annualPriceId === item.stripePriceId,
+      ),
+    }));
+
+    if (matchingProducts.some(({ product }) => !product?.isActive)) return false;
+
+    return matchingProducts.some(({ item, product }) => {
+      const targetPriceId = targetInterval === "annual"
+        ? product?.annualPriceId
+        : product?.monthlyPriceId;
+      return Boolean(targetPriceId && targetPriceId !== item.stripePriceId);
+    });
+  }, [billingInterval, productConfigs, subscription]);
 
   if (!subscription) {
     return (
@@ -161,7 +189,7 @@ export function BillingDashboard({
             Choose your plan
           </h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto">
-            Pick the bundles or individual features that match how you work.
+            Pick the plans that match how you work.
             You can upgrade, downgrade, or cancel at any time.
           </p>
         </div>
@@ -205,7 +233,7 @@ export function BillingDashboard({
           </div>
           <div className="flex items-center gap-6 text-sm">
             <div>
-              <span className="text-white/50 text-xs">Active bundles</span>
+              <span className="text-white/50 text-xs">Active products</span>
               <p className="text-white font-semibold">{activeItemCount}</p>
             </div>
             <div>
@@ -214,7 +242,7 @@ export function BillingDashboard({
             </div>
             {estimatedTotal > 0 && (
               <div>
-                <span className="text-white/50 text-xs">Monthly total</span>
+                <span className="text-white/50 text-xs">Monthly equivalent</span>
                 <p className="text-white font-bold text-lg">
                   {formatAmount(estimatedTotal)}
                 </p>
@@ -223,6 +251,51 @@ export function BillingDashboard({
           </div>
         </div>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-1">
+          <h2 className="font-serif text-base font-semibold text-navy-700">
+            Subscription products
+          </h2>
+          <p className="text-xs text-slate-500">
+            Current period: {formatDate(subscription.currentPeriodStart)} to{" "}
+            {formatDate(subscription.currentPeriodEnd)}
+          </p>
+        </CardHeader>
+        <CardBody>
+          <ul className="flex flex-col gap-3" aria-label="Subscription products">
+            {subscription.items.map((item) => (
+              <li
+                key={`${item.stripePriceId}-${item.productType}`}
+                className="flex flex-col gap-2 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-semibold text-navy-700">
+                    {item.productName}
+                  </p>
+                  {item.quantity > 1 && (
+                    <p className="text-xs text-slate-500">
+                      Quantity: {item.quantity}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" size="sm">
+                    {item.billingInterval === "annual"
+                      ? "Annual"
+                      : item.billingInterval === "monthly"
+                        ? "Monthly"
+                        : "Unknown interval"}
+                  </Badge>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {formatItemAmount(item)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardBody>
+      </Card>
 
       {subscription.status === "past_due" && (
         <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
@@ -271,8 +344,7 @@ export function BillingDashboard({
             items={subscription.items}
             productConfigs={productConfigs}
             entitlements={entitlements}
-            billingInterval={currentInterval}
-            onBillingIntervalChange={setCurrentInterval}
+            billingInterval={billingInterval}
           />
         )}
         {activeTab === "payments" && <PaymentMethodsTab />}
@@ -282,7 +354,8 @@ export function BillingDashboard({
             status={subscription.status}
             currentPeriodEnd={subscription.currentPeriodEnd}
             cancelAtPeriodEnd={subscription.cancelAtPeriodEnd}
-            billingInterval={currentInterval}
+            billingInterval={billingInterval}
+            canChangeBillingInterval={canChangeBillingInterval}
             items={subscription.items}
           />
         )}

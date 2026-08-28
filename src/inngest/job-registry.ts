@@ -11,6 +11,12 @@ export interface JobMeta {
 }
 
 export const JOB_REGISTRY: Record<string, JobMeta> = {
+  "cleanup-rate-limit-buckets": {
+    name: "Rate Limit Cleanup",
+    description: "Delete expired shared rate-limit buckets",
+    schedule: "Hourly at :15",
+    type: "cron",
+  },
   "mls-sync": {
     name: "MLS Sync",
     description: "Sync listings from Stellar MLS",

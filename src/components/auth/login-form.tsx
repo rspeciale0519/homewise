@@ -6,6 +6,10 @@ import Link from "next/link";
 import { loginSchema, magicLinkSchema } from "@/schemas/login.schema";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { cn } from "@/lib/utils";
+import {
+  DEFAULT_AUTH_REDIRECT,
+  safeAuthRedirectPath,
+} from "@/lib/auth-redirect";
 
 type Mode = "password" | "magic-link";
 
@@ -13,8 +17,8 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawRedirectTo = searchParams.get("redirectTo");
-  const redirectTo = rawRedirectTo ?? "/dashboard";
-  const redirectToIsDefault = !rawRedirectTo || rawRedirectTo === "/dashboard";
+  const redirectTo = safeAuthRedirectPath(rawRedirectTo);
+  const redirectToIsDefault = redirectTo === DEFAULT_AUTH_REDIRECT;
   const { supabase } = useSupabase();
 
   const [mode, setMode] = useState<Mode>("password");
@@ -88,8 +92,8 @@ export function LoginForm() {
         });
         if (res.ok) {
           const json = (await res.json()) as { path?: string };
-          if (typeof json.path === "string" && json.path.startsWith("/")) {
-            destination = json.path;
+          if (typeof json.path === "string") {
+            destination = safeAuthRedirectPath(json.path);
           }
         }
       } catch {

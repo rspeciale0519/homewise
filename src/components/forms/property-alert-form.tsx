@@ -20,6 +20,7 @@ export function PropertyAlertForm() {
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [serverError, setServerError] = useState("");
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -78,6 +79,8 @@ export function PropertyAlertForm() {
         throw new Error(body?.error ?? "Submission failed");
       }
 
+      const body = await res.json().catch(() => null) as { pendingConfirmation?: boolean } | null;
+      setPendingConfirmation(body?.pendingConfirmation === true);
       setStatus("success");
     } catch (err) {
       setServerError(err instanceof Error ? err.message : "Something went wrong.");
@@ -88,12 +91,15 @@ export function PropertyAlertForm() {
   if (status === "success") {
     return (
       <FormSuccess
-        title="You're Subscribed!"
-        message="We'll send you email alerts when new listings match your criteria."
+        title={pendingConfirmation ? "Check Your Email" : "You're Subscribed!"}
+        message={pendingConfirmation
+          ? "Use the confirmation link in your email to start property alerts."
+          : "We'll send you email alerts when new listings match your criteria."}
         onReset={() => {
           setForm({ email: "", name: "", cities: [], minPrice: "", maxPrice: "", beds: "" });
           setErrors({});
           setTouched(new Set());
+          setPendingConfirmation(false);
           setStatus("idle");
         }}
       />

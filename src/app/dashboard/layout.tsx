@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/layout/header";
+import { SkipLink } from "@/components/layout/skip-link";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { DashboardToaster } from "@/components/dashboard/dashboard-toaster";
 
@@ -40,10 +41,11 @@ export default async function DashboardLayout({
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-slate-50/50">
+      <SkipLink />
       <Header />
       <div className="flex flex-1 min-h-0">
         <Sidebar role={userRole} />
-        <main className="flex-1 overflow-y-auto">
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

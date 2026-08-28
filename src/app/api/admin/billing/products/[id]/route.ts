@@ -118,29 +118,20 @@ export async function PUT(
         : {}),
     };
 
+    const featureChanges = parsed.data.featureKeys !== undefined
+      ? {
+          features: {
+            deleteMany: {},
+            create: parsed.data.featureKeys.map((featureKey) => ({ featureKey })),
+          },
+        }
+      : {};
+
     const bundle = await prisma.productConfig.update({
       where: { id },
-      data: bundleData,
+      data: { ...bundleData, ...featureChanges },
       include: { features: true },
     });
-
-    if (parsed.data.featureKeys !== undefined) {
-      await prisma.productFeature.deleteMany({ where: { productId: id } });
-      if (parsed.data.featureKeys.length > 0) {
-        await prisma.productFeature.createMany({
-          data: parsed.data.featureKeys.map((featureKey) => ({
-            productId: id,
-            featureKey,
-          })),
-        });
-      }
-
-      const updated = await prisma.productConfig.findUnique({
-        where: { id },
-        include: { features: true },
-      });
-      return NextResponse.json({ bundle: updated });
-    }
 
     return NextResponse.json({ bundle });
   } catch {

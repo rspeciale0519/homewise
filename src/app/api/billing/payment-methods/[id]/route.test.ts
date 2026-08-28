@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { requireAuthApiMock, agentFindFirstMock, pmRetrieveMock, pmDetachMock } =
+const { requireAuthApiMock, agentFindUniqueMock, pmRetrieveMock, pmDetachMock } =
   vi.hoisted(() => ({
     requireAuthApiMock: vi.fn(),
-    agentFindFirstMock: vi.fn(),
+    agentFindUniqueMock: vi.fn(),
     pmRetrieveMock: vi.fn(),
     pmDetachMock: vi.fn(),
   }));
@@ -15,7 +15,7 @@ vi.mock("@/lib/admin-api", () => ({
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { agent: { findFirst: agentFindFirstMock } },
+  prisma: { agent: { findUnique: agentFindUniqueMock } },
 }));
 
 vi.mock("@/lib/stripe", () => ({
@@ -42,7 +42,7 @@ function req(): NextRequest {
 beforeEach(() => {
   vi.clearAllMocks();
   requireAuthApiMock.mockResolvedValue(authed);
-  agentFindFirstMock.mockResolvedValue({
+  agentFindUniqueMock.mockResolvedValue({
     stripeCustomer: { stripeCustomerId: "cus_me" },
   });
 });
@@ -53,6 +53,9 @@ describe("DELETE /api/billing/payment-methods/[id]", () => {
     const res = await DELETE(req(), ctx("pm_victim"));
     expect(res.status).toBe(404);
     expect(pmDetachMock).not.toHaveBeenCalled();
+    expect(agentFindUniqueMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: "u1" } }),
+    );
   });
 
   it("detaches the payment method when it belongs to the caller", async () => {

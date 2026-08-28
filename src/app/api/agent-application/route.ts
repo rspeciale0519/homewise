@@ -7,10 +7,21 @@ import {
   agentApplicationAdminNotificationEmail,
 } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/constants";
+import { logApiError } from "@/lib/api-error";
+import { readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
+import { clientIpRateRule, publicMutationRateLimiter } from "@/lib/public-rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
-    const body: unknown = await request.json();
+    let body: unknown;
+    try {
+      body = await readJsonBodyWithLimit(request, 6_000);
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+      }
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
 
     // Honeypot: a filled "company" field means a bot. Silently accept, do nothing.
     if (body && typeof body === "object" && "company" in body && (body as { company?: unknown }).company) {
@@ -26,6 +37,24 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
+    const ipRule = clientIpRateRule(request, "agent-application", 10);
+    const rateLimit = await publicMutationRateLimiter.consume([
+      ...(ipRule ? [ipRule] : []),
+      { key: `agent-application:email:${data.email}`, limit: 3 },
+    ]);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: rateLimit.unavailable
+            ? "The application service is temporarily unavailable. Please try again later."
+            : "Too many applications. Please try again later.",
+        },
+        {
+          status: rateLimit.unavailable ? 503 : 429,
+          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+        },
+      );
+    }
 
     // HomeWise applications require MLS access; the no-MLS branch never submits here.
     if (!data.hasMlsAccess) {
@@ -67,7 +96,7 @@ export async function POST(request: NextRequest) {
       const confirm = agentApplicationReceivedEmail(data.firstName);
       await sendEmail({ to: data.email, subject: confirm.subject, html: confirm.html });
     } catch (err) {
-      console.error("[agent-application] applicant email failed:", err);
+      logApiError("agent-application/applicant-email", err);
     }
 
     if (adminTo) {
@@ -75,7 +104,7 @@ export async function POST(request: NextRequest) {
         const notify = agentApplicationAdminNotificationEmail(application, reviewUrl);
         await sendEmail({ to: adminTo, subject: notify.subject, html: notify.html });
       } catch (err) {
-        console.error("[agent-application] admin email failed:", err);
+        logApiError("agent-application/admin-email", err);
       }
     }
 

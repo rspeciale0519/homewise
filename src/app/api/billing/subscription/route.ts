@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { getGraceStatus } from "@/lib/billing/grace-period";
+import { resolveAgentPlatform } from "@/lib/platform/filter";
 
 export async function GET() {
   const auth = await requireAuthApi();
@@ -9,10 +10,8 @@ export async function GET() {
 
   const { user } = auth;
 
-  const agent = await prisma.agent.findFirst({
-    where: {
-      OR: [{ userId: user.id }, { email: user.email ?? "" }],
-    },
+  const agent = await prisma.agent.findUnique({
+    where: { userId: user.id },
     include: {
       subscription: {
         include: { items: true },
@@ -25,10 +24,12 @@ export async function GET() {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
+  const platform = resolveAgentPlatform(agent);
+
   const [graceStatus, availableBundles] = await Promise.all([
     getGraceStatus(agent.id),
     prisma.productConfig.findMany({
-      where: { isActive: true },
+      where: { isActive: true, platforms: { has: platform } },
       include: { features: true },
       orderBy: { sortOrder: "asc" },
     }),

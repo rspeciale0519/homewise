@@ -1,10 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { storageKeyFor } from "@/lib/mls-image";
 import type { ResoProperty } from "@/types/reso";
 import { detectPriceChange, mapResoToListingData } from "./mls-sync";
 import { priceHistoryEntriesFor } from "./mls-sync.mapper";
 
 const originalEnv = { ...process.env };
+
+beforeEach(() => {
+  process.env.MLS_MEDIA_ALLOWED_HOSTS = "media.example.test";
+});
 
 afterEach(() => {
   process.env = { ...originalEnv };
@@ -80,6 +84,24 @@ describe("MLS sync mapping", () => {
     process.env.MLS_IMAGE_SIGNING_SECRET = "secret";
 
     expect(mapResoToListingData(resoListing()).featured).toBe(false);
+  });
+
+  it("drops unapproved media before it creates signed proxy URLs", () => {
+    process.env.MLS_IMAGE_SIGNING_SECRET = "secret";
+
+    const mapped = mapResoToListingData(
+      resoListing({
+        Media: [
+          { MediaURL: "https://evil.test/photo.jpg", Order: 1 },
+          { MediaURL: "https://media.example.test/approved.jpg", Order: 2 },
+        ],
+      }),
+    );
+
+    expect(mapped.photoSources).toEqual([
+      "https://media.example.test/approved.jpg",
+    ]);
+    expect(mapped.photos).toHaveLength(1);
   });
 
   it("maps land listings without bed/bath/area fields using zero fallbacks", () => {

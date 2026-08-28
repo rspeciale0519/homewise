@@ -1,13 +1,98 @@
 import { z } from "zod";
 
+const billingSlugSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .regex(/^[a-z0-9_-]+$/);
+
+const uniqueBillingSlugs = z
+  .array(billingSlugSchema)
+  .max(20)
+  .refine((values) => new Set(values).size === values.length, {
+    message: "Duplicate product selections are not allowed",
+  });
+
+const billingFeatureKeySchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .toLowerCase()
+  .regex(/^[a-z0-9_]+$/);
+
+const uniqueBillingFeatureKeys = z
+  .array(billingFeatureKeySchema)
+  .refine((values) => new Set(values).size === values.length, {
+    message: "Duplicate feature keys are not allowed",
+  });
+
+function rejectOverlappingBundleChanges(
+  value: { addBundles: string[]; removeBundles: string[] },
+  context: z.RefinementCtx,
+): void {
+  const removals = new Set(value.removeBundles);
+  if (value.addBundles.some((slug) => removals.has(slug))) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "A product cannot be added and removed in the same request",
+    });
+  }
+}
+
+function rejectOverlappingProductChanges(
+  value: {
+    addBundles: string[];
+    removeBundles: string[];
+    addOns: string[];
+    removeAddOns: string[];
+  },
+  context: z.RefinementCtx,
+): void {
+  const additions = [...value.addBundles, ...value.addOns];
+  const removals = new Set([...value.removeBundles, ...value.removeAddOns]);
+
+  if (new Set(additions).size !== additions.length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "A product cannot be added as both a bundle and an add-on",
+    });
+  }
+
+  const removedProducts = [...value.removeBundles, ...value.removeAddOns];
+  if (new Set(removedProducts).size !== removedProducts.length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "A product cannot be removed as both a bundle and an add-on",
+    });
+  }
+
+  if (additions.some((slug) => removals.has(slug))) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "A product cannot be added and removed in the same request",
+    });
+  }
+}
+
 // ─── Checkout ──────────────────────────────────────────────
 
 export const checkoutSessionSchema = z.object({
-  bundles: z.array(z.string()).default([]),
-  addOns: z.array(z.string()).default([]),
+  operationId: z.string().uuid(),
+  bundles: uniqueBillingSlugs.default([]),
+  addOns: uniqueBillingSlugs.default([]),
   billingInterval: z.enum(["monthly", "annual"]).default("annual"),
-  successUrl: z.string().url().optional(),
-  cancelUrl: z.string().url().optional(),
+  successUrl: z.string().url().max(2_048).optional(),
+  cancelUrl: z.string().url().max(2_048).optional(),
+}).strict().superRefine((value, context) => {
+  const addOns = new Set(value.addOns);
+  if (value.bundles.some((slug) => addOns.has(slug))) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "A product cannot be selected as both a bundle and an add-on",
+    });
+  }
 });
 
 export type CheckoutSessionInput = z.infer<typeof checkoutSessionSchema>;
@@ -23,7 +108,7 @@ export const productCreateSchema = z.object({
   productType: z.string().min(1).max(50),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().default(0),
-  featureKeys: z.array(z.string()).default([]),
+  featureKeys: uniqueBillingFeatureKeys.default([]),
 });
 
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
@@ -52,31 +137,50 @@ export type EntitlementUpdateInput = z.infer<typeof entitlementUpdateSchema>;
 // ─── Admin: Payment Processing ─────────────────────────────
 
 export const adminProcessCardPaymentSchema = z.object({
-  agentId: z.string().min(1),
-  amount: z.number().int().min(100),
-  paymentMethodId: z.string().min(1).optional(),
+  agentId: z.string().trim().min(1).max(100),
+  amount: z.number().int().min(100).max(10_000_000),
+  paymentMethodId: z.string().trim().min(1).max(255),
+  operationId: z.string().uuid(),
   savePaymentMethod: z.boolean().default(false),
   description: z.string().max(500).optional(),
-});
+}).strict();
 
 export type AdminProcessCardPaymentInput = z.infer<typeof adminProcessCardPaymentSchema>;
 
 export const adminRecordOfflinePaymentSchema = z.object({
-  agentId: z.string().min(1),
-  amount: z.number().int().min(100),
+  agentId: z.string().trim().min(1).max(100),
+  operationId: z.string().uuid(),
+  amount: z.number().int().min(100).max(10_000_000),
   paymentType: z.enum(["cash", "check"]),
   notes: z.string().max(1000).optional().or(z.literal("")),
-});
+}).strict();
 
 export type AdminRecordOfflinePaymentInput = z.infer<typeof adminRecordOfflinePaymentSchema>;
 
 // ─── Admin: Subscription Management ────────────────────────
 
 export const adminModifySubscriptionSchema = z.object({
-  agentId: z.string().min(1),
-  addBundles: z.array(z.string()).default([]),
-  removeBundles: z.array(z.string()).default([]),
-});
+  agentId: z.string().trim().min(1).max(100),
+  addBundles: uniqueBillingSlugs.default([]),
+  removeBundles: uniqueBillingSlugs.default([]),
+}).strict().superRefine(rejectOverlappingBundleChanges);
+
+export const modifySubscriptionSchema = z.object({
+  operationId: z.string().uuid(),
+  addBundles: uniqueBillingSlugs.default([]),
+  removeBundles: uniqueBillingSlugs.default([]),
+  addOns: uniqueBillingSlugs.default([]),
+  removeAddOns: uniqueBillingSlugs.default([]),
+}).strict().superRefine(rejectOverlappingProductChanges);
+
+export const cancelSubscriptionSchema = z.object({
+  reason: z.string().trim().min(1).max(500).optional(),
+}).strict();
+
+export const changeSubscriptionIntervalSchema = z.object({
+  operationId: z.string().uuid(),
+  interval: z.enum(["monthly", "annual"]),
+}).strict();
 
 export type AdminModifySubscriptionInput = z.infer<typeof adminModifySubscriptionSchema>;
 
@@ -90,15 +194,45 @@ export type AdminExtendGracePeriodInput = z.infer<typeof adminExtendGracePeriodS
 
 // ─── Admin: Billing Settings ───────────────────────────────
 
+const billingSettingsFields = {
+  gracePeriodWarningDays: z.number().int().min(1).max(30),
+  gracePeriodUrgentDays: z.number().int().min(1).max(60),
+  gracePeriodLockoutDays: z.number().int().min(1).max(90),
+  invoiceNotifyDays: z.number().int().min(1).max(30),
+  trialDurationDays: z.number().int().min(0).max(90),
+  transitionGraceDays: z.number().int().min(0).max(90),
+  loyaltyDiscountPercent: z.number().int().min(0).max(100),
+};
+
+export const billingSettingsSchema = z
+  .object(billingSettingsFields)
+  .superRefine((settings, context) => {
+    if (settings.gracePeriodWarningDays >= settings.gracePeriodUrgentDays) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["gracePeriodWarningDays"],
+        message: "Warning days must be less than urgent days",
+      });
+    }
+
+    if (settings.gracePeriodUrgentDays >= settings.gracePeriodLockoutDays) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["gracePeriodUrgentDays"],
+        message: "Urgent days must be less than lockout days",
+      });
+    }
+  });
+
 export const billingSettingsUpdateSchema = z.object({
-  gracePeriodWarningDays: z.number().int().min(1).max(30).optional(),
-  gracePeriodUrgentDays: z.number().int().min(1).max(60).optional(),
-  gracePeriodLockoutDays: z.number().int().min(1).max(90).optional(),
-  invoiceNotifyDays: z.number().int().min(1).max(30).optional(),
-  trialDurationDays: z.number().int().min(0).max(90).optional(),
-  transitionGraceDays: z.number().int().min(0).max(90).optional(),
-  loyaltyDiscountPercent: z.number().int().min(0).max(100).optional(),
-});
+  gracePeriodWarningDays: billingSettingsFields.gracePeriodWarningDays.optional(),
+  gracePeriodUrgentDays: billingSettingsFields.gracePeriodUrgentDays.optional(),
+  gracePeriodLockoutDays: billingSettingsFields.gracePeriodLockoutDays.optional(),
+  invoiceNotifyDays: billingSettingsFields.invoiceNotifyDays.optional(),
+  trialDurationDays: billingSettingsFields.trialDurationDays.optional(),
+  transitionGraceDays: billingSettingsFields.transitionGraceDays.optional(),
+  loyaltyDiscountPercent: billingSettingsFields.loyaltyDiscountPercent.optional(),
+}).strict();
 
 export type BillingSettingsUpdateInput = z.infer<typeof billingSettingsUpdateSchema>;
 
@@ -113,10 +247,32 @@ export const couponCreateSchema = z
     durationInMonths: z.number().int().min(1).max(36).optional(),
     maxRedemptions: z.number().int().min(1).optional(),
   })
-  .refine(
-    (data) => data.percentOff !== undefined || data.amountOff !== undefined,
-    { message: "Either percentOff or amountOff is required" }
-  );
+  .superRefine((data, context) => {
+    const discountCount = Number(data.percentOff !== undefined) +
+      Number(data.amountOff !== undefined);
+    if (discountCount !== 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Exactly one of percentOff or amountOff is required",
+      });
+    }
+
+    if (data.duration === "repeating" && data.durationInMonths === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["durationInMonths"],
+        message: "durationInMonths is required for repeating coupons",
+      });
+    }
+
+    if (data.duration !== "repeating" && data.durationInMonths !== undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["durationInMonths"],
+        message: "durationInMonths is only valid for repeating coupons",
+      });
+    }
+  });
 
 export type CouponCreateInput = z.infer<typeof couponCreateSchema>;
 

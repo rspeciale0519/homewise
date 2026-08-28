@@ -21,6 +21,12 @@ type SyncedOpenHouseSlot = {
   openHouseKey?: string;
 };
 
+type ListingOpenHouseChanges = {
+  clearAll: boolean;
+  removedKeys: Set<string>;
+  upserts: SyncedOpenHouseSlot[];
+};
+
 type OpenHousePageResult = {
   processed: number;
   updated: number;
@@ -67,11 +73,10 @@ export async function syncOpenHouses(step: StepLike): Promise<OpenHouseSyncResul
       cursor = maxIsoTimestamp(cursor, result.maxCursor);
       nextLink = result.nextLink ?? undefined;
 
-      await step.run(`persist-openhouse-cursor-${pageIndex}`, async () => {
+      await step.run(`persist-openhouse-progress-${pageIndex}`, async () => {
         return prisma.syncState.update({
           where: { provider: OPENHOUSE_PROVIDER },
           data: {
-            cursor,
             lastSyncAt: new Date(),
             totalSynced: { increment: result.updated },
             lastError: null,
@@ -110,8 +115,7 @@ export async function syncOpenHouses(step: StepLike): Promise<OpenHouseSyncResul
 async function processOpenHousePage(
   openHouses: ResoOpenHouse[],
 ): Promise<OpenHousePageResult> {
-  const slotsByListingId = new Map<string, SyncedOpenHouseSlot[]>();
-  const clearListingIds = new Set<string>();
+  const changesByListingId = new Map<string, ListingOpenHouseChanges>();
   let maxCursor: string | undefined;
 
   for (const openHouse of openHouses) {
@@ -119,36 +123,59 @@ async function processOpenHousePage(
     const listingId = openHouse.ListingId;
     if (!listingId) continue;
 
+    const changes = changesByListingId.get(listingId) ?? {
+      clearAll: false,
+      removedKeys: new Set<string>(),
+      upserts: [],
+    };
+    changesByListingId.set(listingId, changes);
+
     if (openHouse.MlgCanView === false) {
-      clearListingIds.add(listingId);
+      if (openHouse.OpenHouseKey) {
+        changes.removedKeys.add(openHouse.OpenHouseKey);
+      } else {
+        changes.clearAll = true;
+      }
       continue;
     }
 
     const slot = toOpenHouseSlot(openHouse);
     if (!slot) continue;
 
-    const slots = slotsByListingId.get(listingId) ?? [];
-    slots.push(slot);
-    slotsByListingId.set(listingId, slots);
+    changes.upserts.push(slot);
+    if (slot.openHouseKey) changes.removedKeys.delete(slot.openHouseKey);
   }
+
+  const listingIds = [...changesByListingId.keys()];
+  if (listingIds.length === 0) {
+    return { processed: openHouses.length, updated: 0, cleared: 0, maxCursor };
+  }
+
+  const listings = await prisma.listing.findMany({
+    where: { listingId: { in: listingIds } },
+    select: { id: true, listingId: true, openHouseSchedule: true },
+  });
 
   let updated = 0;
-  for (const [listingId, slots] of slotsByListingId) {
-    const result = await prisma.listing.updateMany({
-      where: { listingId },
-      data: { openHouseSchedule: slots },
-    });
-    updated += result.count;
-  }
-
   let cleared = 0;
-  const clearIds = [...clearListingIds];
-  if (clearIds.length > 0) {
-    const result = await prisma.listing.updateMany({
-      where: { listingId: { in: clearIds } },
-      data: { openHouseSchedule: Prisma.JsonNull },
+  for (const listing of listings) {
+    if (!listing.listingId) continue;
+    const changes = changesByListingId.get(listing.listingId);
+    if (!changes) continue;
+
+    const existingSlots = parseStoredSchedule(listing.openHouseSchedule);
+    const mergedSlots = mergeOpenHouseSchedule(existingSlots, changes);
+    if (JSON.stringify(existingSlots) === JSON.stringify(mergedSlots)) continue;
+
+    await prisma.listing.update({
+      where: { id: listing.id },
+      data: {
+        openHouseSchedule:
+          mergedSlots.length > 0 ? mergedSlots : Prisma.JsonNull,
+      },
     });
-    cleared = result.count;
+    if (mergedSlots.length > 0) updated++;
+    else cleared++;
   }
 
   return { processed: openHouses.length, updated, cleared, maxCursor };
@@ -177,29 +204,144 @@ function toOpenHouseSlot(openHouse: ResoOpenHouse): SyncedOpenHouseSlot | null {
   };
 }
 
-function parseOpenHouseDateTime(date: string, time: string): Date | null {
+export function parseOpenHouseDateTime(date: string, time: string): Date | null {
   const value = time.includes("T") ? time : `${date}T${time}`;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  if (/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?$/,
+  );
+  if (!match) return null;
+
+  const [, year, month, day, hour, minute, second = "0"] = match;
+  const parts = [year, month, day, hour, minute, second].map(Number);
+  if (parts.some((part) => !Number.isFinite(part))) return null;
+
+  const [yearNumber, monthNumber, dayNumber, hourNumber, minuteNumber, secondNumber] =
+    parts as [number, number, number, number, number, number];
+  const utcGuess = Date.UTC(
+    yearNumber,
+    monthNumber - 1,
+    dayNumber,
+    hourNumber,
+    minuteNumber,
+    secondNumber,
+  );
+  let instant = new Date(utcGuess);
+  for (let iteration = 0; iteration < 2; iteration++) {
+    const offset = timeZoneOffsetMilliseconds(instant, "America/New_York");
+    instant = new Date(utcGuess - offset);
+  }
+
+  return Number.isNaN(instant.getTime()) ? null : instant;
 }
 
-async function clearExpiredOpenHouseSchedules(now: Date): Promise<number> {
-  const listings = await prisma.listing.findMany({
-    where: { openHouseSchedule: { not: Prisma.JsonNull } },
-    select: { id: true, openHouseSchedule: true },
-    take: 1000,
-  });
-  const expiredIds = listings
-    .filter((listing) => scheduleIsExpired(listing.openHouseSchedule, now))
-    .map((listing) => listing.id);
+function timeZoneOffsetMilliseconds(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(instant);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return (
+    Date.UTC(
+      Number(values.year),
+      Number(values.month) - 1,
+      Number(values.day),
+      Number(values.hour),
+      Number(values.minute),
+      Number(values.second),
+    ) - instant.getTime()
+  );
+}
 
-  if (expiredIds.length === 0) return 0;
+export function mergeOpenHouseSchedule(
+  existingSlots: SyncedOpenHouseSlot[],
+  changes: ListingOpenHouseChanges,
+): SyncedOpenHouseSlot[] {
+  const merged = new Map<string, SyncedOpenHouseSlot>();
+  if (!changes.clearAll) {
+    for (const slot of existingSlots) merged.set(openHouseSlotKey(slot), slot);
+  }
 
-  const result = await prisma.listing.updateMany({
-    where: { id: { in: expiredIds } },
-    data: { openHouseSchedule: Prisma.JsonNull },
+  for (const removedKey of changes.removedKeys) merged.delete(removedKey);
+  for (const slot of changes.upserts) merged.set(openHouseSlotKey(slot), slot);
+
+  return [...merged.values()].sort((left, right) =>
+    left.startDateTime.localeCompare(right.startDateTime),
+  );
+}
+
+function openHouseSlotKey(slot: SyncedOpenHouseSlot): string {
+  return slot.openHouseKey ?? `${slot.date}|${slot.startTime}|${slot.endTime}`;
+}
+
+function parseStoredSchedule(schedule: Prisma.JsonValue): SyncedOpenHouseSlot[] {
+  if (!Array.isArray(schedule)) return [];
+
+  return schedule.flatMap((value) => {
+    if (!isRecord(value)) return [];
+    const date = stringValue(value.date);
+    const startTime = stringValue(value.startTime);
+    const endTime = stringValue(value.endTime);
+    const startDateTime = stringValue(value.startDateTime);
+    const endDateTime = stringValue(value.endDateTime);
+    if (!date || !startTime || !endTime || !startDateTime || !endDateTime) return [];
+
+    return [{
+      date,
+      startTime,
+      endTime,
+      startDateTime,
+      endDateTime,
+      remarks: stringValue(value.remarks),
+      openHouseKey: stringValue(value.openHouseKey),
+    }];
   });
-  return result.count;
+}
+
+export async function clearExpiredOpenHouseSchedules(now: Date): Promise<number> {
+  const pageSize = 1000;
+  let afterId: string | undefined;
+  let cleared = 0;
+
+  while (true) {
+    const listings = await prisma.listing.findMany({
+      where: {
+        openHouseSchedule: { not: Prisma.JsonNull },
+        ...(afterId ? { id: { gt: afterId } } : {}),
+      },
+      select: { id: true, openHouseSchedule: true },
+      orderBy: { id: "asc" },
+      take: pageSize,
+    });
+    if (listings.length === 0) break;
+
+    const expiredIds = listings
+      .filter((listing) => scheduleIsExpired(listing.openHouseSchedule, now))
+      .map((listing) => listing.id);
+
+    if (expiredIds.length > 0) {
+      const result = await prisma.listing.updateMany({
+        where: { id: { in: expiredIds } },
+        data: { openHouseSchedule: Prisma.JsonNull },
+      });
+      cleared += result.count;
+    }
+
+    afterId = listings.at(-1)?.id;
+    if (listings.length < pageSize || !afterId) break;
+  }
+
+  return cleared;
 }
 
 function scheduleIsExpired(schedule: Prisma.JsonValue, now: Date): boolean {

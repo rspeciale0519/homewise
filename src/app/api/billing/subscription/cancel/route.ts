@@ -1,14 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { requireAuthApi, isError } from "@/lib/admin-api";
+import { logApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
+import {
+  getStripeSubscriptionPeriodBounds,
+  syncSubscriptionFromStripe,
+} from "@/lib/billing/stripe-sync";
+import { cancelSubscriptionSchema } from "@/schemas/billing.schema";
+import { readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
+
+const SUBSCRIPTION_TRANSACTION_TIMEOUT_MS = 30_000;
+
+async function lockAgentSubscription(
+  tx: Prisma.TransactionClient,
+  agentId: string,
+): Promise<void> {
+  await tx.$queryRaw`
+    SELECT pg_advisory_xact_lock(hashtextextended(${`billing-subscription:${agentId}`}, 0))
+  `;
+}
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuthApi();
   if (isError(auth)) return auth.error;
 
-  const agent = await prisma.agent.findFirst({
-    where: { email: auth.profile.email ?? undefined },
+  const agent = await prisma.agent.findUnique({
+    where: { userId: auth.user.id },
     include: { stripeCustomer: true, subscription: { include: { items: true } } },
   });
 
@@ -20,40 +39,100 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No active subscription" }, { status: 404 });
   }
 
-  let body: { reason?: string } = {};
+  let body: unknown;
   try {
-    const parsed: unknown = await request.json();
-    if (typeof parsed === "object" && parsed !== null) {
-      body = parsed as { reason?: string };
+    body = await readJsonBodyWithLimit(request, 1_000);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
     }
-  } catch {
-    // Body is optional; proceed with empty body
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const stripeSubscriptionId = agent.subscription.stripeSubscriptionId;
+  const parsed = cancelSubscriptionSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid cancellation request" }, { status: 400 });
+  }
 
   try {
-    const subscription = await stripe.subscriptions.update(stripeSubscriptionId, {
-      cancel_at_period_end: true,
-      ...(body.reason ? { metadata: { cancel_reason: body.reason } } : {}),
-    });
+    const outcome = await prisma.$transaction(
+      async (tx) => {
+        await lockAgentSubscription(tx, agent.id);
 
-    await prisma.subscription.update({
-      where: { agentId: agent.id },
-      data: { cancelAtPeriodEnd: true },
-    });
+        const lockedAgent = await tx.agent.findUnique({
+          where: { id: agent.id },
+          select: {
+            stripeCustomer: { select: { stripeCustomerId: true } },
+            subscription: { select: { stripeSubscriptionId: true } },
+          },
+        });
+        if (!lockedAgent?.stripeCustomer) {
+          return { kind: "error", error: "No billing account", status: 404 } as const;
+        }
+        if (!lockedAgent.subscription) {
+          return { kind: "error", error: "No active subscription", status: 404 } as const;
+        }
 
-    // Derive period end from first subscription item (Stripe API 2024-11-20+)
-    const firstItem = subscription.items.data[0];
-    const cancelAt = firstItem
-      ? firstItem.current_period_end
-      : subscription.cancel_at;
+        const stripeSubscriptionId = lockedAgent.subscription.stripeSubscriptionId;
+        const currentSubscription = await stripe.subscriptions.retrieve(
+          stripeSubscriptionId,
+        );
+        const customerId = typeof currentSubscription.customer === "string"
+          ? currentSubscription.customer
+          : currentSubscription.customer.id;
+        if (customerId !== lockedAgent.stripeCustomer.stripeCustomerId) {
+          return {
+            kind: "error",
+            error: "Billing account does not match the subscription",
+            status: 409,
+          } as const;
+        }
+        if (currentSubscription.status === "canceled") {
+          await syncSubscriptionFromStripe(currentSubscription, tx);
+          return {
+            kind: "error",
+            error: "Subscription is already canceled",
+            status: 409,
+          } as const;
+        }
 
-    return NextResponse.json({ success: true, cancelAt });
+        const alreadyScheduled = currentSubscription.cancel_at_period_end ||
+          typeof currentSubscription.cancel_at === "number";
+        const reconciledSubscription = alreadyScheduled
+          ? currentSubscription
+          : await stripe.subscriptions.update(stripeSubscriptionId, {
+              cancel_at: "min_period_end",
+              ...(parsed.data.reason
+                ? { metadata: { cancel_reason: parsed.data.reason } }
+                : {}),
+            });
+
+        await syncSubscriptionFromStripe(reconciledSubscription, tx);
+        const cancelAt = reconciledSubscription.cancel_at ?? (
+          reconciledSubscription.items.data.length > 0
+            ? Math.floor(
+                getStripeSubscriptionPeriodBounds(reconciledSubscription)
+                  .periodEnd.getTime() / 1000,
+              )
+            : null
+        );
+        return { kind: "success", cancelAt } as const;
+      },
+      { timeout: SUBSCRIPTION_TRANSACTION_TIMEOUT_MS },
+    );
+
+    if (outcome.kind === "error") {
+      return NextResponse.json(
+        { error: outcome.error },
+        { status: outcome.status },
+      );
+    }
+
+    return NextResponse.json({ success: true, cancelAt: outcome.cancelAt });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    logApiError("billing/subscription/cancel", err);
     return NextResponse.json(
-      { error: "Failed to cancel subscription", detail: message },
+      { error: "Failed to cancel subscription" },
       { status: 500 },
     );
   }

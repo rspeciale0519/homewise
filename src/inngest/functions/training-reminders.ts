@@ -1,6 +1,12 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, buildEmailHtml } from "@/lib/email";
+import {
+  buildEmailHtml,
+  escapeHtml,
+  escapeHttpUrl,
+  sanitizeEmailSubject,
+  sendEmail,
+} from "@/lib/email";
 
 interface OverdueEnrollment {
   id: string;
@@ -101,24 +107,31 @@ export const trainingReminders = inngest.createFunction(
         if (incompleteItems.length === 0) return;
 
         const incompleteList = incompleteItems
-          .map((item) => `<li>${item.content.title}</li>`)
+          .map((item) => `<li>${escapeHtml(item.content.title)}</li>`)
           .join("");
 
         const appUrl =
           process.env.NEXT_PUBLIC_APP_URL ?? "https://homewisefl.com";
+        const trainingUrl = escapeHttpUrl(
+          `${appUrl.replace(/\/+$/, "")}/dashboard/training`,
+        );
+        const firstName = escapeHtml(user.firstName);
+        const courseName = escapeHtml(enrollment.course.name);
 
         const body = `
           <h2>Training Reminder</h2>
-          <p>Hi ${user.firstName},</p>
-          <p>You have incomplete items in the required training course: <strong>${enrollment.course.name}</strong></p>
+          <p>Hi ${firstName},</p>
+          <p>You have incomplete items in the required training course: <strong>${courseName}</strong></p>
           <ul>${incompleteList}</ul>
-          <p><a href="${appUrl}/dashboard/training" class="btn">Go to Training</a></p>
+          <p><a href="${trainingUrl}" class="btn">Go to Training</a></p>
         `;
 
         await sendEmail({
           to: user.email,
-          subject: `Training Reminder: ${enrollment.course.name}`,
-          html: buildEmailHtml(body),
+          subject: sanitizeEmailSubject(
+            `Training Reminder: ${enrollment.course.name}`,
+          ),
+          html: buildEmailHtml(body, undefined, false),
         });
 
         sent++;

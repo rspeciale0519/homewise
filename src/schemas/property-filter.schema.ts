@@ -1,5 +1,53 @@
 import { z } from "zod";
 
+const MAX_POLYGON_POINTS = 500;
+const MAX_POLYGON_QUERY_LENGTH = 30_000;
+
+const optionalQueryBoolean = z.preprocess((value) => {
+  if (value === undefined || value === "") return undefined;
+  if (value === "true" || value === true) return true;
+  if (value === "false" || value === false) return false;
+  return value;
+}, z.boolean().optional());
+
+const polygonCoordinatesSchema = z
+  .array(
+    z.tuple([
+      z.number().finite().min(-180).max(180),
+      z.number().finite().min(-90).max(90),
+    ]),
+  )
+  .min(3)
+  .max(MAX_POLYGON_POINTS);
+
+const polygonQuerySchema = z
+  .string()
+  .max(MAX_POLYGON_QUERY_LENGTH)
+  .transform((value, context) => {
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(value);
+    } catch {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Polygon must be valid JSON",
+      });
+      return z.NEVER;
+    }
+
+    const parsed = polygonCoordinatesSchema.safeParse(decoded);
+    if (!parsed.success) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Polygon must contain 3 to ${MAX_POLYGON_POINTS} valid coordinates`,
+      });
+      return z.NEVER;
+    }
+
+    return parsed.data;
+  })
+  .optional();
+
 export const propertyFilterSchema = z.object({
   location: z.string().max(100).optional(),
   minPrice: z.coerce.number().min(0).optional(),
@@ -10,15 +58,15 @@ export const propertyFilterSchema = z.object({
   maxSqft: z.coerce.number().min(0).optional(),
   propertyType: z.string().optional(),
   status: z.string().optional(),
-  page: z.coerce.number().min(1).default(1),
-  perPage: z.coerce.number().min(1).max(48).default(12),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(48).default(12),
   // Map bounds
-  north: z.coerce.number().optional(),
-  south: z.coerce.number().optional(),
-  east: z.coerce.number().optional(),
-  west: z.coerce.number().optional(),
+  north: z.coerce.number().finite().min(-90).max(90).optional(),
+  south: z.coerce.number().finite().min(-90).max(90).optional(),
+  east: z.coerce.number().finite().min(-180).max(180).optional(),
+  west: z.coerce.number().finite().min(-180).max(180).optional(),
   // Polygon (JSON-encoded array of [lng, lat] pairs)
-  polygon: z.string().optional(),
+  polygon: polygonQuerySchema,
   // Advanced filters
   minYearBuilt: z.coerce.number().min(1800).max(2030).optional(),
   maxYearBuilt: z.coerce.number().min(1800).max(2030).optional(),
@@ -26,15 +74,15 @@ export const propertyFilterSchema = z.object({
   maxLotSize: z.coerce.number().min(0).optional(),
   maxHoa: z.coerce.number().min(0).optional(),
   maxDom: z.coerce.number().min(0).optional(),
-  hasPool: z.coerce.boolean().optional(),
-  hasWaterfront: z.coerce.boolean().optional(),
-  hasGarage: z.coerce.boolean().optional(),
-  isNewConstruction: z.coerce.boolean().optional(),
-  hasGatedCommunity: z.coerce.boolean().optional(),
-  openHousesOnly: z.coerce.boolean().optional(),
+  hasPool: optionalQueryBoolean,
+  hasWaterfront: optionalQueryBoolean,
+  hasGarage: optionalQueryBoolean,
+  isNewConstruction: optionalQueryBoolean,
+  hasGatedCommunity: optionalQueryBoolean,
+  openHousesOnly: optionalQueryBoolean,
   schoolDistrict: z.string().optional(),
   tag: z.string().max(40).optional(),
-  featured: z.coerce.boolean().optional(),
+  featured: optionalQueryBoolean,
   // Sorting
   sortBy: z.enum(["price_asc", "price_desc", "newest", "dom_asc", "dom_desc", "sqft_desc"]).optional(),
 });

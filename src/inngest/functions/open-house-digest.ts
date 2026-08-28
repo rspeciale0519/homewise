@@ -1,7 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail } from "@/lib/email";
+import { escapeHtml, escapeHttpUrl, sendEmail } from "@/lib/email";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 import { areMlsBackfillAlertsSuppressed } from "@/lib/mls-alert-suppression";
 import { withIdx } from "@/lib/mls-visibility";
 import { getSiteUrl, toAbsoluteSiteUrl } from "@/lib/site-url";
@@ -86,14 +88,20 @@ export const weeklyOpenHouseDigest = inngest.createFunction(
 
         const cards = matching.slice(0, 8).map((listing) => {
           const imageUrl = toAbsoluteSiteUrl(listing.imageUrl, siteUrl);
+          const safeImageUrl = imageUrl ? escapeHttpUrl(imageUrl) : null;
+          const safeAddress = escapeHtml(listing.address);
+          const safeCity = escapeHtml(listing.city);
+          const listingUrl = escapeHttpUrl(`${siteUrl}/properties/${listing.id}`);
           const slotLines = listing.slots
-            .map((slot) => `${slot.date} · ${slot.startTime}–${slot.endTime}`)
+            .map((slot) => (
+              `${escapeHtml(slot.date)} · ${escapeHtml(slot.startTime)}–${escapeHtml(slot.endTime)}`
+            ))
             .join("<br/>");
           return `
             <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:12px">
-              ${imageUrl ? `<img src="${imageUrl}" alt="${listing.address}" style="width:100%;height:160px;object-fit:cover">` : ""}
+              ${safeImageUrl ? `<img src="${safeImageUrl}" alt="${safeAddress}" style="width:100%;height:160px;object-fit:cover">` : ""}
               <div style="padding:12px">
-                <p style="margin:0;font-weight:600"><a href="${siteUrl}/properties/${listing.id}" style="color:#1e3a5f;text-decoration:none">${listing.address}, ${listing.city}</a></p>
+                <p style="margin:0;font-weight:600"><a href="${listingUrl}" style="color:#1e3a5f;text-decoration:none">${safeAddress}, ${safeCity}</a></p>
                 <p style="margin:4px 0;color:#2563eb;font-weight:700">$${listing.price.toLocaleString()}</p>
                 <p style="margin:0 0 6px;font-size:13px;color:#64748b">${listing.beds} bed · ${listing.baths} bath</p>
                 <p style="margin:0;font-size:13px;color:#0f766e;font-weight:600">${slotLines}</p>
@@ -103,14 +111,27 @@ export const weeklyOpenHouseDigest = inngest.createFunction(
         }).join("");
 
         const firstName = alert.user?.firstName ?? alert.name ?? "there";
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "property_alert", id: alert.id },
+          alert.email,
+        );
+        const unsubscribeUrl = escapeHttpUrl(
+          `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
+        );
+        if (!await canSendPreferenceEmail({
+          kind: "property_alert",
+          id: alert.id,
+          recipientEmail: alert.email,
+        })) return;
+
         await sendEmail({
           to: alert.email,
           subject: `This week's open houses (${matching.length})`,
           html: [
-            `<p>Hi ${firstName},</p>`,
+            `<p>Hi ${escapeHtml(firstName)},</p>`,
             `<p>Here are the open houses coming up in your search areas this week:</p>`,
             cards,
-            `<p style="font-size:12px;color:#94a3b8">You receive this weekly digest because property alerts are enabled. <a href="${siteUrl}/unsubscribe?alert=${alert.id}">Unsubscribe</a></p>`,
+            `<p style="font-size:12px;color:#94a3b8">You receive this weekly digest because property alerts are enabled. <a href="${unsubscribeUrl}">Unsubscribe</a></p>`,
           ].join("\n"),
           tags: [{ name: "type", value: "open_house_digest" }],
         });

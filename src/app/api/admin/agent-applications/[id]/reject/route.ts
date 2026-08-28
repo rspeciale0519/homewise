@@ -17,7 +17,13 @@ export async function POST(
   try {
     const body: unknown = await request.json().catch(() => ({}));
     const parsed = applicationReviewSchema.safeParse(body);
-    const notes = parsed.success ? parsed.data.notes : undefined;
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const notes = parsed.data.notes;
 
     const application = await prisma.agentApplication.findUnique({ where: { id } });
     if (!application) {
@@ -30,8 +36,8 @@ export async function POST(
       );
     }
 
-    await prisma.agentApplication.update({
-      where: { id },
+    const claimed = await prisma.agentApplication.updateMany({
+      where: { id, status: "pending" },
       data: {
         status: "rejected",
         reviewedBy: auth.profile.id,
@@ -39,6 +45,12 @@ export async function POST(
         reviewNotes: notes || null,
       },
     });
+    if (claimed.count !== 1) {
+      return NextResponse.json(
+        { error: "Application has already been reviewed" },
+        { status: 409 },
+      );
+    }
 
     try {
       const template = agentApplicationRejectedEmail(application.firstName, notes);

@@ -8,6 +8,7 @@ import {
   isSlugTakenForTraining,
   recordTrainingSlugChange,
 } from "@/lib/slug/resolve";
+import { isFinalAdminUploadKey } from "@/lib/http/admin-upload";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -54,6 +55,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const existing = await prisma.trainingContent.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (
+    parsed.data.fileKey !== undefined &&
+    parsed.data.fileKey !== existing.fileKey &&
+    !isFinalAdminUploadKey(parsed.data.fileKey, "training")
+  ) {
+    return NextResponse.json(
+      { error: "Upload validation is required", field: "fileKey" },
+      { status: 400 },
+    );
   }
 
   const data: Record<string, unknown> = { ...parsed.data };

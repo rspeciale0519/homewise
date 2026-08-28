@@ -31,7 +31,8 @@ function postReq(body: unknown): NextRequest {
 }
 const item = (name: string) => ({
   name,
-  storageKey: `documents/k-${name}`,
+  storageKey:
+    `documents/123e4567-e89b-42d3-a456-426614174000-100-${name}.pdf`,
   storageProvider: "supabase" as const,
   mimeType: "application/pdf",
   sizeBytes: 100,
@@ -65,6 +66,13 @@ describe("POST /api/admin/documents/bulk-create", () => {
 
   it("400 on empty items", async () => {
     expect((await POST(postReq({ items: [] }))).status).toBe(400);
+  });
+
+  it("rejects an object that did not complete upload validation", async () => {
+    const unvalidated = { ...item("a"), storageKey: "pending/unvalidated.pdf" };
+    const response = await POST(postReq({ items: [unvalidated] }));
+    expect(response.status).toBe(400);
+    expect(documentCreateMock).not.toHaveBeenCalled();
   });
 
   it("400 on more than 50 items", async () => {

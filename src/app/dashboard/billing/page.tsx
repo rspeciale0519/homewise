@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { AccessDenied } from "@/components/dashboard/access-denied";
 import { BillingDashboard } from "@/components/billing/billing-dashboard";
+import { resolveAgentPlatform } from "@/lib/platform/filter";
+import type { BillingInterval } from "@/components/billing/types";
 
 export const metadata: Metadata = { title: "Billing — Dashboard" };
 
@@ -24,24 +26,37 @@ export default async function BillingPage() {
     return <AccessDenied />;
   }
 
-  const [agent, productConfigs, entitlements] = await Promise.all([
-    prisma.agent.findFirst({
-      where: {
-        OR: [{ userId: user.id }, { email: user.email ?? "" }],
+  const agent = await prisma.agent.findUnique({
+    where: { userId: user.id },
+    include: {
+      subscription: {
+        include: { items: true },
       },
-      include: {
-        subscription: {
-          include: { items: true },
-        },
-        stripeCustomer: true,
-        paymentRecords: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        },
+      stripeCustomer: true,
+      paymentRecords: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
       },
-    }),
+    },
+  });
+
+  if (!agent && profile.role !== "admin") {
+    return <AccessDenied />;
+  }
+
+  const platform = resolveAgentPlatform(agent);
+  const subscribedPriceIds = agent?.subscription?.items.map(
+    (item) => item.stripePriceId,
+  ) ?? [];
+  const [productConfigs, entitlements] = await Promise.all([
     prisma.productConfig.findMany({
-      where: { isActive: true },
+      where: {
+        OR: [
+          { isActive: true, platforms: { has: platform } },
+          { monthlyPriceId: { in: subscribedPriceIds } },
+          { annualPriceId: { in: subscribedPriceIds } },
+        ],
+      },
       orderBy: { sortOrder: "asc" },
       select: {
         id: true,
@@ -54,13 +69,18 @@ export default async function BillingPage() {
         monthlyPriceId: true,
         annualPriceId: true,
         sortOrder: true,
+        isActive: true,
         features: {
           select: { featureKey: true, limit: true },
         },
       },
     }),
     prisma.entitlementConfig.findMany({
-      where: { isActive: true, requiredProduct: { not: null } },
+      where: {
+        isActive: true,
+        requiredProduct: { not: null },
+        platforms: { has: platform },
+      },
       select: {
         id: true,
         featureKey: true,
@@ -72,10 +92,6 @@ export default async function BillingPage() {
     }),
   ]);
 
-  if (!agent && profile.role !== "admin") {
-    return <AccessDenied />;
-  }
-
   const subscription = agent?.subscription
     ? {
         status: agent.subscription.status,
@@ -83,12 +99,33 @@ export default async function BillingPage() {
         currentPeriodEnd: agent.subscription.currentPeriodEnd.toISOString(),
         cancelAtPeriodEnd: agent.subscription.cancelAtPeriodEnd,
         trialEnd: agent.subscription.trialEnd?.toISOString() ?? null,
-        items: agent.subscription.items.map((item) => ({
-          productType: item.productType,
-          productName: item.productName,
-          stripePriceId: item.stripePriceId,
-          quantity: item.quantity,
-        })),
+        items: agent.subscription.items.map((item) => {
+          const product = productConfigs.find(
+            (config) =>
+              config.monthlyPriceId === item.stripePriceId ||
+              config.annualPriceId === item.stripePriceId,
+          );
+          const billingInterval: BillingInterval | null =
+            product?.annualPriceId === item.stripePriceId
+              ? "annual"
+              : product?.monthlyPriceId === item.stripePriceId
+                ? "monthly"
+                : null;
+          const billingAmount = billingInterval === "annual"
+            ? (product?.annualAmount ?? null)
+            : billingInterval === "monthly"
+              ? (product?.monthlyAmount ?? null)
+              : null;
+
+          return {
+            productType: item.productType,
+            productName: item.productName,
+            stripePriceId: item.stripePriceId,
+            quantity: item.quantity,
+            billingInterval,
+            billingAmount,
+          };
+        }),
       }
     : null;
 

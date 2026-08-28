@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createClientMock, userProfileFindUniqueMock, agentFindFirstMock } = vi.hoisted(() => ({
+const { createClientMock, userProfileFindUniqueMock, agentFindUniqueMock } = vi.hoisted(() => ({
   createClientMock: vi.fn(),
   userProfileFindUniqueMock: vi.fn(),
-  agentFindFirstMock: vi.fn(),
+  agentFindUniqueMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     userProfile: { findUnique: userProfileFindUniqueMock },
-    agent: { findFirst: agentFindFirstMock },
+    agent: { findUnique: agentFindUniqueMock },
   },
 }));
 
@@ -44,7 +44,7 @@ describe("requireStaffApi", () => {
       expect(result.isAdmin).toBe(true);
       expect(result.agentId).toBeNull();
     }
-    expect(agentFindFirstMock).not.toHaveBeenCalled();
+    expect(agentFindUniqueMock).not.toHaveBeenCalled();
   });
 
   it("allows linked agents and returns their agent id", async () => {
@@ -59,7 +59,7 @@ describe("requireStaffApi", () => {
       id: "user-2",
       role: "agent",
     });
-    agentFindFirstMock.mockResolvedValue({ id: "agent-9" });
+    agentFindUniqueMock.mockResolvedValue({ id: "agent-9" });
 
     const result = await requireStaffApi();
 
@@ -68,6 +68,10 @@ describe("requireStaffApi", () => {
       expect(result.isAdmin).toBe(false);
       expect(result.agentId).toBe("agent-9");
     }
+    expect(agentFindUniqueMock).toHaveBeenCalledWith({
+      where: { userId: "user-2" },
+      select: { id: true },
+    });
   });
 
   it("rejects agents that are not linked to an Agent record", async () => {
@@ -82,7 +86,7 @@ describe("requireStaffApi", () => {
       id: "user-3",
       role: "agent",
     });
-    agentFindFirstMock.mockResolvedValue(null);
+    agentFindUniqueMock.mockResolvedValue(null);
 
     const result = await requireStaffApi();
 

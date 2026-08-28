@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma";
+import { readFormDataBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
+import { detectRasterImageType } from "@/lib/http/raster-image";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 500 * 1024; // 500KB (already cropped)
+const MAX_BODY_SIZE = MAX_SIZE + 64 * 1024;
 const BUCKET = "user-avatars";
 
 export async function POST(request: NextRequest) {
@@ -17,7 +20,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await readFormDataBodyWithLimit(request, MAX_BODY_SIZE);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "File too large. Maximum size is 500KB" }, { status: 413 });
+    }
+    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  }
   const file = formData.get("file") as File | null;
 
   if (!file) {
@@ -41,18 +52,25 @@ export async function POST(request: NextRequest) {
   const filePath = `${user.id}/avatar.webp`;
   const admin = createAdminClient();
   const buffer = Buffer.from(await file.arrayBuffer());
+  const detectedType = detectRasterImageType(buffer);
+  if (!detectedType || detectedType !== file.type) {
+    return NextResponse.json(
+      { error: "File content does not match its image type" },
+      { status: 400 },
+    );
+  }
 
   const { error: uploadError } = await admin.storage
     .from(BUCKET)
     .upload(filePath, buffer, {
-      contentType: file.type,
+      contentType: detectedType,
       upsert: true,
     });
 
   if (uploadError) {
     console.error("[user/avatar] Upload error:", uploadError.message);
     return NextResponse.json(
-      { error: `Upload failed: ${uploadError.message}` },
+      { error: "Upload failed" },
       { status: 500 }
     );
   }
@@ -90,7 +108,7 @@ export async function DELETE() {
   if (deleteError) {
     console.error("[user/avatar] Delete error:", deleteError.message);
     return NextResponse.json(
-      { error: `Delete failed: ${deleteError.message}` },
+      { error: "Delete failed" },
       { status: 500 }
     );
   }

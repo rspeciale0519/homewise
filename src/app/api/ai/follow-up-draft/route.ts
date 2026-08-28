@@ -2,21 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
+import { InvalidJsonBodyError, readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const followUpSchema = z.object({
-  contactId: z.string().min(1, "contactId is required"),
+  contactId: z.string().trim().min(1, "contactId is required").max(100),
   channel: z.enum(["email", "sms"]).optional(),
-});
+}).strict();
 
 export async function POST(request: NextRequest) {
   const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
-    const raw: unknown = await request.json();
+    const raw: unknown = await readJsonBodyWithLimit(request, 2_000);
     const input = followUpSchema.safeParse(raw);
     if (!input.success) {
       return NextResponse.json(
@@ -68,6 +70,9 @@ ${channel === "email" ? `Generate a JSON response with:
 
 Reference specific listings or activities they've engaged with. Be warm and personal.`;
 
+    const entitlementError = await reserveStaffFeature(auth, "ai_follow_up_drafts");
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("follow_up_draft", {
       feature: "follow_up_draft",
       systemPrompt: `You are a real estate agent's writing assistant. Write personalized ${channel === "sms" ? "text messages" : "emails"} that reference the lead's specific activity. Be warm, not salesy. Output valid JSON only.`,
@@ -86,6 +91,12 @@ Reference specific listings or activities they've engaged with. Be warm and pers
 
     return NextResponse.json({ channel, ...parsed });
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/follow-up-draft] error:", err);
     return NextResponse.json({ error: "Failed to generate draft" }, { status: 500 });
   }

@@ -2,22 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
 import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
+import { InvalidJsonBodyError, readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const meetingPrepSchema = z.object({
-  contactId: z.string().min(1, "contactId is required"),
-  propertyId: z.string().optional(),
-});
+  contactId: z.string().trim().min(1, "contactId is required").max(100),
+  propertyId: z.string().trim().min(1).max(100).optional(),
+}).strict();
 
 export async function POST(request: NextRequest) {
   const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
-    const raw: unknown = await request.json();
+    const raw: unknown = await readJsonBodyWithLimit(request, 2_000);
     const input = meetingPrepSchema.safeParse(raw);
     if (!input.success) {
       return NextResponse.json(
@@ -94,6 +96,9 @@ Generate a JSON meeting prep brief:
   "competitiveContext": "<market position of the property>"
 }`;
 
+    const entitlementError = await reserveStaffFeature(auth, "ai_meeting_prep");
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("meeting_prep", {
       feature: "meeting_prep",
       systemPrompt: "You are a real estate agent's preparation assistant. Create concise, actionable meeting briefs. Output valid JSON only.",
@@ -112,6 +117,12 @@ Generate a JSON meeting prep brief:
 
     return NextResponse.json(parsed);
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/meeting-prep] error:", err);
     return NextResponse.json({ error: "Failed to generate brief" }, { status: 500 });
   }

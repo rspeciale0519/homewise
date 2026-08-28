@@ -70,15 +70,15 @@ export function MortgageAdvisor() {
         }),
       });
       if (!res.ok) {
-        setError("Something went wrong generating your scenarios. Please try again.");
-        return;
+        throw new Error("Mortgage advisor request failed");
       }
       const data = (await res.json()) as AdvisorResult;
       setResult(data);
     } catch {
       setError("Something went wrong generating your scenarios. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (

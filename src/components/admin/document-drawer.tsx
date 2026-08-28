@@ -54,6 +54,8 @@ export function DocumentDrawer({
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [storageProvider, setStorageProvider] = useState<"local" | "supabase">("local");
   const [uploadedName, setUploadedName] = useState<string | null>(null);
+  const [uploadedMimeType, setUploadedMimeType] = useState<string | null>(null);
+  const [uploadedSizeBytes, setUploadedSizeBytes] = useState<number | null>(null);
   const [published, setPublished] = useState(true);
   const [quickAccess, setQuickAccess] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -80,12 +82,16 @@ export function DocumentDrawer({
         setExternalUrl(item.url);
         setStorageKey(null);
         setUploadedName(null);
+        setUploadedMimeType(null);
+        setUploadedSizeBytes(null);
       } else {
         setSourceKind("upload");
         setExternalUrl("");
         setStorageKey(item.storageKey);
         setStorageProvider((item.storageProvider as "local" | "supabase") ?? "local");
         setUploadedName(item.storageKey ? item.storageKey.split("/").pop() ?? item.storageKey : null);
+        setUploadedMimeType(item.mimeType);
+        setUploadedSizeBytes(item.sizeBytes);
       }
       setPublished(item.published);
       setQuickAccess(item.quickAccess);
@@ -101,6 +107,8 @@ export function DocumentDrawer({
       setStorageKey(null);
       setStorageProvider("local");
       setUploadedName(null);
+      setUploadedMimeType(null);
+      setUploadedSizeBytes(null);
       setPublished(true);
       setQuickAccess(false);
     }
@@ -114,25 +122,41 @@ export function DocumentDrawer({
   const handleUpload = useCallback(async (file: File) => {
     setUploading(true);
     try {
-      const { uploadUrl, storageKey: key, storageProvider: provider } =
+      const { uploadUrl, pendingKey } =
         await adminFetch<{
           uploadUrl: string;
-          storageKey: string;
-          storageProvider: "supabase";
+          pendingKey: string;
         }>("/api/admin/documents/upload", {
           method: "POST",
           body: JSON.stringify({
             filename: file.name,
             contentType: file.type,
+            byteSize: file.size,
           }),
         });
-      await fetch(uploadUrl, {
+      const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type },
         body: file,
       });
-      setStorageKey(key);
-      setStorageProvider(provider);
+      if (!uploadResponse.ok) throw new Error("File upload failed");
+      const finalized = await adminFetch<{
+        storageKey: string;
+        storageProvider: "supabase";
+        mimeType: string;
+        sizeBytes: number;
+      }>("/api/admin/documents/upload", {
+        method: "PUT",
+        body: JSON.stringify({
+          pendingKey,
+          contentType: file.type,
+          byteSize: file.size,
+        }),
+      });
+      setStorageKey(finalized.storageKey);
+      setStorageProvider(finalized.storageProvider);
+      setUploadedMimeType(finalized.mimeType);
+      setUploadedSizeBytes(finalized.sizeBytes);
       setUploadedName(file.name);
       toast("File uploaded", "success");
     } catch (err) {
@@ -190,6 +214,8 @@ export function DocumentDrawer({
         payload.url = null;
         payload.storageKey = storageKey;
         payload.storageProvider = storageProvider;
+        payload.mimeType = uploadedMimeType;
+        payload.sizeBytes = uploadedSizeBytes;
       }
 
       if (item) {
@@ -360,7 +386,12 @@ export function DocumentDrawer({
                         <span className="text-sm text-slate-700 truncate">{uploadedName}</span>
                         <button
                           type="button"
-                          onClick={() => { setStorageKey(null); setUploadedName(null); }}
+                          onClick={() => {
+                            setStorageKey(null);
+                            setUploadedName(null);
+                            setUploadedMimeType(null);
+                            setUploadedSizeBytes(null);
+                          }}
                           className="text-xs text-slate-400 hover:text-red-600"
                         >
                           Remove

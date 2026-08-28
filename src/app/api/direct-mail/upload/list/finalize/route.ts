@@ -2,17 +2,30 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { MAX_LIST_ROWS } from "@/lib/direct-mail/constants";
-import { downloadObject, deleteObjects } from "@/lib/direct-mail/storage";
+import {
+  ACCEPTED_LIST_MIME,
+  MAX_LIST_BYTES,
+  MAX_LIST_ROWS,
+} from "@/lib/direct-mail/constants";
+import {
+  DirectMailFileValidationError,
+  decodeCsvBuffer,
+  deleteObjects,
+  downloadObjectWithinLimit,
+  isUploadAttemptKeyForOrder,
+  parseListUploadAttemptKey,
+} from "@/lib/direct-mail/storage";
 import { parseListPreview } from "@/lib/direct-mail/csv-validator";
+import { logApiError } from "@/lib/api-error";
+import { readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 
 const requestSchema = z.object({
-  orderId: z.string().min(1),
-  listId: z.string().min(1).max(64),
-  fileKey: z.string().min(1),
+  orderId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+  listId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  fileKey: z.string().min(1).max(500),
   fileName: z.string().min(1).max(300),
-  byteSize: z.number().int().nonnegative(),
-});
+  byteSize: z.number().int().positive().max(MAX_LIST_BYTES),
+}).strict();
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -29,8 +42,11 @@ export async function POST(req: Request) {
 
   let body: unknown;
   try {
-    body = await req.json();
-  } catch {
+    body = await readJsonBodyWithLimit(req, 4_000);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   const parsed = requestSchema.safeParse(body);
@@ -52,24 +68,39 @@ export async function POST(req: Request) {
   if (order.status !== "draft") {
     return NextResponse.json({ error: "Submitted orders cannot accept new files" }, { status: 409 });
   }
-  if (!fileKey.startsWith(`${orderId}/`)) {
-    return NextResponse.json({ error: "fileKey does not belong to this order" }, { status: 400 });
+  const attempt = parseListUploadAttemptKey(fileKey, orderId, listId);
+  if (!attempt || attempt.expectedByteSize !== byteSize) {
+    return NextResponse.json({ error: "Invalid signed list upload key." }, { status: 400 });
   }
 
-  let buffer: Buffer;
+  let uploaded: Awaited<ReturnType<typeof downloadObjectWithinLimit>>;
   try {
-    const obj = await downloadObject(fileKey);
-    buffer = obj.buffer;
+    uploaded = await downloadObjectWithinLimit(fileKey, MAX_LIST_BYTES, byteSize);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "unknown";
-    return NextResponse.json({ error: `Failed to read uploaded file: ${msg}` }, { status: 502 });
+    if (e instanceof DirectMailFileValidationError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    logApiError("direct-mail/list-finalize-read", e);
+    return NextResponse.json({ error: "Failed to read uploaded file" }, { status: 502 });
   }
 
-  if (buffer.byteLength === 0) {
-    return NextResponse.json({ error: "Uploaded file is empty." }, { status: 400 });
+  const mimeType = uploaded.mimeType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  const acceptedMime =
+    ACCEPTED_LIST_MIME.includes(mimeType as (typeof ACCEPTED_LIST_MIME)[number]) ||
+    mimeType.endsWith("/csv");
+  if (!acceptedMime) {
+    return NextResponse.json({ error: "Uploaded file content type is not CSV." }, { status: 415 });
   }
 
-  const text = buffer.toString("utf-8");
+  let text: string;
+  try {
+    text = decodeCsvBuffer(uploaded.buffer);
+  } catch (e) {
+    if (e instanceof DirectMailFileValidationError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    throw e;
+  }
   const parsedCsv = parseListPreview(text);
   if (parsedCsv.error) {
     return NextResponse.json({ error: parsedCsv.error }, { status: 400 });
@@ -85,7 +116,7 @@ export async function POST(req: Request) {
     listId,
     fileKey,
     fileName,
-    byteSize,
+    byteSize: uploaded.byteSize,
     rowCount: parsedCsv.rowCount,
     columns: parsedCsv.columns,
     fillPercent: parsedCsv.fillPercent,
@@ -113,7 +144,7 @@ export async function DELETE(req: Request) {
   if (!orderId || !fileKey) {
     return NextResponse.json({ error: "orderId and fileKey required" }, { status: 400 });
   }
-  if (!fileKey.startsWith(`${orderId}/`)) {
+  if (!isUploadAttemptKeyForOrder(fileKey, orderId)) {
     return NextResponse.json({ error: "fileKey does not belong to this order" }, { status: 400 });
   }
 
@@ -131,8 +162,8 @@ export async function DELETE(req: Request) {
   try {
     await deleteObjects([fileKey]);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "unknown";
-    return NextResponse.json({ error: `Storage delete failed: ${msg}` }, { status: 502 });
+    logApiError("direct-mail/list-delete", e);
+    return NextResponse.json({ error: "Storage delete failed" }, { status: 502 });
   }
 
   return NextResponse.json({ ok: true });

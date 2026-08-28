@@ -1,14 +1,32 @@
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import {
-  artworkFileKeyFor,
-  copyToKey,
-  getSignedUrl,
-  listFileKeyFor,
+  artworkUploadAttemptKeyFor,
+  downloadObjectWithinLimit,
+  extFromMime,
+  isSubmittedFileKeyForOrder,
+  listUploadAttemptKeyFor,
+  removeOrderFiles,
+  uploadCreateOnlyAtKey,
 } from "@/lib/direct-mail/storage";
+import {
+  MAX_ARTWORK_BYTES,
+  MAX_LIST_BYTES,
+} from "@/lib/direct-mail/constants";
+import {
+  artworkFilesArraySchema,
+  listFilesArraySchema,
+} from "@/lib/direct-mail/schemas";
 import type { ArtworkFile, ListFile } from "@/lib/direct-mail/types";
+import { logApiError } from "@/lib/api-error";
+import { readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
+
+const duplicateRequestSchema = z.object({
+  includeList: z.boolean().optional(),
+}).strict();
 
 export async function POST(
   req: Request,
@@ -27,17 +45,43 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  let body: { includeList?: boolean } = {};
-  try {
-    body = (await req.json()) as { includeList?: boolean };
-  } catch {
-    body = {};
+  let body: unknown = {};
+  if (req.body) {
+    try {
+      body = await readJsonBodyWithLimit(req, 1_000);
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+      }
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
   }
-  const includeList = body.includeList === true;
+  const parsedBody = duplicateRequestSchema.safeParse(body);
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: "Validation failed" }, { status: 400 });
+  }
+  const includeList = parsedBody.data.includeList === true;
 
   const source = await prisma.mailOrder.findUnique({ where: { id } });
   if (!source || source.userId !== profile.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (source.status !== "submitted" || source.purgedAt) {
+    return NextResponse.json(
+      { error: "Only retained submitted orders can be duplicated" },
+      { status: 409 },
+    );
+  }
+
+  const parsedArtwork = artworkFilesArraySchema.safeParse(source.artworkFiles);
+  const parsedLists = includeList
+    ? listFilesArraySchema.safeParse(source.listFiles)
+    : null;
+  if (!parsedArtwork.success || (parsedLists && !parsedLists.success)) {
+    return NextResponse.json(
+      { error: "The source order files are not valid" },
+      { status: 409 },
+    );
   }
 
   const draft = await prisma.mailOrder.create({
@@ -53,77 +97,94 @@ export async function POST(
       mailClass: source.mailClass,
       dropDate: null,
       returnAddress: source.returnAddress ?? undefined,
-      quantity: includeList ? source.quantity : 0,
+      quantity: parsedLists?.success
+        ? parsedLists.data.reduce((sum, file) => sum + file.rowCount, 0)
+        : 0,
       specialInstructions: source.specialInstructions,
       complianceConfirmed: false,
     },
     select: { id: true },
   });
 
-  const sourceArtwork = Array.isArray(source.artworkFiles)
-    ? (source.artworkFiles as unknown as ArtworkFile[])
-    : [];
-
-  const newArtwork: ArtworkFile[] = [];
-  for (const f of sourceArtwork) {
-    const newId = nanoid(12);
-    const newKey = artworkFileKeyFor(draft.id, newId, ext(f.fileKey));
-    await copyKey(f.fileKey, newKey, f.mimeType);
-    newArtwork.push({
-      id: newId,
-      name: f.name,
-      fileKey: newKey,
-      fileName: f.fileName,
-      byteSize: f.byteSize,
-      mimeType: f.mimeType,
-      warnings: f.warnings,
-    });
-  }
-
-  const newLists: ListFile[] = [];
-  if (includeList) {
-    const sourceLists = Array.isArray(source.listFiles)
-      ? (source.listFiles as unknown as ListFile[])
-      : [];
-    for (const l of sourceLists) {
+  try {
+    const newArtwork: ArtworkFile[] = [];
+    for (const file of parsedArtwork.data) {
+      if (!isSubmittedFileKeyForOrder(file.fileKey, source.id)) {
+        throw new Error("Source artwork key is outside the order prefix");
+      }
       const newId = nanoid(12);
-      const newKey = listFileKeyFor(draft.id, newId);
-      await copyKey(l.fileKey, newKey, "text/csv");
-      newLists.push({
+      const uploaded = await downloadObjectWithinLimit(
+        file.fileKey,
+        MAX_ARTWORK_BYTES,
+        file.byteSize,
+      );
+      const ext = extFromMime(file.mimeType);
+      const newKey = artworkUploadAttemptKeyFor(
+        draft.id,
+        newId,
+        uploaded.byteSize,
+        ext,
+      );
+      await uploadCreateOnlyAtKey(newKey, {
+        buffer: uploaded.buffer,
+        mimeType: file.mimeType,
+      });
+      newArtwork.push({
         id: newId,
-        name: l.name,
+        name: file.name,
         fileKey: newKey,
-        fileName: l.fileName,
-        byteSize: l.byteSize,
-        rowCount: l.rowCount,
-        columns: l.columns,
-        fillPercent: l.fillPercent,
-        excludedColumns: l.excludedColumns,
-        warnings: l.warnings,
+        fileName: file.fileName,
+        byteSize: uploaded.byteSize,
+        mimeType: file.mimeType,
+        warnings: file.warnings,
       });
     }
+
+    const newLists: ListFile[] = [];
+    if (parsedLists?.success) {
+      for (const file of parsedLists.data) {
+        if (!isSubmittedFileKeyForOrder(file.fileKey, source.id)) {
+          throw new Error("Source list key is outside the order prefix");
+        }
+        const newId = nanoid(12);
+        const uploaded = await downloadObjectWithinLimit(
+          file.fileKey,
+          MAX_LIST_BYTES,
+          file.byteSize,
+        );
+        const newKey = listUploadAttemptKeyFor(draft.id, newId, uploaded.byteSize);
+        await uploadCreateOnlyAtKey(newKey, {
+          buffer: uploaded.buffer,
+          mimeType: "text/csv",
+        });
+        newLists.push({
+          ...file,
+          id: newId,
+          fileKey: newKey,
+          byteSize: uploaded.byteSize,
+        });
+      }
+    }
+
+    await prisma.mailOrder.update({
+      where: { id: draft.id },
+      data: {
+        artworkFiles: newArtwork as unknown as object,
+        listFiles: newLists as unknown as object,
+      },
+    });
+  } catch (error) {
+    try {
+      await removeOrderFiles(draft.id);
+      await prisma.mailOrder.deleteMany({
+        where: { id: draft.id, userId: profile.id, status: "draft" },
+      });
+    } catch (cleanupError) {
+      logApiError("direct-mail/duplicate-cleanup", cleanupError);
+    }
+    logApiError("direct-mail/duplicate", error);
+    return NextResponse.json({ error: "Failed to duplicate the order" }, { status: 502 });
   }
 
-  await prisma.mailOrder.update({
-    where: { id: draft.id },
-    data: {
-      artworkFiles: newArtwork as unknown as object,
-      listFiles: newLists as unknown as object,
-    },
-  });
-
   return NextResponse.json({ orderId: draft.id });
-}
-
-async function copyKey(srcKey: string, destKey: string, mimeType: string) {
-  const url = await getSignedUrl(srcKey, 60);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch source file ${srcKey}: ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  await copyToKey(destKey, { buffer: buf, mimeType });
-}
-
-function ext(key: string): string {
-  const idx = key.lastIndexOf(".");
-  return idx >= 0 ? key.slice(idx + 1) : "bin";
 }

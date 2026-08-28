@@ -5,6 +5,11 @@
  * (name, photo, signature) while the brokerage retains lead ownership.
  */
 
+import { escapeHtml, escapeHttpUrl } from "./index";
+
+const DEFAULT_BRAND_COLOR = "#1e293b";
+const SIX_DIGIT_HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
 interface AgentBrand {
   firstName: string;
   lastName: string;
@@ -22,20 +27,32 @@ export function buildAgentBrandedEmailHtml(
   preheader?: string,
 ): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://homewisefl.com";
-  const color = agent.brandColor ?? "#1e293b";
-  const fullName = `${agent.firstName} ${agent.lastName}`;
-  const tagline = agent.emailTagline ?? "Your Homewise FL Agent";
+  const color = agent.brandColor && SIX_DIGIT_HEX_COLOR.test(agent.brandColor)
+    ? agent.brandColor
+    : DEFAULT_BRAND_COLOR;
+  const fullName = escapeHtml(`${agent.firstName} ${agent.lastName}`);
+  const tagline = escapeHtml(agent.emailTagline ?? "Your Homewise FL Agent");
+  const photoUrl = agent.photoUrl ? escapeHttpUrl(agent.photoUrl) : "";
+  const logoUrl = escapeHttpUrl(`${siteUrl.replace(/\/$/, "")}/logo.png`);
+  const firstInitial = escapeHtml(agent.firstName.charAt(0));
+  const lastInitial = escapeHtml(agent.lastName.charAt(0));
 
-  const photoBlock = agent.photoUrl
-    ? `<img src="${agent.photoUrl}" alt="${fullName}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid ${color}" />`
-    : `<div style="width:64px;height:64px;border-radius:50%;background:${color};color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">${agent.firstName[0]}${agent.lastName[0]}</div>`;
+  const photoBlock = photoUrl
+    ? `<img src="${photoUrl}" alt="${fullName}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid ${color}" />`
+    : `<div style="width:64px;height:64px;border-radius:50%;background:${color};color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">${firstInitial}${lastInitial}</div>`;
 
   const contactLinks: string[] = [];
-  if (agent.email) contactLinks.push(`<a href="mailto:${agent.email}" style="color:${color};text-decoration:none">${agent.email}</a>`);
-  if (agent.phone) contactLinks.push(`<a href="tel:${agent.phone}" style="color:${color};text-decoration:none">${agent.phone}</a>`);
+  if (agent.email) {
+    const email = escapeHtml(agent.email);
+    contactLinks.push(`<a href="mailto:${email}" style="color:${color};text-decoration:none">${email}</a>`);
+  }
+  if (agent.phone) {
+    const phone = escapeHtml(agent.phone);
+    contactLinks.push(`<a href="tel:${phone}" style="color:${color};text-decoration:none">${phone}</a>`);
+  }
 
   const signature = agent.emailSignature
-    ? `<p style="margin:12px 0 0;font-style:italic;color:#64748b;font-size:13px">${agent.emailSignature}</p>`
+    ? `<p style="margin:12px 0 0;font-style:italic;color:#64748b;font-size:13px">${escapeHtml(agent.emailSignature)}</p>`
     : "";
 
   return `<!DOCTYPE html>
@@ -43,7 +60,7 @@ export function buildAgentBrandedEmailHtml(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  ${preheader ? `<span style="display:none;max-height:0;overflow:hidden">${preheader}</span>` : ""}
+  ${preheader ? `<span style="display:none;max-height:0;overflow:hidden">${escapeHtml(preheader)}</span>` : ""}
   <style>
     body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; }
@@ -69,7 +86,7 @@ export function buildAgentBrandedEmailHtml(
             <p style="margin:2px 0 0;font-size:13px;color:#64748b">${tagline}</p>
           </td>
           <td width="100" valign="middle" align="right">
-            <img src="${siteUrl}/logo.png" alt="Homewise FL" style="height:28px;opacity:0.6" />
+            ${logoUrl ? `<img src="${logoUrl}" alt="Homewise FL" style="height:28px;opacity:0.6" />` : ""}
           </td>
         </tr>
       </table>
@@ -85,7 +102,7 @@ export function buildAgentBrandedEmailHtml(
       <table cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td valign="top" style="padding-right:12px">
-            ${agent.photoUrl ? `<img src="${agent.photoUrl}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover" />` : ""}
+            ${photoUrl ? `<img src="${photoUrl}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover" />` : ""}
           </td>
           <td valign="top">
             <p style="margin:0;font-size:14px;font-weight:600;color:#1e293b">${fullName}</p>

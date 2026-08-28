@@ -2,28 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
 import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
 import { logMlsAccess } from "@/lib/mls-access-log";
+import { InvalidJsonBodyError, readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const cmaSchema = z.object({
-  address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-  zip: z.string().min(1, "ZIP code is required"),
-  beds: z.number().int().positive().optional(),
-  baths: z.number().positive().optional(),
-  sqft: z.number().int().positive().optional(),
-  propertyType: z.string().optional(),
-});
+  address: z.string().trim().min(1, "Address is required").max(300),
+  city: z.string().trim().min(1, "City is required").max(120),
+  zip: z.string().trim().min(1, "ZIP code is required").max(20),
+  beds: z.number().int().positive().max(30).optional(),
+  baths: z.number().positive().max(30).optional(),
+  sqft: z.number().int().positive().max(100_000).optional(),
+  propertyType: z.string().trim().max(120).optional(),
+}).strict();
 
 export async function POST(request: NextRequest) {
   const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
-    const raw: unknown = await request.json();
+    const raw: unknown = await readJsonBodyWithLimit(request, 5_000);
     const input = cmaSchema.safeParse(raw);
     if (!input.success) {
       return NextResponse.json(
@@ -108,6 +110,9 @@ Generate a JSON response:
   "keyFindings": ["<finding 1>", "<finding 2>", "<finding 3>"]
 }`;
 
+    const entitlementError = await reserveStaffFeature(auth, "ai_cma_reports");
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("cma_report", {
       feature: "cma_report",
       systemPrompt: "You are a real estate market analyst generating CMA reports. Be data-driven and specific. Output valid JSON only.",
@@ -139,6 +144,12 @@ Generate a JSON response:
       subjectProperty: body,
     });
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/cma] error:", err);
     return NextResponse.json({ error: "Failed to generate CMA" }, { status: 500 });
   }

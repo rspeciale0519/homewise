@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface RecordPaymentFormProps {
@@ -15,6 +15,7 @@ export function RecordPaymentForm({ agentId, onSuccess, onCancel }: RecordPaymen
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const operationIdRef = useRef<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +29,17 @@ export function RecordPaymentForm({ agentId, onSuccess, onCancel }: RecordPaymen
 
     setSaving(true);
     try {
+      const operationId = operationIdRef.current ?? crypto.randomUUID();
+      operationIdRef.current = operationId;
       const res = await fetch(`/api/admin/billing/agents/${agentId}/payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amountCents, paymentType, notes: notes || undefined }),
+        body: JSON.stringify({
+          operationId,
+          amount: amountCents,
+          paymentType,
+          notes: notes || undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -57,7 +65,10 @@ export function RecordPaymentForm({ agentId, onSuccess, onCancel }: RecordPaymen
           step="0.01"
           min="1"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => {
+            operationIdRef.current = null;
+            setAmount(e.target.value);
+          }}
           placeholder="0.00"
           required
           className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200 focus:border-navy-300"
@@ -70,7 +81,10 @@ export function RecordPaymentForm({ agentId, onSuccess, onCancel }: RecordPaymen
             <button
               key={t}
               type="button"
-              onClick={() => setPaymentType(t)}
+              onClick={() => {
+                operationIdRef.current = null;
+                setPaymentType(t);
+              }}
               className={`px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors ${
                 paymentType === t
                   ? "bg-navy-600 text-white"
@@ -86,7 +100,10 @@ export function RecordPaymentForm({ agentId, onSuccess, onCancel }: RecordPaymen
         <label className="text-xs font-medium text-slate-500 mb-1.5 block">Notes (optional)</label>
         <textarea
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(e) => {
+            operationIdRef.current = null;
+            setNotes(e.target.value);
+          }}
           rows={2}
           maxLength={1000}
           className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200 focus:border-navy-300 resize-none"

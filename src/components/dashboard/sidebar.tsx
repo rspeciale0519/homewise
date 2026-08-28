@@ -38,7 +38,13 @@ export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname.startsWith(href);
+    exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+  const ariaCurrent = (href: string, exact?: boolean) =>
+    pathname === href
+      ? "page" as const
+      : !exact && pathname.startsWith(`${href}/`)
+        ? "location" as const
+        : undefined;
 
   const showAgentNav =
     role === "agent" ||
@@ -56,6 +62,7 @@ export function Sidebar({ role }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={ariaCurrent(item.href, item.exact)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive(item.href, item.exact)
@@ -77,6 +84,7 @@ export function Sidebar({ role }: SidebarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={ariaCurrent(item.href, item.exact)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                     isActive(item.href, item.exact)
@@ -111,6 +119,7 @@ export function Sidebar({ role }: SidebarProps) {
           <Link
             key={item.href}
             href={item.href}
+            aria-current={ariaCurrent(item.href, item.exact)}
             className={cn(
               "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
               isActive(item.href, item.exact)
@@ -129,6 +138,7 @@ export function Sidebar({ role }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={ariaCurrent(item.href, item.exact)}
                 className={cn(
                   "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
                   isActive(item.href, item.exact)

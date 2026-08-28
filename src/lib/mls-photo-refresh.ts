@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { authedFetch } from "@/lib/mls-grid";
-import { canonicalMediaIdentity, proxyPhotoUrl } from "@/lib/mls-image";
+import {
+  canonicalMediaIdentity,
+  normalizeMlsMediaUrl,
+  proxyPhotoUrl,
+} from "@/lib/mls-image";
 import type { ResoProperty } from "@/types/reso";
 
 function mlsGridBaseUrl(): string {
@@ -37,13 +41,18 @@ export async function refreshPhotoSource(staleSourceUrl: string): Promise<string
   const media = [...(entity.Media ?? [])].sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0));
   if (media.length === 0) return null;
 
-  const freshByIdentity = new Map(
-    media.map((item) => [canonicalMediaIdentity(item.MediaURL), item.MediaURL]),
-  );
+  const freshByIdentity = new Map<string, string>();
+  for (const item of media) {
+    const approvedUrl = normalizeMlsMediaUrl(item.MediaURL);
+    if (approvedUrl) {
+      freshByIdentity.set(canonicalMediaIdentity(approvedUrl), approvedUrl);
+    }
+  }
 
-  const refreshedSources = listing.photoSources.map(
-    (source) => freshByIdentity.get(canonicalMediaIdentity(source)) ?? source,
-  );
+  const refreshedSources = listing.photoSources
+    .map((source) => freshByIdentity.get(canonicalMediaIdentity(source)) ?? source)
+    .map(normalizeMlsMediaUrl)
+    .filter((source): source is string => source !== null);
   const refreshedPhotos = refreshedSources.map((source) => proxyPhotoUrl(source));
 
   await prisma.listing.update({

@@ -4,13 +4,17 @@ import { requireAdminApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueSlug, slugify } from "@/lib/slug/slugify";
 import { isSlugTakenForDocument } from "@/lib/slug/resolve";
+import { isFinalAdminUploadKey } from "@/lib/http/admin-upload";
 
 const bulkCreateSchema = z.object({
   items: z
     .array(
       z.object({
         name: z.string().min(1),
-        storageKey: z.string().min(1),
+        storageKey: z.string().min(1).refine(
+          (key) => isFinalAdminUploadKey(key, "documents"),
+          "Upload validation is required",
+        ),
         storageProvider: z.literal("supabase"),
         mimeType: z.string().optional().nullable(),
         sizeBytes: z.number().int().nonnegative().optional().nullable(),

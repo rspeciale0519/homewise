@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { normalizeMlsAgentId } from "@/lib/mls-agent-id";
 import { isHomewiseOffice } from "@/lib/mls-featured";
 import { deriveListingTags } from "@/lib/listing-tags";
-import { proxyPhotoUrl } from "@/lib/mls-image";
+import { normalizeMlsMediaUrl, proxyPhotoUrl } from "@/lib/mls-image";
 import { limitMlsPhotoSources } from "@/lib/mls-media-budget";
 import type { ResoProperty } from "@/types/reso";
 
@@ -18,9 +18,12 @@ export type ListingSyncData = Prisma.ListingUncheckedCreateInput & {
 };
 
 function sortedPhotoSources(reso: ResoProperty): string[] {
-  return limitMlsPhotoSources([...(reso.Media ?? [])]
+  const approvedSources = [...(reso.Media ?? [])]
     .sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
-    .map((media) => media.MediaURL));
+    .map((media) => normalizeMlsMediaUrl(media.MediaURL))
+    .filter((source): source is string => source !== null);
+
+  return limitMlsPhotoSources(approvedSources);
 }
 
 export type PriceHistoryEntry = {

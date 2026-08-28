@@ -22,6 +22,7 @@ const PROVIDER = "stellar";
 const PHOTO_BUCKET = "mls-photos";
 const PAGE_SIZE = 200;
 const PAGES_PER_RUN = 10;
+const SYNC_LEASE_MS = 30 * 60 * 1000;
 
 type SyncEventData = {
   nextLink?: string;
@@ -45,6 +46,7 @@ export const mlsSync = inngest.createFunction(
     id: "mls-sync",
     name: "MLS Grid Sync",
     retries: 2,
+    concurrency: { limit: 1 },
   },
   [{ cron: "*/15 * * * *" }, { event: "mls-sync" }, { event: "mls/sync.continue" }],
   async ({ event, step }) => {
@@ -58,7 +60,9 @@ export const mlsSync = inngest.createFunction(
         where: { provider: PROVIDER },
       });
 
-      if (isCronInvocation(event.name) && current?.status === "syncing") {
+      const staleBefore = new Date(Date.now() - SYNC_LEASE_MS);
+      const activeSync = current?.status === "syncing" && current.updatedAt >= staleBefore;
+      if (isCronInvocation(event.name) && activeSync) {
         return { skipped: true, state: current };
       }
 
@@ -111,11 +115,10 @@ export const mlsSync = inngest.createFunction(
         totalDeleted += result.deleted;
         maxCursor = maxIsoTimestamp(maxCursor, result.maxCursor);
 
-        await step.run(`persist-property-cursor-${pageIndex}`, async () => {
+        await step.run(`persist-property-progress-${pageIndex}`, async () => {
           return prisma.syncState.update({
             where: { provider: PROVIDER },
             data: {
-              cursor: maxCursor,
               lastSyncAt: new Date(),
               totalSynced: { increment: result.upserted },
               lastError: null,

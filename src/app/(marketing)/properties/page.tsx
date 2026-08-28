@@ -40,18 +40,13 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
   const parsed = propertyFilterSchema.safeParse(flat);
 
   const rawFilters = parsed.success ? parsed.data : { page: 1, perPage: 12 };
-  const { north, south, east, west, polygon: polygonStr, ...rest } = rawFilters;
+  const { north, south, east, west, polygon, ...rest } = rawFilters;
   const filters: PropertyFilters = { ...rest };
 
   if (north !== undefined && south !== undefined && east !== undefined && west !== undefined) {
     filters.bounds = { north, south, east, west };
   }
-  if (typeof polygonStr === "string" && polygonStr) {
-    try {
-      const coords = JSON.parse(polygonStr) as [number, number][];
-      if (Array.isArray(coords) && coords.length >= 3) filters.polygon = coords;
-    } catch { /* ignore */ }
-  }
+  if (polygon) filters.polygon = polygon;
 
   const result = await propertyProvider.search(filters);
 

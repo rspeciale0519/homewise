@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SERVICE_AREAS, AGENT_COUNT, YEARS_IN_BUSINESS } from "@/lib/constants";
 import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
 import { StaggerChildren, StaggerItem } from "@/components/shared/stagger-children";
+import { cn } from "@/lib/utils";
 
 const STATS = [
   { value: AGENT_COUNT, label: "Licensed Agents", icon: "👥" },
@@ -58,19 +59,20 @@ export function CompanyDescription() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/about">
-                <Button variant="outline-white" size="lg">
-                  Learn About Us
-                </Button>
+              <Link
+                href="/about"
+                className={buttonVariants({ variant: "outline-white", size: "lg" })}
+              >
+                Learn About Us
               </Link>
-              <Link href="/agents">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className="text-slate-300 hover:text-white hover:bg-white/10"
-                >
-                  Meet Our Agents
-                </Button>
+              <Link
+                href="/agents"
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "lg" }),
+                  "text-slate-300 hover:bg-white/10 hover:text-white",
+                )}
+              >
+                Meet Our Agents
               </Link>
             </div>
           </div>

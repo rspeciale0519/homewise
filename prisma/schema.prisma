@@ -131,16 +131,20 @@ model AgentApplication {
 }
 
 model PropertyAlert {
-  id        String   @id @default(cuid())
-  email     String
-  name      String?
-  cities    String[]
-  minPrice  Int?
-  maxPrice  Int?
-  beds      Int?
-  active    Boolean  @default(true)
-  userId    String?
-  createdAt DateTime @default(now())
+  id                   String    @id @default(cuid())
+  email                String
+  name                 String?
+  cities               String[]
+  minPrice             Int?
+  maxPrice             Int?
+  beds                 Int?
+  active               Boolean   @default(true)
+  verificationRequired Boolean   @default(false)
+  verificationVersion  Int       @default(0)
+  verificationSentAt   DateTime?
+  emailVerifiedAt      DateTime?
+  userId               String?
+  createdAt            DateTime  @default(now())
 
   user UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -159,6 +163,7 @@ model UserProfile {
   preferredAgent       String?
   /// Deprecated 2026-04-21. Admins now always log in to /admin; column kept to avoid a migration. Safe to drop in a future cleanup.
   defaultDashboardView String   @default("client")
+  favoritePriceAlertsEnabled Boolean @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -418,6 +423,18 @@ model SyncState {
   updatedAt   DateTime  @updatedAt
 }
 
+model RateLimitBucket {
+  keyHash     String   @db.VarChar(64)
+  windowStart DateTime @db.Timestamptz(3)
+  windowMs    Int
+  count       Int      @default(1)
+  expiresAt   DateTime @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt
+
+  @@id([keyHash, windowStart, windowMs])
+  @@index([expiresAt])
+}
+
 // =============================================================================
 // CRM — Contact / Lead Management (B5)
 // =============================================================================
@@ -440,6 +457,7 @@ model Contact {
   prefBudgetMax    Float?
   prefCities       String[]  @default([])
   prefMinBeds      Int?
+  marketingEmailOptOutAt DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

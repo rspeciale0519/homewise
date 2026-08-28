@@ -1,6 +1,14 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
+import {
+  buildEmailHtml,
+  escapeHtml,
+  escapeHttpUrl,
+  personalizeTemplate,
+  sendEmail,
+} from "@/lib/email";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 
 export const monthlyMarketEmail = inngest.createFunction(
   { id: "monthly-market-email", concurrency: { limit: 1 } },
@@ -29,7 +37,7 @@ export const monthlyMarketEmail = inngest.createFunction(
 
     const statsHtml = stats.slice(0, 10).map((s) => `
       <tr>
-        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-weight:600">${s.area}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-weight:600">${escapeHtml(s.area)}</td>
         <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right">$${s.medianPrice.toLocaleString()}</td>
         <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right">${s.activeCount}</td>
         <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right">${s.avgDom} days</td>
@@ -60,16 +68,28 @@ export const monthlyMarketEmail = inngest.createFunction(
     for (const sub of subscribers) {
       await step.run(`email-${sub.id}`, async () => {
         const firstName = sub.user?.firstName ?? sub.name ?? "there";
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "property_alert", id: sub.id },
+          sub.email,
+        );
         const tokens: Record<string, string> = {
-          first_name: firstName,
-          site_url: siteUrl,
-          unsubscribe_url: `${siteUrl}/unsubscribe?alert=${sub.id}`,
+          first_name: escapeHtml(firstName),
+          site_url: escapeHttpUrl(siteUrl),
+          unsubscribe_url: escapeHttpUrl(
+            `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
+          ),
         };
+
+        if (!await canSendPreferenceEmail({
+          kind: "property_alert",
+          id: sub.id,
+          recipientEmail: sub.email,
+        })) return;
 
         await sendEmail({
           to: sub.email,
           subject: personalizeTemplate(`${now.toLocaleDateString("en-US", { month: "long" })} Central FL Market Report`, tokens),
-          html: buildEmailHtml(personalizeTemplate(emailBody, tokens)),
+          html: personalizeTemplate(buildEmailHtml(emailBody), tokens),
           tags: [{ name: "type", value: "monthly_market" }],
         });
         sent++;

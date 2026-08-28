@@ -2,6 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import type { ProductWithFeatures } from "@/app/(marketing)/pricing/page";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type BillingInterval = "monthly" | "annual";
 
@@ -12,6 +14,7 @@ interface PlanBundleCardProps {
   onAdd: () => void;
   onRemove: () => void;
   loading: boolean;
+  removeDisabled: boolean;
 }
 
 function formatDollars(cents: number): string {
@@ -61,6 +64,7 @@ export function PlanBundleCard({
   onAdd,
   onRemove,
   loading,
+  removeDisabled,
 }: PlanBundleCardProps) {
   const price =
     billingInterval === "annual" ? bundle.annualAmount : bundle.monthlyAmount;
@@ -68,6 +72,9 @@ export function PlanBundleCard({
     billingInterval === "annual" ? Math.round(price / 12) : price;
   const features = BUNDLE_FEATURES_DISPLAY[bundle.productType] ?? [];
   const icon = BUNDLE_ICONS[bundle.productType] ?? "\u2728";
+  const productLabel = bundle.productType === "membership"
+    ? "Membership"
+    : "Bundle";
 
   return (
     <div
@@ -80,22 +87,7 @@ export function PlanBundleCard({
     >
       {isActive && (
         <div className="absolute top-3 right-3 z-10">
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-bold text-white uppercase tracking-wide">
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            Active
-          </span>
+          <Badge variant="success" size="sm">Active</Badge>
         </div>
       )}
 
@@ -108,6 +100,7 @@ export function PlanBundleCard({
             {bundle.name}
           </h3>
         </div>
+        <p className="mb-3 text-sm text-slate-500">{bundle.description}</p>
         <div className="flex items-end gap-1">
           <span className="text-3xl font-bold text-navy-700 font-serif">
             {formatDollars(displayedPrice)}
@@ -152,23 +145,30 @@ export function PlanBundleCard({
 
       <div className="p-6 pt-0">
         {isActive ? (
-          <button
+          <Button
             onClick={onRemove}
-            disabled={loading}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+            disabled={loading || removeDisabled}
+            variant="destructive"
+            className="w-full"
             type="button"
           >
-            {loading ? "Updating..." : "Remove Bundle"}
-          </button>
+            {loading ? "Updating..." : `Remove ${productLabel}`}
+          </Button>
         ) : (
-          <button
+          <Button
             onClick={onAdd}
             disabled={loading}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors"
+            variant="secondary"
+            className="w-full"
             type="button"
           >
-            {loading ? "Updating..." : "+ Add to Plan"}
-          </button>
+            {loading ? "Updating..." : `Add ${productLabel}`}
+          </Button>
+        )}
+        {isActive && removeDisabled && (
+          <p className="mt-2 text-center text-xs text-slate-500">
+            Cancel the subscription to remove the final plan.
+          </p>
         )}
       </div>
     </div>

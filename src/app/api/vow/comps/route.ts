@@ -4,11 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { isVowRegistered } from "@/lib/vow";
 import { withVow } from "@/lib/mls-visibility";
 import { logMlsAccess } from "@/lib/mls-access-log";
+import { boundedStoredValue, trustedClientIp } from "@/lib/trusted-client";
+import { z } from "zod";
 
-function clientIp(request: NextRequest): string | null {
-  const fwd = request.headers.get("x-forwarded-for");
-  return fwd ? fwd.split(",")[0]!.trim() : request.headers.get("x-real-ip");
-}
+const querySchema = z
+  .object({
+    city: z.string().trim().min(1).max(100).optional(),
+    zip: z.string().trim().regex(/^\d{5}(?:-\d{4})?$/).optional(),
+  })
+  .refine(({ city, zip }) => Boolean(city || zip));
 
 /**
  * VOW sold-comparables lookup — expanded data available only to a registered
@@ -28,11 +32,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const { searchParams } = new URL(request.url);
-  const city = searchParams.get("city")?.trim() || undefined;
-  const zip = searchParams.get("zip")?.trim() || undefined;
-  if (!city && !zip) {
+  const parsedQuery = querySchema.safeParse({
+    city: searchParams.get("city") ?? undefined,
+    zip: searchParams.get("zip") ?? undefined,
+  });
+  if (!parsedQuery.success) {
     return NextResponse.json({ error: "Provide a city or ZIP code." }, { status: 400 });
   }
+  const { city, zip } = parsedQuery.data;
 
   const comps = await prisma.listing.findMany({
     where: withVow({
@@ -54,8 +61,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     userId: user.id,
     tier: "vow",
     action: "search",
-    detail: `sold-comps ${city ?? ""} ${zip ?? ""} -> ${comps.length}`.trim(),
-    ipAddress: clientIp(request),
+    detail: boundedStoredValue(
+      `sold-comps ${city ?? ""} ${zip ?? ""} -> ${comps.length}`.trim(),
+      256,
+    ),
+    ipAddress: trustedClientIp(request),
   });
 
   return NextResponse.json({
