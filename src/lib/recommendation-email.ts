@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { escapeHtml, escapeHttpUrl } from "@/lib/email";
 import { withIdx } from "@/lib/mls-visibility";
 import { toAbsoluteSiteUrl } from "@/lib/site-url";
 import {
@@ -67,15 +68,33 @@ export async function recommendedListingsHtmlForContact(
   if (top.length === 0) return "";
 
   const cards = top.map((listing) => {
-    const imageUrl = toAbsoluteSiteUrl(listing.imageUrl, siteUrl);
+    const absoluteImageUrl = toAbsoluteSiteUrl(listing.imageUrl, siteUrl);
+    const imageUrl = absoluteImageUrl ? escapeHttpUrl(absoluteImageUrl) : "";
+    const propertyUrl = escapeHttpUrl(
+      toAbsoluteSiteUrl(`/properties/${encodeURIComponent(listing.id)}`, siteUrl) ?? "",
+    );
+    const address = escapeHtml(listing.address);
+    const city = escapeHtml(listing.city);
+    const price = escapeHtml(listing.price.toLocaleString());
+    const beds = escapeHtml(String(listing.beds));
+    const baths = escapeHtml(String(listing.baths));
+    const sqft = escapeHtml(listing.sqft.toLocaleString());
+    const addressLabel = `${address}, ${city}`;
+    const linkedAddress = propertyUrl
+      ? `<a href="${propertyUrl}" style="color:#1e3a5f;text-decoration:none">${addressLabel}</a>`
+      : addressLabel;
+    const officeName = listing.listingOfficeName
+      ? escapeHtml(listing.listingOfficeName)
+      : "";
+
     return `
       <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:12px">
-        ${imageUrl ? `<img src="${imageUrl}" alt="${listing.address}" style="width:100%;height:160px;object-fit:cover">` : ""}
+        ${imageUrl ? `<img src="${imageUrl}" alt="${address}" style="width:100%;height:160px;object-fit:cover">` : ""}
         <div style="padding:12px">
-          <p style="margin:0;font-weight:600"><a href="${siteUrl}/properties/${listing.id}" style="color:#1e3a5f;text-decoration:none">${listing.address}, ${listing.city}</a></p>
-          <p style="margin:4px 0;color:#2563eb;font-weight:700">$${listing.price.toLocaleString()}</p>
-          <p style="margin:0;font-size:13px;color:#64748b">${listing.beds} bed · ${listing.baths} bath · ${listing.sqft.toLocaleString()} sqft</p>
-          ${listing.listingOfficeName ? `<p style="margin:4px 0 0;font-size:11px;color:#94a3b8">Courtesy of ${listing.listingOfficeName}</p>` : ""}
+          <p style="margin:0;font-weight:600">${linkedAddress}</p>
+          <p style="margin:4px 0;color:#2563eb;font-weight:700">$${price}</p>
+          <p style="margin:0;font-size:13px;color:#64748b">${beds} bed · ${baths} bath · ${sqft} sqft</p>
+          ${officeName ? `<p style="margin:4px 0 0;font-size:11px;color:#94a3b8">Courtesy of ${officeName}</p>` : ""}
         </div>
       </div>
     `;

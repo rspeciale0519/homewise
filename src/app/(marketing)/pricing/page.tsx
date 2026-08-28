@@ -34,7 +34,11 @@ export type FeatureEntitlement = {
 export default async function PricingServerPage() {
   const [configs, entitlements] = await Promise.all([
     prisma.productConfig.findMany({
-      where: { isActive: true, platforms: { has: "homewise" } },
+      where: {
+        isActive: true,
+        platforms: { has: "homewise" },
+        NOT: { productType: "add_on" },
+      },
       orderBy: { sortOrder: "asc" },
       select: {
         id: true,
@@ -74,12 +78,10 @@ export default async function PricingServerPage() {
     .filter((b) => bundleOrder.includes(b.productType))
     .sort((a, b) => bundleOrder.indexOf(a.productType) - bundleOrder.indexOf(b.productType));
 
-  const addOns = configs.filter((b) => b.productType === "add_on");
-
   return (
     <PricingPage
       bundles={bundles}
-      addOns={addOns}
+      addOns={[]}
       entitlements={entitlements}
     />
   );

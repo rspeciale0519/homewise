@@ -43,7 +43,7 @@ export const agentApplicationSchema = z.object({
     .or(z.literal("")),
   // Honeypot — must stay empty; bots tend to fill every field.
   company: z.string().max(0).optional().or(z.literal("")),
-});
+}).strict();
 
 export type AgentApplicationInput = z.infer<typeof agentApplicationSchema>;
 

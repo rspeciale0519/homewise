@@ -2,30 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
+import {
+  InvalidJsonBodyError,
+  readJsonBodyWithLimit,
+  RequestBodyTooLargeError,
+} from "@/lib/http/request-body";
 import { withIdx } from "@/lib/mls-visibility";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const listingInsightsSchema = z.object({
-  mlsId: z.string().min(1, "mlsId is required"),
-});
+  mlsId: z.string().trim().min(1, "mlsId is required").max(100),
+}).strict();
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
-  const params = Object.fromEntries(request.nextUrl.searchParams.entries());
-  const input = listingInsightsSchema.safeParse(params);
-  if (!input.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: input.error.flatten().fieldErrors },
-      { status: 400 },
-    );
-  }
-  const { mlsId } = input.data;
-
   try {
+    const raw = await readJsonBodyWithLimit(request, 2_000);
+    const input = listingInsightsSchema.safeParse(raw);
+    if (!input.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: input.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const { mlsId } = input.data;
+
     const listing = await prisma.listing.findFirst({ where: withIdx({ mlsId }) });
     if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
 
@@ -64,6 +70,12 @@ Generate JSON:
   "marketContext": "<brief market context>"
 }`;
 
+    const entitlementError = await reserveStaffFeature(
+      auth,
+      "ai_listing_descriptions",
+    );
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("listing_insights", {
       feature: "listing_insights",
       systemPrompt: "You are a real estate listing performance analyst. Output valid JSON only.",
@@ -82,12 +94,18 @@ Generate JSON:
 
     return NextResponse.json({
       ...parsed,
-      listing: { mlsId, address: listing.address, price: listing.price, dom: listing.daysOnMarket },
+      listing: { mlsId: input.data.mlsId, address: listing.address, price: listing.price, dom: listing.daysOnMarket },
       comparableCount: comparables.length,
       avgCompPrice: Math.round(avgCompPrice),
       avgCompDom: Math.round(avgCompDom),
     });
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/listing-insights] error:", err);
     return NextResponse.json({ error: "Failed to generate insights" }, { status: 500 });
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { OpenHouseSlot } from "@/providers/property-provider";
 
 interface OpenHouseRsvpFormProps {
@@ -9,6 +9,7 @@ interface OpenHouseRsvpFormProps {
 }
 
 export function OpenHouseRsvpForm({ listingId, slots }: OpenHouseRsvpFormProps) {
+  const formId = useId();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,7 +19,7 @@ export function OpenHouseRsvpForm({ listingId, slots }: OpenHouseRsvpFormProps) 
 
   if (state === "done") {
     return (
-      <p className="mt-3 text-sm text-emerald-600 font-medium">
+      <p className="mt-3 text-sm text-emerald-600 font-medium" role="status" aria-live="polite">
         You&apos;re on the list! The listing agent has been notified.
       </p>
     );
@@ -55,21 +56,33 @@ export function OpenHouseRsvpForm({ listingId, slots }: OpenHouseRsvpFormProps) 
     "w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy-200";
 
   return (
-    <form onSubmit={submit} className="mt-3 space-y-2">
+    <form onSubmit={submit} className="mt-3 space-y-3" aria-busy={state === "saving"}>
       {slots.length > 1 && (
-        <select value={slotDate} onChange={(e) => setSlotDate(e.target.value)} className={inputCls}>
-          {slots.map((slot) => (
-            <option key={slot.date} value={slot.date}>
-              {slot.date}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label htmlFor={`${formId}-date`} className="block text-xs font-medium text-slate-600 mb-1">Open house date</label>
+          <select id={`${formId}-date`} value={slotDate} onChange={(e) => setSlotDate(e.target.value)} className={inputCls}>
+            {slots.map((slot) => (
+              <option key={slot.date} value={slot.date}>
+                {slot.date}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
-      <input type="text" required placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
-      <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
-      <input type="tel" placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} />
+      <div>
+        <label htmlFor={`${formId}-name`} className="block text-xs font-medium text-slate-600 mb-1">Your name</label>
+        <input id={`${formId}-name`} type="text" autoComplete="name" required placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+      </div>
+      <div>
+        <label htmlFor={`${formId}-email`} className="block text-xs font-medium text-slate-600 mb-1">Email</label>
+        <input id={`${formId}-email`} type="email" autoComplete="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
+      </div>
+      <div>
+        <label htmlFor={`${formId}-phone`} className="block text-xs font-medium text-slate-600 mb-1">Phone (optional)</label>
+        <input id={`${formId}-phone`} type="tel" autoComplete="tel" placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} />
+      </div>
       {state === "error" && (
-        <p className="text-xs text-crimson-600">Something went wrong — please try again.</p>
+        <p className="text-xs text-crimson-600" role="alert">Something went wrong — please try again.</p>
       )}
       <button
         type="submit"

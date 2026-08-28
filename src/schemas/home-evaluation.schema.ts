@@ -48,7 +48,7 @@ export const homeEvaluationSchema = z.object({
     .trim()
     .optional()
     .or(z.literal("")),
-});
+}).strict();
 
 export type HomeEvaluationInput = z.infer<typeof homeEvaluationSchema>;
 

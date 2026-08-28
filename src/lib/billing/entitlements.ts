@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveAgentPlatform } from "@/lib/platform/filter";
 
@@ -6,6 +7,21 @@ export interface EntitlementCheck {
   remaining: number | null;
   limit: number | null;
   upgradeBundle: string | null;
+}
+
+export type EntitlementDatabase = Pick<
+  Prisma.TransactionClient,
+  | "agent"
+  | "entitlementConfig"
+  | "productConfig"
+  | "productFeature"
+  | "subscription"
+  | "usageRecord"
+>;
+
+export interface EntitlementOptions {
+  /** Paid API routes must not become free when billing configuration is absent. */
+  requireActiveConfig?: boolean;
 }
 
 function startOfMonth(date: Date): Date {
@@ -20,8 +36,9 @@ async function getUsageCount(
   agentId: string,
   featureKey: string,
   periodStart: Date,
+  database: EntitlementDatabase,
 ): Promise<number> {
-  const record = await prisma.usageRecord.findUnique({
+  const record = await database.usageRecord.findUnique({
     where: {
       agentId_featureKey_billingPeriodStart: {
         agentId,
@@ -36,8 +53,9 @@ async function getUsageCount(
 async function getUpgradeBundleSlug(
   productType: string,
   platform: string,
+  database: EntitlementDatabase,
 ): Promise<string | null> {
-  const product = await prisma.productConfig.findFirst({
+  const product = await database.productConfig.findFirst({
     where: { productType, isActive: true, platforms: { has: platform } },
     orderBy: { sortOrder: "asc" },
   });
@@ -47,18 +65,23 @@ async function getUpgradeBundleSlug(
 export async function checkEntitlement(
   agentId: string,
   featureKey: string,
+  database: EntitlementDatabase = prisma,
+  options: EntitlementOptions = {},
 ): Promise<EntitlementCheck> {
-  const agent = await prisma.agent.findUnique({
+  const agent = await database.agent.findUnique({
     where: { id: agentId },
     select: { platform: true },
   });
   const platform = resolveAgentPlatform(agent);
 
-  const config = await prisma.entitlementConfig.findUnique({
+  const config = await database.entitlementConfig.findUnique({
     where: { featureKey },
   });
 
   if (!config || !config.isActive || !config.requiredProduct) {
+    if (options.requireActiveConfig) {
+      return { allowed: false, remaining: 0, limit: null, upgradeBundle: null };
+    }
     return { allowed: true, remaining: null, limit: null, upgradeBundle: null };
   }
 
@@ -66,45 +89,64 @@ export async function checkEntitlement(
     return { allowed: false, remaining: 0, limit: null, upgradeBundle: null };
   }
 
-  const subscription = await prisma.subscription.findUnique({
+  const subscription = await database.subscription.findUnique({
     where: { agentId },
     include: { items: true },
   });
 
   const activeStatuses = ["active", "trialing"];
-  const hasProduct =
+  const subscribedProductItems = subscription?.items.filter(
+    (item) => item.productType === config.requiredProduct,
+  ) ?? [];
+  const hasProduct = Boolean(
     subscription &&
     activeStatuses.includes(subscription.status) &&
-    subscription.items.some((item) => item.productType === config.requiredProduct);
+    subscribedProductItems.length > 0,
+  );
 
-  if (hasProduct) {
-    const productFeature = await prisma.productFeature.findFirst({
+  if (hasProduct && subscription) {
+    const subscribedPriceIds = subscribedProductItems
+      .map((item) => item.stripePriceId)
+      .filter((priceId): priceId is string => typeof priceId === "string");
+    const productFeature = await database.productFeature.findFirst({
       where: {
         featureKey,
-        product: { productType: config.requiredProduct, isActive: true },
+        product: {
+          productType: config.requiredProduct,
+          ...(subscribedPriceIds.length > 0
+            ? {
+                OR: [
+                  { monthlyPriceId: { in: subscribedPriceIds } },
+                  { annualPriceId: { in: subscribedPriceIds } },
+                ],
+              }
+            : {}),
+        },
       },
     });
 
-    if (!productFeature || productFeature.limit === null) {
+    if (productFeature?.limit === null) {
       return { allowed: true, remaining: null, limit: null, upgradeBundle: null };
     }
 
-    const periodStart = subscription.currentPeriodStart;
-    const usageCount = await getUsageCount(agentId, featureKey, periodStart);
-    const remaining = productFeature.limit - usageCount;
+    if (productFeature) {
+      const periodStart = subscription.currentPeriodStart;
+      const usageCount = await getUsageCount(agentId, featureKey, periodStart, database);
+      const remaining = productFeature.limit - usageCount;
 
-    return {
-      allowed: remaining > 0,
-      remaining: Math.max(0, remaining),
-      limit: productFeature.limit,
-      upgradeBundle: null,
-    };
+      return {
+        allowed: remaining > 0,
+        remaining: Math.max(0, remaining),
+        limit: productFeature.limit,
+        upgradeBundle: null,
+      };
+    }
   }
 
   if (config.freeLimit !== null && config.freeLimit !== undefined) {
     const now = new Date();
     const periodStart = startOfMonth(now);
-    const usageCount = await getUsageCount(agentId, featureKey, periodStart);
+    const usageCount = await getUsageCount(agentId, featureKey, periodStart, database);
     const remaining = config.freeLimit - usageCount;
 
     if (usageCount < config.freeLimit) {
@@ -117,7 +159,7 @@ export async function checkEntitlement(
     }
   }
 
-  const upgradeBundle = await getUpgradeBundleSlug(config.requiredProduct, platform);
+  const upgradeBundle = await getUpgradeBundleSlug(config.requiredProduct, platform, database);
 
   return {
     allowed: false,
@@ -130,16 +172,30 @@ export async function checkEntitlement(
 export async function incrementUsage(
   agentId: string,
   featureKey: string,
+  database: EntitlementDatabase = prisma,
 ): Promise<void> {
-  const subscription = await prisma.subscription.findUnique({
-    where: { agentId },
-  });
-
   const now = new Date();
-  const periodStart = subscription?.currentPeriodStart ?? startOfMonth(now);
-  const periodEnd = subscription?.currentPeriodEnd ?? endOfMonth(now);
+  const [config, subscription] = await Promise.all([
+    database.entitlementConfig.findUnique({ where: { featureKey } }),
+    database.subscription.findUnique({
+      where: { agentId },
+      include: { items: true },
+    }),
+  ]);
+  const usesActiveRequiredProduct = Boolean(
+    config?.requiredProduct &&
+    subscription &&
+    ["active", "trialing"].includes(subscription.status) &&
+    subscription.items.some((item) => item.productType === config.requiredProduct),
+  );
+  const periodStart = usesActiveRequiredProduct && subscription
+    ? subscription.currentPeriodStart
+    : startOfMonth(now);
+  const periodEnd = usesActiveRequiredProduct && subscription
+    ? subscription.currentPeriodEnd
+    : endOfMonth(now);
 
-  await prisma.usageRecord.upsert({
+  await database.usageRecord.upsert({
     where: {
       agentId_featureKey_billingPeriodStart: {
         agentId,

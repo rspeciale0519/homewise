@@ -90,6 +90,7 @@ export const ARTWORK_UPLOAD_CONCURRENCY = 4;
 export const MAX_LIST_FILES_PER_ORDER = 10;
 export const MAX_LIST_ROWS = 50_000;
 export const MAX_LIST_BYTES = 25 * 1024 * 1024;
+export const MAX_ORDER_UPLOAD_BYTES = 100 * 1024 * 1024;
 export const LIST_PREVIEW_ROW_COUNT = 5;
 
 export const ACCEPTED_ARTWORK_MIME = [
@@ -97,11 +98,9 @@ export const ACCEPTED_ARTWORK_MIME = [
   "image/png",
   "image/jpeg",
   "image/jpg",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
 
-export const ARTWORK_ACCEPT_HINT = "PDF, PNG, JPG, or Word (.doc / .docx)";
+export const ARTWORK_ACCEPT_HINT = "PDF, PNG, or JPG";
 
 export const ACCEPTED_LIST_MIME = [
   "text/csv",

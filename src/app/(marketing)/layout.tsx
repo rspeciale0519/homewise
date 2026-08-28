@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { SkipLink } from "@/components/layout/skip-link";
 
 export default function MarketingLayout({
   children,
@@ -8,8 +9,9 @@ export default function MarketingLayout({
 }) {
   return (
     <>
+      <SkipLink />
       <Header />
-      <main className="min-h-screen">{children}</main>
+      <main id="main-content" tabIndex={-1} className="min-h-screen">{children}</main>
       <Footer />
     </>
   );

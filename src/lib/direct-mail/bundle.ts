@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { downloadObject, uploadAtKey } from "./storage";
+import { downloadObject, extFromMime, uploadAtKey } from "./storage";
 import type { ArtworkFile } from "./types";
 
 /**
@@ -48,7 +48,7 @@ export async function buildOrderBundle(input: BundleInput): Promise<string> {
     const used = new Set<string>();
     for (const f of input.artworkFiles) {
       const obj = await downloadObject(f.fileKey);
-      const ext = extFromFileName(f.fileName);
+      const ext = extFromMime(f.mimeType);
       const name = uniqueName(used, sanitizeFilename(f.name), ext);
       artworkFolder.file(name, obj.buffer);
     }
@@ -95,12 +95,6 @@ export function sanitizeFilename(name: string): string {
     }
   }
   return out.replace(/\s+/g, " ").trim().slice(0, 80) || "file";
-}
-
-function extFromFileName(fileName: string): string {
-  const idx = fileName.lastIndexOf(".");
-  if (idx <= 0 || idx === fileName.length - 1) return "bin";
-  return fileName.slice(idx + 1).toLowerCase();
 }
 
 function uniqueName(used: Set<string>, base: string, ext: string): string {

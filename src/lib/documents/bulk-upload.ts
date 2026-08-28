@@ -23,6 +23,17 @@ export const ALLOWED_CONTENT_TYPES = [
   "image/jpeg",
 ] as const;
 
+const CONTENT_TYPE_BY_EXTENSION: Readonly<Record<string, string>> = {
+  ".pdf": "application/pdf",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xls": "application/vnd.ms-excel",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".doc": "application/msword",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+};
+
 export interface BulkUploadItem {
   name: string;
   storageKey: string;
@@ -57,12 +68,14 @@ export function validateFile(file: {
   type: string;
   size: number;
 }): FileValidation {
-  if (
-    !(ALLOWED_EXTENSIONS as readonly string[]).includes(extensionOf(file.name))
-  ) {
+  const extension = extensionOf(file.name);
+  if (!(ALLOWED_EXTENSIONS as readonly string[]).includes(extension)) {
     return { ok: false, reason: "Unsupported file type" };
   }
-  if (!(ALLOWED_CONTENT_TYPES as readonly string[]).includes(file.type)) {
+  if (
+    !(ALLOWED_CONTENT_TYPES as readonly string[]).includes(file.type) ||
+    CONTENT_TYPE_BY_EXTENSION[extension] !== file.type
+  ) {
     return { ok: false, reason: "Unsupported file type" };
   }
   if (file.size > MAX_FILE_BYTES) {
@@ -100,6 +113,7 @@ export function xhrPut(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
+    if (body.type) xhr.setRequestHeader("Content-Type", body.type);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && opts.onProgress) {
         opts.onProgress(Math.round((e.loaded / e.total) * 100));

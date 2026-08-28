@@ -72,8 +72,8 @@ async function getOrCreateStripePrice(
 async function seedBilling() {
   console.log("Seeding billing data...\n");
 
-  // ── 1. BundleConfig — Stripe Products/Prices + DB records ───────────────────
-  console.log("1. Seeding BundleConfig records...");
+  // ── 1. ProductConfig — Stripe Products/Prices + DB records ──────────────────
+  console.log("1. Seeding ProductConfig records...");
 
   const orphan = await prisma.productConfig.deleteMany({
     where: { slug: "annual_brokerage_membership" },
@@ -143,7 +143,7 @@ async function seedBilling() {
       },
     });
 
-    console.log(`  Upserted BundleConfig: ${product.slug}`);
+    console.log(`  Upserted ProductConfig: ${product.slug}`);
   }
 
   // ── 2. EntitlementConfig records ─────────────────────────────────────────────
@@ -173,26 +173,26 @@ async function seedBilling() {
     console.log(`  Upserted EntitlementConfig: ${entitlement.featureKey}`);
   }
 
-  // ── 3. BundleFeature records ──────────────────────────────────────────────────
-  console.log("\n3. Seeding BundleFeature records...");
+  // ── 3. ProductFeature records ─────────────────────────────────────────────────
+  console.log("\n3. Seeding ProductFeature records...");
 
-  for (const [bundleSlug, featureKeys] of Object.entries(BUNDLE_FEATURES)) {
-    const bundle = await prisma.productConfig.findUnique({
-      where: { slug: bundleSlug },
+  for (const [productSlug, featureKeys] of Object.entries(BUNDLE_FEATURES)) {
+    const product = await prisma.productConfig.findUnique({
+      where: { slug: productSlug },
     });
 
-    if (!bundle) {
-      console.warn(`  WARNING: BundleConfig not found for slug "${bundleSlug}" — skipping`);
+    if (!product) {
+      console.warn(`  WARNING: ProductConfig not found for slug "${productSlug}" — skipping`);
       continue;
     }
 
     for (const featureKey of featureKeys) {
-      await prisma.bundleFeature.upsert({
-        where: { bundleId_featureKey: { bundleId: bundle.id, featureKey } },
+      await prisma.productFeature.upsert({
+        where: { productId_featureKey: { productId: product.id, featureKey } },
         update: { limit: null },
-        create: { bundleId: bundle.id, featureKey, limit: null },
+        create: { productId: product.id, featureKey, limit: null },
       });
-      console.log(`  Upserted BundleFeature: ${bundleSlug} → ${featureKey}`);
+      console.log(`  Upserted ProductFeature: ${productSlug} → ${featureKey}`);
     }
   }
 

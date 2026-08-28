@@ -8,13 +8,15 @@ import {
   slugify,
 } from "@/lib/slug/slugify";
 import { isSlugTakenForDocument } from "@/lib/slug/resolve";
+import { isFinalAdminUploadKey } from "@/lib/http/admin-upload";
+import { httpUrlSchema } from "@/schemas/http-url.schema";
 
 const createSchema = z
   .object({
     name: z.string().min(1),
     slug: z.string().optional(),
     description: z.string().optional(),
-    url: z.string().url().optional().nullable(),
+    url: httpUrlSchema.optional().nullable(),
     external: z.boolean().optional(),
     storageKey: z.string().optional().nullable(),
     storageProvider: z.enum(["local", "supabase"]).optional(),
@@ -25,10 +27,26 @@ const createSchema = z
     quickAccess: z.boolean().optional(),
     categoryIds: z.array(z.string().min(1)).min(1, "Pick at least one category"),
   })
-  .refine(
-    (v) => Boolean(v.url) || Boolean(v.storageKey),
-    { message: "Provide a URL or upload a file", path: ["url"] },
-  );
+  .superRefine((value, context) => {
+    if (!value.url && !value.storageKey) {
+      context.addIssue({
+        code: "custom",
+        message: "Provide a URL or upload a file",
+        path: ["url"],
+      });
+    }
+    if (
+      value.storageProvider === "supabase" &&
+      value.storageKey &&
+      !isFinalAdminUploadKey(value.storageKey, "documents")
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Upload validation is required",
+        path: ["storageKey"],
+      });
+    }
+  });
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdminApi();

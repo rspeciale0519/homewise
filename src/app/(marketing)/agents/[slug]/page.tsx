@@ -116,7 +116,7 @@ export default async function AgentProfilePage({ params }: AgentProfileProps) {
           <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[340px_1fr] gap-8 lg:gap-12 pb-12">
             {/* Photo */}
             <div className="relative">
-              <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-elevated ring-1 ring-white/10">
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-elevated ring-1 ring-white/10">
                 {agent.photoUrl ? (
                   <Image
                     src={agent.photoUrl}

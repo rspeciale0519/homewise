@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 import { SocialAuthButton } from "@/components/auth/social-auth-button";
+import { safeAuthRedirectPath } from "@/lib/auth-redirect";
 
 export const metadata: Metadata = {
   title: "Log In",
@@ -10,7 +11,14 @@ export const metadata: Metadata = {
     "Sign in to your Home Wise Realty Group account to access saved searches, favorites, and property alerts.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirectTo?: string }>;
+}) {
+  const { redirectTo: rawRedirectTo } = await searchParams;
+  const redirectTo = safeAuthRedirectPath(rawRedirectTo);
+
   return (
     <section className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center py-12 px-4">
       {/* Decorative background */}
@@ -35,7 +43,7 @@ export default function LoginPage() {
           </div>
 
           {/* Google OAuth */}
-          <SocialAuthButton />
+          <SocialAuthButton redirectTo={redirectTo} />
 
           {/* Divider */}
           <div className="relative my-6">

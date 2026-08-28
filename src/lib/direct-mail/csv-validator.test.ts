@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { filterCsvColumns, parseListPreview } from "./csv-validator";
+import {
+  filterCsvColumns,
+  parseListPreview,
+  sanitizeCsvForSpreadsheet,
+} from "./csv-validator";
 
 describe("parseListPreview", () => {
   it("rejects an empty CSV", () => {
@@ -64,6 +68,21 @@ describe("parseListPreview", () => {
     expect(r.fillPercent.name).toBe(100);
     expect(r.fillPercent.phone).toBe(50);
     expect(r.fillPercent.notes).toBe(50);
+  });
+});
+
+describe("sanitizeCsvForSpreadsheet", () => {
+  it("neutralizes spreadsheet formula prefixes in every cell", () => {
+    const csv = "name,phone,note\n=CMD(),+15551212, @SUM(1+1)\n-safe,plain,ok";
+
+    expect(sanitizeCsvForSpreadsheet(csv)).toBe(
+      "name,phone,note\n'=CMD(),'+15551212,'@SUM(1+1)\n'-safe,plain,ok",
+    );
+  });
+
+  it("does not rewrite a safe CSV", () => {
+    const csv = 'name,address\r\nJane,"123 Oak, Apt 4"';
+    expect(sanitizeCsvForSpreadsheet(csv)).toBe(csv);
   });
 });
 

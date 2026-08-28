@@ -1,7 +1,14 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, personalizeTemplate } from "@/lib/email";
+import {
+  escapeHtml,
+  escapeHttpUrl,
+  personalizeTemplate,
+  sendEmail,
+} from "@/lib/email";
 import { priceChangeAlertEmail } from "@/lib/email/templates";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 import { areMlsBackfillAlertsSuppressed } from "@/lib/mls-alert-suppression";
 import { withIdx } from "@/lib/mls-visibility";
 import { getSiteUrl } from "@/lib/site-url";
@@ -28,7 +35,10 @@ export const priceChangeAlert = inngest.createFunction(
       if (!listing) return [];
 
       return prisma.favoriteProperty.findMany({
-        where: { propertyId: listing.id },
+        where: {
+          propertyId: listing.id,
+          user: { favoritePriceAlertsEnabled: true },
+        },
         include: { user: { select: { id: true, email: true, firstName: true } } },
       });
     });
@@ -51,17 +61,29 @@ export const priceChangeAlert = inngest.createFunction(
     for (const fav of favorites) {
       await step.run(`notify-fav-${fav.id}`, async () => {
         if (notifiedEmails.has(fav.user.email)) return;
-        notifiedEmails.add(fav.user.email);
 
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "user", id: fav.user.id },
+          fav.user.email,
+        );
         const tokens: Record<string, string> = {
-          first_name: fav.user.firstName,
-          property_address: `${address}, ${city}`,
+          first_name: escapeHtml(fav.user.firstName),
+          property_address: escapeHtml(`${address}, ${city}`),
           old_price: `$${oldPrice.toLocaleString()}`,
           new_price: `$${newPrice.toLocaleString()}`,
-          listing_url: `${siteUrl}/properties/${mlsId}`,
-          unsubscribe_url: `${siteUrl}/unsubscribe?id=${fav.user.id}`,
+          listing_url: escapeHttpUrl(`${siteUrl}/properties/${mlsId}`),
+          unsubscribe_url: escapeHttpUrl(
+            `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
+          ),
         };
 
+        if (!await canSendPreferenceEmail({
+          kind: "user",
+          id: fav.user.id,
+          recipientEmail: fav.user.email,
+        })) return;
+
+        notifiedEmails.add(fav.user.email);
         await sendEmail({
           to: fav.user.email,
           subject: personalizeTemplate(template.subject, tokens),
@@ -75,18 +97,30 @@ export const priceChangeAlert = inngest.createFunction(
     for (const alert of alertRecipients) {
       await step.run(`notify-alert-${alert.id}`, async () => {
         if (notifiedEmails.has(alert.email)) return;
-        notifiedEmails.add(alert.email);
 
         const firstName = alert.user?.firstName ?? alert.name ?? "there";
+        const unsubscribeToken = createUnsubscribeToken(
+          { kind: "property_alert", id: alert.id },
+          alert.email,
+        );
         const tokens: Record<string, string> = {
-          first_name: firstName,
-          property_address: `${address}, ${city}`,
+          first_name: escapeHtml(firstName),
+          property_address: escapeHtml(`${address}, ${city}`),
           old_price: `$${oldPrice.toLocaleString()}`,
           new_price: `$${newPrice.toLocaleString()}`,
-          listing_url: `${siteUrl}/properties/${mlsId}`,
-          unsubscribe_url: `${siteUrl}/unsubscribe?alert=${alert.id}`,
+          listing_url: escapeHttpUrl(`${siteUrl}/properties/${mlsId}`),
+          unsubscribe_url: escapeHttpUrl(
+            `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
+          ),
         };
 
+        if (!await canSendPreferenceEmail({
+          kind: "property_alert",
+          id: alert.id,
+          recipientEmail: alert.email,
+        })) return;
+
+        notifiedEmails.add(alert.email);
         await sendEmail({
           to: alert.email,
           subject: personalizeTemplate(template.subject, tokens),

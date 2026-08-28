@@ -1,37 +1,61 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { CourseCard } from "@/components/training/course-card";
 import { ModuleCard } from "@/components/training/module-card";
 import { TrainingFilters } from "./training-filters";
+import { enrollAgentInAutomaticCourses } from "@/lib/training/enrollment";
 
 export const metadata: Metadata = { title: "Training Hub — Dashboard" };
 
 export default async function AgentTrainingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?redirectTo=/dashboard/training");
+
+  const profile = await prisma.userProfile.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  });
+  if (profile?.role !== "agent") redirect("/dashboard");
+
+  await enrollAgentInAutomaticCourses(user.id);
 
   const [content, courses, completedRows] = await Promise.all([
     prisma.trainingContent.findMany({
-      where: { published: true, audience: { in: ["agent_only", "public_only", "both"] } },
+      where: {
+        published: true,
+        status: "published",
+        audience: { in: ["agent_only", "both"] },
+      },
       orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
     }),
     prisma.trainingCourse.findMany({
+      where: {
+        audience: { in: ["agent_only", "both"] },
+        enrollments: { some: { userId: user.id } },
+      },
       include: {
         items: {
+          where: {
+            content: {
+              published: true,
+              status: "published",
+              audience: { in: ["agent_only", "both"] },
+            },
+          },
           include: { content: { select: { id: true, title: true, type: true, duration: true } } },
           orderBy: { sortOrder: "asc" },
         },
       },
       orderBy: { createdAt: "asc" },
     }),
-    user
-      ? prisma.trainingProgress.findMany({
-          where: { userId: user.id, completed: true },
-          select: { contentId: true },
-        })
-      : [],
+    prisma.trainingProgress.findMany({
+      where: { userId: user.id, completed: true },
+      select: { contentId: true },
+    }),
   ]);
 
   const completedIds = new Set(completedRows.map((p) => p.contentId));

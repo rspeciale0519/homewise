@@ -74,6 +74,7 @@ export async function sendOrderToYls(
       { name: "workflow", value: input.workflow },
       { name: "order_ref", value: input.orderRef },
     ],
+    idempotencyKey: `direct-mail-order:${input.orderRef}`,
   });
 
   return result;

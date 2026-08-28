@@ -40,7 +40,9 @@
   "exclude": [
     "node_modules",
     "archive",
-    "prisma/seed-*.ts",
+    "prisma/seed-documents.ts",
+    "prisma/seed-listings.ts",
+    "prisma/seed-data-documents.ts",
     "**/__tests__/**"
   ]
 }

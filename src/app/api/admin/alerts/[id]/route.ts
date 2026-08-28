@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const toggleSchema = z.object({
   active: z.boolean(),
-});
+}).strict();
 
 export async function PATCH(
   request: NextRequest,
@@ -26,10 +26,29 @@ export async function PATCH(
   }
 
   try {
-    const updated = await prisma.propertyAlert.update({
-      where: { id },
+    const result = await prisma.propertyAlert.updateMany({
+      where: {
+        id,
+        ...(parsed.data.active ? { verificationRequired: false } : {}),
+      },
       data: { active: parsed.data.active },
     });
+
+    if (result.count !== 1) {
+      const alert = await prisma.propertyAlert.findUnique({
+        where: { id },
+        select: { verificationRequired: true },
+      });
+      if (!alert) {
+        return NextResponse.json({ error: "Alert not found" }, { status: 404 });
+      }
+      return NextResponse.json(
+        { error: "The email address must be confirmed before this alert can be activated." },
+        { status: 409 },
+      );
+    }
+
+    const updated = await prisma.propertyAlert.findUnique({ where: { id } });
 
     return NextResponse.json({ alert: updated });
   } catch {

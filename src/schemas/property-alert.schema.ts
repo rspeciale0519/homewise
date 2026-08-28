@@ -13,11 +13,14 @@ export const propertyAlertSchema = z.object({
     .trim()
     .optional()
     .or(z.literal("")),
-  cities: z.array(z.string()).min(1, "Select at least one area"),
-  minPrice: z.coerce.number().min(0).optional(),
-  maxPrice: z.coerce.number().min(0).optional(),
-  beds: z.coerce.number().min(0).max(10).optional(),
-});
+  cities: z.array(z.string().trim().min(1).max(100)).min(1, "Select at least one area").max(20),
+  minPrice: z.coerce.number().finite().min(0).max(1_000_000_000).optional(),
+  maxPrice: z.coerce.number().finite().min(0).max(1_000_000_000).optional(),
+  beds: z.coerce.number().finite().min(0).max(10).optional(),
+}).strict().refine(
+  (data) => data.minPrice === undefined || data.maxPrice === undefined || data.minPrice <= data.maxPrice,
+  { message: "Minimum price cannot exceed maximum price", path: ["minPrice"] },
+);
 
 export type PropertyAlertInput = z.infer<typeof propertyAlertSchema>;
 

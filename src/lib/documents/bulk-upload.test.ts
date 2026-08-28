@@ -48,6 +48,11 @@ describe("validateFile", () => {
       validateFile({ name: "a.pdf", type: "text/x-evil", size: 1 }).ok,
     ).toBe(false);
   });
+  it("rejects a permitted content type with the wrong extension", () => {
+    expect(
+      validateFile({ name: "a.pdf", type: "image/jpeg", size: 1 }),
+    ).toEqual({ ok: false, reason: "Unsupported file type" });
+  });
   it("rejects an oversized file", () => {
     expect(
       validateFile({

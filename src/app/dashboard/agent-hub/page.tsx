@@ -50,7 +50,11 @@ export default async function AgentHubPage() {
   }
 
   const quickAccessDocs = await prisma.document.findMany({
-    where: { quickAccess: true, published: true },
+    where: {
+      quickAccess: true,
+      published: true,
+      platforms: { has: "homewise" },
+    },
     orderBy: { sortOrder: "asc" },
     select: {
       id: true,
@@ -63,13 +67,22 @@ export default async function AgentHubPage() {
     },
   });
 
-  const sectionCounts = await prisma.documentCategoryMembership.groupBy({
-    by: ["categoryId"],
-    _count: { documentId: true },
+  const sectionMemberships = await prisma.documentCategoryMembership.findMany({
+    where: {
+      document: {
+        published: true,
+        platforms: { has: "homewise" },
+      },
+    },
+    select: { categoryId: true },
   });
-  const categoryIdToCount = new Map(
-    sectionCounts.map((row) => [row.categoryId, row._count.documentId]),
-  );
+  const categoryIdToCount = new Map<string, number>();
+  for (const membership of sectionMemberships) {
+    categoryIdToCount.set(
+      membership.categoryId,
+      (categoryIdToCount.get(membership.categoryId) ?? 0) + 1,
+    );
+  }
   const categoryMeta = await prisma.documentCategory.findMany({
     select: { id: true, section: true },
   });

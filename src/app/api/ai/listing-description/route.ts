@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
 import { withIdx } from "@/lib/mls-visibility";
+import { InvalidJsonBodyError, readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const listingDescriptionSchema = z.object({
-  mlsId: z.string().optional(),
-  details: z.string().optional(),
-}).refine((data) => data.mlsId || data.details, {
+  mlsId: z.string().trim().min(1).max(100).optional(),
+  details: z.string().trim().min(1).max(10_000).optional(),
+}).strict().refine((data) => data.mlsId || data.details, {
   message: "Provide mlsId or details",
 });
 
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (isError(auth)) return auth.error;
 
   try {
-    const raw: unknown = await request.json();
+    const raw: unknown = await readJsonBodyWithLimit(request, 12_000);
     const input = listingDescriptionSchema.safeParse(raw);
     if (!input.success) {
       return NextResponse.json(
@@ -70,6 +72,9 @@ Return JSON:
 
 Each description should be 150-250 words.`;
 
+    const entitlementError = await reserveStaffFeature(auth, "ai_listing_descriptions");
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("listing_description", {
       feature: "listing_description",
       systemPrompt: "You are a real estate copywriter. Write compelling listing descriptions. Output valid JSON only.",
@@ -88,6 +93,12 @@ Each description should be 150-250 words.`;
 
     return NextResponse.json(parsed);
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/listing-description] error:", err);
     return NextResponse.json({ error: "Failed to generate descriptions" }, { status: 500 });
   }

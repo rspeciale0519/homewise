@@ -21,11 +21,31 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CourseDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?redirectTo=/dashboard/training");
 
-  const course = await prisma.trainingCourse.findUnique({
-    where: { id },
+  const profile = await prisma.userProfile.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  });
+  if (profile?.role !== "agent") redirect("/dashboard");
+
+  const course = await prisma.trainingCourse.findFirst({
+    where: {
+      id,
+      audience: { in: ["agent_only", "both"] },
+      enrollments: { some: { userId: user.id } },
+    },
     include: {
       items: {
+        where: {
+          content: {
+            published: true,
+            status: "published",
+            audience: { in: ["agent_only", "both"] },
+          },
+        },
         include: { content: true },
         orderBy: { sortOrder: "asc" },
       },
@@ -33,6 +53,13 @@ export default async function CourseDetailPage({ params }: PageProps) {
         orderBy: { sortOrder: "asc" },
         include: {
           items: {
+            where: {
+              content: {
+                published: true,
+                status: "published",
+                audience: { in: ["agent_only", "both"] },
+              },
+            },
             orderBy: { sortOrder: "asc" },
             include: { content: true },
           },
@@ -42,10 +69,6 @@ export default async function CourseDetailPage({ params }: PageProps) {
   });
 
   if (!course) notFound();
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   // Use section-grouped items when the course has any sections (always true
   // post-migration: every existing course has a default "Lessons" section).

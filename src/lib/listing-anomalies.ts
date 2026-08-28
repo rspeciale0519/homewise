@@ -39,3 +39,10 @@ export function isStaleListing(daysOnMarket: number, status: string): boolean {
 export function duplicateKey(address: string, city: string): string {
   return `${address.trim().toLowerCase()}|${city.trim().toLowerCase()}`;
 }
+
+export function resolvedAnomalyListingIds(
+  existingListingIds: string[],
+  currentlyFlaggedIds: ReadonlySet<string>,
+): string[] {
+  return existingListingIds.filter((listingId) => !currentlyFlaggedIds.has(listingId));
+}

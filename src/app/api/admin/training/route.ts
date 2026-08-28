@@ -8,6 +8,7 @@ import {
   slugify,
 } from "@/lib/slug/slugify";
 import { isSlugTakenForTraining } from "@/lib/slug/resolve";
+import { isFinalAdminUploadKey } from "@/lib/http/admin-upload";
 
 const createSchema = z.object({
   title: z.string().min(1),
@@ -62,6 +63,15 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid data", details: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+  if (
+    parsed.data.fileKey &&
+    !isFinalAdminUploadKey(parsed.data.fileKey, "training")
+  ) {
+    return NextResponse.json(
+      { error: "Upload validation is required", field: "fileKey" },
       { status: 400 },
     );
   }

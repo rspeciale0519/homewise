@@ -1,8 +1,12 @@
 import { z } from "zod";
 import {
+  ACCEPTED_ARTWORK_MIME,
   MAIL_CLASSES,
+  MAX_ARTWORK_BYTES,
   MAX_ARTWORK_FILES_PER_ORDER,
+  MAX_LIST_BYTES,
   MAX_LIST_FILES_PER_ORDER,
+  MAX_LIST_ROWS,
   PRODUCT_TYPES,
   WORKFLOWS,
   earliestDropDate,
@@ -15,14 +19,20 @@ const trimmedString = (max = 500) =>
     .max(max);
 
 export const artworkFileSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   name: trimmedString(120).min(1, "Description is required"),
-  fileKey: z.string().min(1),
-  fileName: z.string().min(1),
-  byteSize: z.number().int().nonnegative(),
-  mimeType: z.string().min(1),
-  warnings: z.array(z.string()),
-});
+  fileKey: z.string().min(1).max(500),
+  fileName: z.string().min(1).max(300),
+  byteSize: z.number().int().positive().max(MAX_ARTWORK_BYTES),
+  mimeType: z.string().refine(
+    (value) =>
+      ACCEPTED_ARTWORK_MIME.includes(
+        value as (typeof ACCEPTED_ARTWORK_MIME)[number],
+      ),
+    { message: "Unsupported artwork file type" },
+  ),
+  warnings: z.array(z.string().max(500)).max(20),
+}).strict();
 export type ArtworkFileInput = z.infer<typeof artworkFileSchema>;
 
 export const artworkFilesArraySchema = z
@@ -34,17 +44,17 @@ export const artworkFilesArraySchema = z
   );
 
 export const listFileSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   name: trimmedString(120).min(1, "Description is required"),
-  fileKey: z.string().min(1),
-  fileName: z.string().min(1),
-  byteSize: z.number().int().nonnegative(),
-  rowCount: z.number().int().nonnegative(),
-  columns: z.array(z.string()).min(1),
-  fillPercent: z.record(z.string(), z.number()),
-  excludedColumns: z.array(z.string()),
-  warnings: z.array(z.string()),
-});
+  fileKey: z.string().min(1).max(500),
+  fileName: z.string().min(1).max(300),
+  byteSize: z.number().int().positive().max(MAX_LIST_BYTES),
+  rowCount: z.number().int().nonnegative().max(MAX_LIST_ROWS),
+  columns: z.array(z.string().max(300)).min(1).max(500),
+  fillPercent: z.record(z.string().max(300), z.number().min(0).max(100)),
+  excludedColumns: z.array(z.string().max(300)).max(500),
+  warnings: z.array(z.string().max(500)).max(20),
+}).strict();
 export type ListFileInput = z.infer<typeof listFileSchema>;
 
 export const listFilesArraySchema = z
@@ -69,14 +79,14 @@ export const returnAddressSchema = z.object({
   city: trimmedString(120).min(1, "City is required"),
   state: trimmedString(2).min(2, "Use the 2-letter state code").max(2, "Use the 2-letter state code"),
   zip: trimmedString(10).min(5, "ZIP must be at least 5 digits"),
-});
+}).strict();
 export type ReturnAddress = z.infer<typeof returnAddressSchema>;
 
 export const stepBasicsSchema = z.object({
   workflow: z.enum(WORKFLOWS),
   subjectPropertyAddress: trimmedString(300).optional().nullable(),
   campaignName: trimmedString(120).optional().nullable(),
-});
+}).strict();
 export type StepBasicsInput = z.infer<typeof stepBasicsSchema>;
 
 export const stepSpecSchema = z.object({
@@ -98,29 +108,29 @@ export const stepSpecSchema = z.object({
     ),
   returnAddress: returnAddressSchema,
   specialInstructions: trimmedString(2000).optional().nullable(),
-});
+}).strict();
 export type StepSpecInput = z.infer<typeof stepSpecSchema>;
 
 export const stepArtworkSchema = z.object({
   artworkFiles: artworkFilesArraySchema,
-});
+}).strict();
 export type StepArtworkInput = z.infer<typeof stepArtworkSchema>;
 
 export const stepListSchema = z.object({
   listFiles: listFilesArraySchema,
-});
+}).strict();
 export type StepListInput = z.infer<typeof stepListSchema>;
 
 export const stepReviewSchema = z.object({
   complianceConfirmed: z
     .boolean()
     .refine((v) => v === true, { message: "Confirm compliance to submit" }),
-});
+}).strict();
 export type StepReviewInput = z.infer<typeof stepReviewSchema>;
 
 export const orderDraftCreateSchema = z.object({
   workflow: z.enum(WORKFLOWS),
-});
+}).strict();
 export type OrderDraftCreateInput = z.infer<typeof orderDraftCreateSchema>;
 
 export const orderDraftPatchSchema = z.object({
@@ -133,7 +143,7 @@ export const orderDraftPatchSchema = z.object({
   mailClass: z.enum(MAIL_CLASSES).optional().nullable(),
   dropDate: z.string().optional().nullable(),
   returnAddress: returnAddressSchema.optional().nullable(),
-  quantity: z.number().int().nonnegative().optional(),
+  quantity: z.number().int().nonnegative().max(MAX_LIST_ROWS * MAX_LIST_FILES_PER_ORDER).optional(),
   specialInstructions: trimmedString(2000).optional().nullable(),
   artworkFiles: z
     .array(artworkFileSchema)
@@ -144,7 +154,7 @@ export const orderDraftPatchSchema = z.object({
     .max(MAX_LIST_FILES_PER_ORDER)
     .optional(),
   complianceConfirmed: z.boolean().optional(),
-});
+}).strict();
 export type OrderDraftPatchInput = z.infer<typeof orderDraftPatchSchema>;
 
 export const orderSubmitSchema = stepBasicsSchema

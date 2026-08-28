@@ -9,6 +9,8 @@ import { agentApplicationApprovedEmail } from "@/lib/email/templates";
 import { applicationReviewSchema } from "@/schemas/agent-application.schema";
 import { SITE_URL } from "@/lib/constants";
 
+class ApplicationReviewConflictError extends Error {}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -21,7 +23,13 @@ export async function POST(
   try {
     const body: unknown = await request.json().catch(() => ({}));
     const parsed = applicationReviewSchema.safeParse(body);
-    const notes = parsed.success ? parsed.data.notes : undefined;
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const notes = parsed.data.notes;
 
     const application = await prisma.agentApplication.findUnique({ where: { id } });
     if (!application) {
@@ -35,6 +43,17 @@ export async function POST(
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.agentApplication.updateMany({
+        where: { id, status: "pending" },
+        data: {
+          status: "approved",
+          reviewedBy: auth.profile.id,
+          reviewedAt: new Date(),
+          reviewNotes: notes || null,
+        },
+      });
+      if (claimed.count !== 1) throw new ApplicationReviewConflictError();
+
       const agent = await createAgentRecord(
         {
           firstName: application.firstName,
@@ -60,10 +79,6 @@ export async function POST(
       await tx.agentApplication.update({
         where: { id },
         data: {
-          status: "approved",
-          reviewedBy: auth.profile.id,
-          reviewedAt: new Date(),
-          reviewNotes: notes || null,
           agentId: agent.id,
         },
       });
@@ -83,7 +98,9 @@ export async function POST(
         subject: template.subject,
         html: template.html,
       });
-      if (sent.error) emailWarning = sent.error;
+      if (sent.error) {
+        emailWarning = "Email delivery failed — share the invite link manually.";
+      }
     } catch (err) {
       console.error("[agent-application] approval email failed:", err);
       emailWarning = "Email delivery failed — share the invite link manually.";
@@ -93,7 +110,13 @@ export async function POST(
       { success: true, agentId: result.agentId, inviteUrl, emailWarning },
       { status: 200 }
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof ApplicationReviewConflictError) {
+      return NextResponse.json(
+        { error: "Application has already been reviewed" },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

@@ -41,6 +41,15 @@ const CUID_PATTERN = /^c[a-z0-9]{20,}$/i;
 
 export default async function TrainingDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?redirectTo=/dashboard/training");
+
+  const profile = await prisma.userProfile.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  });
+  if (profile?.role !== "agent") redirect("/dashboard");
 
   if (CUID_PATTERN.test(slug)) {
     const byId = await prisma.trainingContent.findUnique({
@@ -58,14 +67,16 @@ export default async function TrainingDetailPage({ params }: PageProps) {
     redirect(`/dashboard/training/${resolved.record.slug}`);
   }
 
-  const item = await prisma.trainingContent.findUnique({
-    where: { id: resolved.record.id },
+  const item = await prisma.trainingContent.findFirst({
+    where: {
+      id: resolved.record.id,
+      published: true,
+      status: "published",
+      audience: { in: ["agent_only", "both"] },
+    },
+    include: { _count: { select: { courseItems: true } } },
   });
-  if (!item || !item.published) notFound();
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!item) notFound();
 
   const progress = await prisma.trainingProgress.findUnique({
     where: { userId_contentId: { userId: user.id, contentId: item.id } },
@@ -75,7 +86,13 @@ export default async function TrainingDetailPage({ params }: PageProps) {
   let upNextModule: { id: string; slug: string | null; title: string; type: string } | null = null;
   try {
     const courseItems = await prisma.trainingCourseItem.findMany({
-      where: { contentId: item.id },
+      where: {
+        contentId: item.id,
+        course: {
+          audience: { in: ["agent_only", "both"] },
+          enrollments: { some: { userId: user.id } },
+        },
+      },
       include: {
         course: {
           include: {
@@ -96,6 +113,8 @@ export default async function TrainingDetailPage({ params }: PageProps) {
   } catch {
     // Course context is optional — don't break the page if it fails
   }
+
+  if (item._count.courseItems > 0 && !courseContext) notFound();
 
   let signedUrl: string | null = null;
   if (item.fileKey) {

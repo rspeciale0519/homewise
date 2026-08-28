@@ -1,28 +1,21 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { PlanBundleCard } from "./plan-bundle-card";
 import { FeaturePicker } from "@/components/pricing/feature-picker";
+import { Button } from "@/components/ui/button";
+import type { FeatureEntitlement } from "@/app/(marketing)/pricing/page";
 import type {
-  ProductWithFeatures,
-  FeatureEntitlement,
-} from "@/app/(marketing)/pricing/page";
-
-type BillingInterval = "monthly" | "annual";
-type PlanMode = "bundles" | "build_your_own";
-
-interface SubscriptionItem {
-  productType: string;
-  productName: string;
-  stripePriceId: string;
-  quantity: number;
-}
+  BillingInterval,
+  BillingProduct,
+  SubscriptionLineItem,
+} from "./types";
 
 interface PlanManagerProps {
-  subscription: { items: SubscriptionItem[] } | null;
-  items?: SubscriptionItem[];
-  productConfigs: ProductWithFeatures[];
+  subscription: { items: SubscriptionLineItem[] } | null;
+  items?: SubscriptionLineItem[];
+  productConfigs: BillingProduct[];
   entitlements: FeatureEntitlement[];
   billingInterval?: BillingInterval;
   onBillingIntervalChange?: (interval: BillingInterval) => void;
@@ -31,62 +24,105 @@ interface PlanManagerProps {
 
 interface ConfirmDialog {
   type: "add" | "remove";
-  bundleSlug: string;
-  bundleName: string;
+  productKind: "plan" | "add_on";
+  productSlug: string;
+  productName: string;
+  productLabel: "Bundle" | "Membership" | "Add-on";
 }
 
-const BUNDLE_ORDER = ["marketing_suite", "ai_power_tools", "growth_engine"];
+const PLAN_ORDER = [
+  "membership",
+  "marketing_suite",
+  "ai_power_tools",
+  "growth_engine",
+];
+const EMPTY_SUBSCRIPTION_ITEMS: SubscriptionLineItem[] = [];
 
 export function PlanManager({
   subscription,
   items: itemsProp,
   productConfigs,
-  entitlements,
+  entitlements: _entitlements,
   billingInterval: billingIntervalProp,
   onBillingIntervalChange,
   isNewSubscription = false,
 }: PlanManagerProps) {
-  const items = itemsProp ?? subscription?.items ?? [];
-  const [mode, setMode] = useState<PlanMode>("bundles");
+  const items = itemsProp ?? subscription?.items ?? EMPTY_SUBSCRIPTION_ITEMS;
   const [localInterval, setLocalInterval] = useState<BillingInterval>("annual");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(
     null,
   );
-  const [selectedFeatures, setSelectedFeatures] = useState<Set<string>>(
-    new Set(),
-  );
   const [selectedNewBundles, setSelectedNewBundles] = useState<Set<string>>(
     new Set(),
   );
+  const checkoutOperationIdRef = useRef<string | null>(null);
+  const modifyOperationRef = useRef<{
+    signature: string;
+    operationId: string;
+  } | null>(null);
 
-  const billingInterval = billingIntervalProp ?? localInterval;
-  const handleIntervalChange = onBillingIntervalChange ?? setLocalInterval;
-
-  const activeBundleSlugs = new Set(
-    items
-      .filter((item) => item.productType === "bundle")
-      .map((item) => {
-        const config = productConfigs.find(
-          (b) =>
-            b.monthlyPriceId === item.stripePriceId ||
-            b.annualPriceId === item.stripePriceId,
-        );
-        return config?.slug;
-      })
-      .filter(Boolean) as string[],
-  );
-
-  const bundles = productConfigs
-    .filter((b) => BUNDLE_ORDER.includes(b.productType))
+  const plans = useMemo(() => productConfigs
+    .filter(
+      (product) => product.isActive && PLAN_ORDER.includes(product.productType),
+    )
     .sort(
       (a, b) =>
-        BUNDLE_ORDER.indexOf(a.productType) -
-        BUNDLE_ORDER.indexOf(b.productType),
-    );
+        PLAN_ORDER.indexOf(a.productType) -
+        PLAN_ORDER.indexOf(b.productType),
+    ), [productConfigs]);
+
+  const supportsMonthly = plans.some((product) => product.monthlyPriceId);
+  const supportsAnnual = plans.some((product) => product.annualPriceId);
+  const requestedInterval = billingIntervalProp ?? localInterval;
+  const billingInterval = requestedInterval === "monthly" && !supportsMonthly
+    ? "annual"
+    : requestedInterval === "annual" && !supportsAnnual
+      ? "monthly"
+      : requestedInterval;
+
+  const handleIntervalChange = useCallback((interval: BillingInterval) => {
+    checkoutOperationIdRef.current = null;
+    if (onBillingIntervalChange) onBillingIntervalChange(interval);
+    else setLocalInterval(interval);
+  }, [onBillingIntervalChange]);
+
+  const { activePlanSlugs, activeAddOnSlugs } = useMemo(() => {
+    const activeProducts = items
+      .map((item) => productConfigs.find(
+        (product) =>
+          product.monthlyPriceId === item.stripePriceId ||
+          product.annualPriceId === item.stripePriceId,
+      ))
+      .filter((product): product is BillingProduct => product !== undefined);
+
+    return {
+      activePlanSlugs: new Set(
+        activeProducts
+          .filter((product) => PLAN_ORDER.includes(product.productType))
+          .map((product) => product.slug),
+      ),
+      activeAddOnSlugs: new Set(
+        activeProducts
+          .filter((product) => product.productType === "add_on")
+          .map((product) => product.slug),
+      ),
+    };
+  }, [items, productConfigs]);
+
+  const addOns = useMemo(
+    () => productConfigs.filter((product) => product.productType === "add_on"),
+    [productConfigs],
+  );
+
+  const activeAddOns = useMemo(
+    () => addOns.filter((product) => activeAddOnSlugs.has(product.slug)),
+    [activeAddOnSlugs, addOns],
+  );
 
   const toggleNewBundle = useCallback((slug: string) => {
+    checkoutOperationIdRef.current = null;
     setSelectedNewBundles((prev) => {
       const next = new Set(prev);
       if (next.has(slug)) next.delete(slug);
@@ -99,10 +135,13 @@ export function PlanManager({
     setLoading(true);
     setError(null);
     try {
+      const operationId = checkoutOperationIdRef.current ?? crypto.randomUUID();
+      checkoutOperationIdRef.current = operationId;
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          operationId,
           bundles: Array.from(selectedNewBundles),
           addOns: [],
           billingInterval,
@@ -124,21 +163,43 @@ export function PlanManager({
     } finally {
       setLoading(false);
     }
-  }, [selectedNewBundles, billingInterval]);
+  }, [billingInterval, selectedNewBundles]);
 
   const handleConfirmModify = useCallback(async () => {
     if (!confirmDialog) return;
     setLoading(true);
     setError(null);
     try {
+      const signature = [
+        confirmDialog.type,
+        confirmDialog.productKind,
+        confirmDialog.productSlug,
+      ].join(":");
+      const operationId = modifyOperationRef.current?.signature === signature
+        ? modifyOperationRef.current.operationId
+        : crypto.randomUUID();
+      modifyOperationRef.current = { signature, operationId };
       const res = await fetch("/api/billing/subscription/modify", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          operationId,
           addBundles:
-            confirmDialog.type === "add" ? [confirmDialog.bundleSlug] : [],
+            confirmDialog.productKind === "plan" && confirmDialog.type === "add"
+              ? [confirmDialog.productSlug]
+              : [],
           removeBundles:
-            confirmDialog.type === "remove" ? [confirmDialog.bundleSlug] : [],
+            confirmDialog.productKind === "plan" && confirmDialog.type === "remove"
+              ? [confirmDialog.productSlug]
+              : [],
+          addOns:
+            confirmDialog.productKind === "add_on" && confirmDialog.type === "add"
+              ? [confirmDialog.productSlug]
+              : [],
+          removeAddOns:
+            confirmDialog.productKind === "add_on" && confirmDialog.type === "remove"
+              ? [confirmDialog.productSlug]
+              : [],
         }),
       });
       if (!res.ok) {
@@ -147,6 +208,7 @@ export function PlanManager({
           data.error ?? "Failed to modify subscription",
         );
       }
+      modifyOperationRef.current = null;
       window.location.reload();
     } catch (err) {
       setError(
@@ -154,79 +216,71 @@ export function PlanManager({
       );
     } finally {
       setLoading(false);
-      setConfirmDialog(null);
     }
   }, [confirmDialog]);
 
-  const handleToggleFeature = useCallback((featureKey: string) => {
-    setSelectedFeatures((prev) => {
-      const next = new Set(prev);
-      if (next.has(featureKey)) {
-        next.delete(featureKey);
-      } else {
-        next.add(featureKey);
-      }
-      return next;
-    });
+  const dismissConfirmDialog = useCallback(() => {
+    modifyOperationRef.current = null;
+    setConfirmDialog(null);
   }, []);
 
+  const handleRemoveAddOn = useCallback((slug: string) => {
+    const addOn = addOns.find((product) => product.slug === slug);
+    if (!addOn || !activeAddOnSlugs.has(slug)) return;
+    setConfirmDialog({
+      type: "remove",
+      productKind: "add_on",
+      productSlug: slug,
+      productName: addOn.name,
+      productLabel: "Add-on",
+    });
+  }, [activeAddOnSlugs, addOns]);
+
   return (
-    <div className="space-y-6">
-      {/* Mode toggle + billing interval */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="inline-flex rounded-lg border border-slate-200 p-1 bg-slate-50">
-          <button
-            type="button"
-            onClick={() => setMode("bundles")}
-            className={cn(
-              "px-4 py-2 rounded-md text-sm font-semibold transition-colors",
-              mode === "bundles"
-                ? "bg-white text-navy-700 shadow-sm"
-                : "text-slate-500 hover:text-slate-700",
-            )}
-          >
-            Bundles
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("build_your_own")}
-            className={cn(
-              "px-4 py-2 rounded-md text-sm font-semibold transition-colors",
-              mode === "build_your_own"
-                ? "bg-white text-navy-700 shadow-sm"
-                : "text-slate-500 hover:text-slate-700",
-            )}
-          >
-            Build Your Own
-          </button>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h2 className="font-serif text-lg font-semibold text-navy-700">
+            {isNewSubscription ? "Available plans" : "Manage plans"}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Select a plan with benefits that are available now.
+          </p>
         </div>
 
-        <div className="inline-flex rounded-lg border border-slate-200 p-1 bg-slate-50">
-          <button
-            type="button"
-            onClick={() => handleIntervalChange("monthly")}
-            className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
-              billingInterval === "monthly"
-                ? "bg-white text-navy-700 shadow-sm"
-                : "text-slate-500 hover:text-slate-700",
-            )}
+        {isNewSubscription && supportsMonthly && supportsAnnual && (
+          <div
+            className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1"
+            aria-label="Plan billing interval"
           >
-            Monthly
-          </button>
-          <button
-            type="button"
-            onClick={() => handleIntervalChange("annual")}
-            className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
-              billingInterval === "annual"
-                ? "bg-white text-navy-700 shadow-sm"
-                : "text-slate-500 hover:text-slate-700",
-            )}
-          >
-            Annual
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => handleIntervalChange("monthly")}
+              aria-pressed={billingInterval === "monthly"}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                billingInterval === "monthly"
+                  ? "bg-white text-navy-700 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700",
+              )}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => handleIntervalChange("annual")}
+              aria-pressed={billingInterval === "annual"}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                billingInterval === "annual"
+                  ? "bg-white text-navy-700 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700",
+              )}
+            >
+              Annual
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -235,132 +289,142 @@ export function PlanManager({
         </div>
       )}
 
-      {/* Bundles mode */}
-      {mode === "bundles" && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {bundles.map((bundle) => (
+      {plans.length > 0 ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          {plans.map((plan) => {
+            const productLabel = plan.productType === "membership"
+              ? "Membership"
+              : "Bundle";
+            const isPlanActive = isNewSubscription
+              ? selectedNewBundles.has(plan.slug)
+              : activePlanSlugs.has(plan.slug);
+            const isFinalActivePlan =
+              !isNewSubscription && isPlanActive && activePlanSlugs.size === 1;
+            return (
               <PlanBundleCard
-                key={bundle.id}
-                bundle={bundle}
-                isActive={
-                  isNewSubscription
-                    ? selectedNewBundles.has(bundle.slug)
-                    : activeBundleSlugs.has(bundle.slug)
-                }
+                key={plan.id}
+                bundle={plan}
+                isActive={isPlanActive}
                 billingInterval={billingInterval}
                 onAdd={() =>
                   isNewSubscription
-                    ? toggleNewBundle(bundle.slug)
+                    ? toggleNewBundle(plan.slug)
                     : setConfirmDialog({
                         type: "add",
-                        bundleSlug: bundle.slug,
-                        bundleName: bundle.name,
+                        productKind: "plan",
+                        productSlug: plan.slug,
+                        productName: plan.name,
+                        productLabel,
                       })
                 }
-                onRemove={() =>
-                  isNewSubscription
-                    ? toggleNewBundle(bundle.slug)
-                    : setConfirmDialog({
-                        type: "remove",
-                        bundleSlug: bundle.slug,
-                        bundleName: bundle.name,
-                      })
-                }
+                onRemove={() => {
+                  if (isFinalActivePlan) return;
+                  if (isNewSubscription) {
+                    toggleNewBundle(plan.slug);
+                  } else {
+                    setConfirmDialog({
+                      type: "remove",
+                      productKind: "plan",
+                      productSlug: plan.slug,
+                      productName: plan.name,
+                      productLabel,
+                    });
+                  }
+                }}
                 loading={loading}
+                removeDisabled={isFinalActivePlan}
               />
-            ))}
-          </div>
-
-          {/* Checkout button for new subscriptions */}
-          {isNewSubscription && (
-            <div className="flex justify-center pt-2">
-              <button
-                type="button"
-                onClick={handleNewSubscriptionCheckout}
-                disabled={loading}
-                className="inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold bg-crimson-600 text-white hover:bg-crimson-700 transition-colors disabled:opacity-50 shadow-lg"
-              >
-                {loading ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    Subscribe & Checkout
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Build Your Own mode */}
-      {mode === "build_your_own" && (
-        <FeaturePicker
-          entitlements={entitlements}
-          bundles={bundles}
-          selectedFeatures={selectedFeatures}
-          onToggleFeature={handleToggleFeature}
-          loading={loading}
-        />
-      )}
-
-      {/* Proration info */}
-      <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
-        <p className="text-xs text-blue-700">
-          <span className="font-semibold">Proration notice:</span> When you add
-          or remove bundles, charges are prorated. You will only be billed for
-          the remainder of your current billing period.
+            );
+          })}
+        </div>
+      ) : (
+        <p className="rounded-xl border border-slate-200 bg-white px-6 py-8 text-center text-sm text-slate-500">
+          No plans are available now.
         </p>
-      </div>
+      )}
+
+      {!isNewSubscription && activeAddOns.length > 0 && (
+        <section className="flex flex-col gap-4" aria-labelledby="current-add-ons-title">
+          <div>
+            <h3
+              id="current-add-ons-title"
+              className="font-serif text-base font-semibold text-navy-700"
+            >
+              Current add-ons
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              New add-on purchases are unavailable. You can remove an existing add-on.
+            </p>
+          </div>
+          <FeaturePicker
+            addOns={activeAddOns}
+            selectedAddOns={activeAddOnSlugs}
+            onToggleAddOn={handleRemoveAddOn}
+            loading={loading}
+          />
+        </section>
+      )}
+
+      {isNewSubscription && (
+        <div className="flex justify-center pt-2">
+          <Button
+            type="button"
+            variant="crimson"
+            size="lg"
+            onClick={handleNewSubscriptionCheckout}
+            disabled={loading || selectedNewBundles.size === 0}
+          >
+            {loading ? "Processing..." : "Subscribe & Checkout"}
+          </Button>
+        </div>
+      )}
+
+      {!isNewSubscription && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <p className="text-xs text-blue-700">
+            <span className="font-semibold">Proration notice:</span> When you add
+            or remove products, charges are prorated. You will only be billed for
+            the remainder of your current billing period.
+          </p>
+        </div>
+      )}
 
       {/* Confirmation dialog */}
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
             <h3 className="font-serif text-lg font-semibold text-navy-700 mb-2">
-              {confirmDialog.type === "add" ? "Add Bundle" : "Remove Bundle"}
+              {confirmDialog.type === "add" ? "Add" : "Remove"}{" "}
+              {confirmDialog.productLabel}
             </h3>
             <p className="text-sm text-slate-600 mb-6">
               {confirmDialog.type === "add"
-                ? `Add ${confirmDialog.bundleName} to your plan? Charges will be prorated for the current billing period.`
-                : `Remove ${confirmDialog.bundleName} from your plan? You will retain access until the end of your current billing period.`}
+                ? `Add ${confirmDialog.productName} to your plan? Charges will be prorated for the current billing period.`
+                : `Remove ${confirmDialog.productName} now? Stripe will prorate the current billing period.`}
             </p>
             <div className="flex gap-3 justify-end">
-              <button
+              <Button
                 type="button"
-                onClick={() => setConfirmDialog(null)}
+                variant="secondary"
+                size="sm"
+                onClick={dismissConfirmDialog}
                 disabled={loading}
-                className="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant={confirmDialog.type === "add" ? "primary" : "destructive"}
+                size="sm"
                 onClick={handleConfirmModify}
                 disabled={loading}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50 transition-colors",
-                  confirmDialog.type === "add"
-                    ? "bg-navy-600 hover:bg-navy-700"
-                    : "bg-red-600 hover:bg-red-700",
-                )}
               >
                 {loading
                   ? "Processing..."
                   : confirmDialog.type === "add"
                     ? "Confirm Add"
                     : "Confirm Remove"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

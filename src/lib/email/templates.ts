@@ -1,16 +1,21 @@
-import { buildEmailHtml } from "./index";
+import {
+  buildEmailHtml,
+  escapeHtml,
+  escapeHttpUrl,
+  sanitizeEmailSubject,
+} from "./index";
 
 export function adminUserWelcomeEmail(firstName: string, setupUrl: string): { subject: string; html: string } {
   return {
     subject: "Set up your Homewise account",
     html: buildEmailHtml(`
-      <h2>Welcome, ${firstName}!</h2>
+      <h2>Welcome, ${escapeHtml(firstName)}!</h2>
       <p>Your administrator has created a Homewise account for you. To get started, please set your password by clicking the button below.</p>
       <p style="text-align:center;margin-top:24px">
-        <a href="${setupUrl}" class="btn">Set Your Password</a>
+        <a href="${escapeHttpUrl(setupUrl)}" class="btn">Set Your Password</a>
       </p>
       <p style="margin-top:24px;font-size:13px;color:#64748b">This link expires in 24 hours. If it has expired, ask your administrator to resend the invitation.</p>
-    `, "Set up your Homewise account"),
+    `, "Set up your Homewise account", false),
   };
 }
 
@@ -18,13 +23,13 @@ export function passwordResetEmail(firstName: string, resetUrl: string): { subje
   return {
     subject: "Reset your Homewise password",
     html: buildEmailHtml(`
-      <h2>Hi ${firstName},</h2>
+      <h2>Hi ${escapeHtml(firstName)},</h2>
       <p>We received a request to reset your password. Click the button below to choose a new one.</p>
       <p style="text-align:center;margin-top:24px">
-        <a href="${resetUrl}" class="btn">Reset Password</a>
+        <a href="${escapeHttpUrl(resetUrl)}" class="btn">Reset Password</a>
       </p>
       <p style="margin-top:24px;font-size:13px;color:#64748b">This link expires in 24 hours. If you didn&apos;t request this, you can safely ignore this email.</p>
-    `, "Reset your Homewise password"),
+    `, "Reset your Homewise password", false),
   };
 }
 
@@ -82,10 +87,12 @@ export function sellerLeadFollowUp(): { subject: string; html: string } {
   };
 }
 
-export function pastClientAnniversary(): { subject: string; html: string } {
-  return {
-    subject: "Happy home anniversary, {{first_name}}!",
-    html: buildEmailHtml(`
+export function pastClientAnniversary(): {
+  subject: string;
+  body: string;
+  html: string;
+} {
+  const body = `
       <h2>Happy Anniversary, {{first_name}}! 🎉</h2>
       <p>It's been another year since you closed on your home. We hope you're enjoying every moment of it!</p>
       <p>Did you know your home's value may have changed? I'd be happy to provide a complimentary market analysis.</p>
@@ -93,7 +100,11 @@ export function pastClientAnniversary(): { subject: string; html: string } {
       <p style="text-align:center;margin-top:24px">
         <a href="{{site_url}}/home-evaluation" class="btn">Get a Free Home Evaluation</a>
       </p>
-    `),
+    `;
+  return {
+    subject: "Happy home anniversary, {{first_name}}!",
+    body,
+    html: buildEmailHtml(body),
   };
 }
 
@@ -113,15 +124,21 @@ export function openHouseFollowUp(): { subject: string; html: string } {
   };
 }
 
-export function birthdayGreeting(): { subject: string; html: string } {
-  return {
-    subject: "Happy Birthday, {{first_name}}! 🎂",
-    html: buildEmailHtml(`
+export function birthdayGreeting(): {
+  subject: string;
+  body: string;
+  html: string;
+} {
+  const body = `
       <h2>Happy Birthday, {{first_name}}!</h2>
       <p>Wishing you a wonderful day filled with joy and celebration!</p>
       <p>As always, I'm here if you need anything related to real estate — whether it's checking your home's value, exploring new neighborhoods, or just saying hello.</p>
       <p>Cheers,<br><strong>{{agent_name}}</strong></p>
-    `),
+    `;
+  return {
+    subject: "Happy Birthday, {{first_name}}! 🎂",
+    body,
+    html: buildEmailHtml(body),
   };
 }
 
@@ -167,31 +184,15 @@ interface AgentApplicationSummary {
   message?: string | null;
 }
 
-// Escape applicant-controlled values before interpolating into email HTML.
-function esc(value: string | null | undefined): string {
-  if (value == null) return "";
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-// Collapse newlines so applicant input can't inject email subject headers.
-function subjectSafe(value: string): string {
-  return value.replace(/[\r\n]+/g, " ").trim();
-}
-
 export function agentApplicationReceivedEmail(firstName: string): { subject: string; html: string } {
   return {
     subject: "We received your HomeWise Agent application",
     html: buildEmailHtml(`
-      <h2>Thanks, ${esc(firstName)}!</h2>
+      <h2>Thanks, ${escapeHtml(firstName)}!</h2>
       <p>We&apos;ve received your application to become a HomeWise Agent. Our corporate office reviews every application personally.</p>
       <p>If you&apos;re approved, we&apos;ll email you a secure registration link to set up your agent account. Membership is always free for HomeWise Agents.</p>
       <p style="margin-top:24px;font-size:13px;color:#64748b">No action is needed right now — we&apos;ll be in touch soon.</p>
-    `, "Your HomeWise Agent application was received"),
+    `, "Your HomeWise Agent application was received", false),
   };
 }
 
@@ -200,9 +201,9 @@ export function agentApplicationAdminNotificationEmail(
   reviewUrl: string,
 ): { subject: string; html: string } {
   const row = (label: string, value?: string | null) =>
-    value ? `<p style="margin:4px 0"><strong>${esc(label)}:</strong> ${esc(value)}</p>` : "";
+    value ? `<p style="margin:4px 0"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>` : "";
   return {
-    subject: subjectSafe(`New agent application — ${app.firstName} ${app.lastName}`),
+    subject: sanitizeEmailSubject(`New agent application — ${app.firstName} ${app.lastName}`),
     html: buildEmailHtml(`
       <h2>New Agent Application</h2>
       <div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0">
@@ -214,9 +215,9 @@ export function agentApplicationAdminNotificationEmail(
         ${row("Message", app.message)}
       </div>
       <p style="text-align:center;margin-top:24px">
-        <a href="${reviewUrl}" class="btn">Review Application</a>
+        <a href="${escapeHttpUrl(reviewUrl)}" class="btn">Review Application</a>
       </p>
-    `, "A prospective agent has applied"),
+    `, "A prospective agent has applied", false),
   };
 }
 
@@ -224,13 +225,13 @@ export function agentApplicationApprovedEmail(firstName: string, inviteUrl: stri
   return {
     subject: "You're approved — welcome to HomeWise",
     html: buildEmailHtml(`
-      <h2>Congratulations, ${esc(firstName)}!</h2>
+      <h2>Congratulations, ${escapeHtml(firstName)}!</h2>
       <p>Your application has been approved by the HomeWise corporate office. You&apos;re ready to set up your agent account.</p>
       <p style="text-align:center;margin-top:24px">
-        <a href="${inviteUrl}" class="btn">Set Up Your Agent Account</a>
+        <a href="${escapeHttpUrl(inviteUrl)}" class="btn">Set Up Your Agent Account</a>
       </p>
       <p style="margin-top:24px;font-size:13px;color:#64748b">This invitation link expires in 7 days. If it expires, reply to this email and we&apos;ll send a new one.</p>
-    `, "Your HomeWise Agent application was approved"),
+    `, "Your HomeWise Agent application was approved", false),
   };
 }
 
@@ -238,10 +239,10 @@ export function agentApplicationRejectedEmail(firstName: string, notes?: string 
   return {
     subject: "Update on your HomeWise Agent application",
     html: buildEmailHtml(`
-      <h2>Hi ${esc(firstName)},</h2>
+      <h2>Hi ${escapeHtml(firstName)},</h2>
       <p>Thank you for your interest in joining HomeWise. After review, we&apos;re not able to move forward with your application at this time.</p>
-      ${notes ? `<div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0"><p style="margin:0">${esc(notes)}</p></div>` : ""}
+      ${notes ? `<div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0"><p style="margin:0">${escapeHtml(notes)}</p></div>` : ""}
       <p>We appreciate the time you took to apply and wish you the best.</p>
-    `, "An update on your HomeWise Agent application"),
+    `, "An update on your HomeWise Agent application", false),
   };
 }

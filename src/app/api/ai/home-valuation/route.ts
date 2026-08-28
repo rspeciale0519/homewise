@@ -3,20 +3,21 @@ import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
 import { analyticsBoEnabled, analyticsUnavailable, withBo } from "@/lib/analytics-flags";
+import { InvalidJsonBodyError, readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const homeValuationSchema = z.object({
-  evaluationId: z.string().min(1, "evaluationId is required"),
-});
+  evaluationId: z.string().trim().min(1, "evaluationId is required").max(100),
+}).strict();
 
 export async function POST(request: NextRequest) {
   const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
-    const raw: unknown = await request.json();
+    const raw: unknown = await readJsonBodyWithLimit(request, 2_000);
     const input = homeValuationSchema.safeParse(raw);
     if (!input.success) {
       return NextResponse.json(
@@ -102,6 +103,12 @@ Do NOT include any disclaimers about being AI. Write as a real estate profession
       evaluationId: evaluation.id,
     });
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/home-valuation] error:", err);
     return NextResponse.json({ error: "Failed to generate valuation" }, { status: 500 });
   }

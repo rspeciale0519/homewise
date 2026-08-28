@@ -1,6 +1,7 @@
 "use client";
 
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { safeAuthRedirectPath } from "@/lib/auth-redirect";
 
 interface SocialAuthButtonProps {
   redirectTo?: string;
@@ -12,7 +13,7 @@ export function SocialAuthButton({ redirectTo, inviteCode }: SocialAuthButtonPro
 
   const handleGoogleAuth = async () => {
     const params = new URLSearchParams();
-    if (redirectTo) params.set("redirectTo", redirectTo);
+    if (redirectTo) params.set("redirectTo", safeAuthRedirectPath(redirectTo));
     if (inviteCode) params.set("inviteCode", inviteCode);
     const qs = params.toString();
 

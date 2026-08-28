@@ -18,6 +18,8 @@ interface AlertRow {
   maxPrice: number | null;
   beds: number | null;
   active: boolean;
+  verificationRequired: boolean;
+  emailVerifiedAt: string | null;
   createdAt: string;
   user: AlertUser | null;
 }
@@ -137,8 +139,16 @@ export function AlertManagementTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {alerts.map((alert) => (
-                <tr key={alert.id} className="hover:bg-slate-50/60 transition-colors">
+              {alerts.map((alert) => {
+                const status = alert.verificationRequired
+                  ? "Pending"
+                  : alert.active
+                    ? "Active"
+                    : alert.emailVerifiedAt
+                      ? "Verified"
+                      : "Inactive";
+                return (
+                  <tr key={alert.id} className="hover:bg-slate-50/60 transition-colors">
                   <td className="px-5 py-3 text-navy-700 font-medium">{alert.email}</td>
                   <td className="px-5 py-3 text-slate-500">{alert.name ?? "—"}</td>
                   <td className="px-5 py-3">
@@ -161,21 +171,26 @@ export function AlertManagementTable() {
                   <td className="px-5 py-3">
                     <button
                       onClick={() => toggleActive(alert.id, alert.active)}
+                      disabled={alert.verificationRequired}
+                      title={alert.verificationRequired ? "Email confirmation is required" : undefined}
                       className={cn(
-                        "text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full transition-colors",
-                        alert.active
+                        "text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full transition-colors disabled:cursor-not-allowed",
+                        alert.verificationRequired
+                          ? "bg-amber-50 text-amber-700"
+                          : alert.active
                           ? "bg-emerald-50 text-emerald-700"
                           : "bg-slate-100 text-slate-400"
                       )}
                     >
-                      {alert.active ? "Active" : "Inactive"}
+                      {status}
                     </button>
                   </td>
                   <td className="px-5 py-3 text-slate-400 text-xs tabular-nums">
                     {new Date(alert.createdAt).toLocaleDateString()}
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
               {alerts.length === 0 && !loading && (
                 <tr>
                   <td colSpan={8} className="px-5 py-10 text-center text-slate-400">

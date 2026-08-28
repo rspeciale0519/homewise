@@ -9,6 +9,7 @@ import type { ReturnAddress } from "./schemas";
 import type { ArtworkFile, ListFile } from "./types";
 
 export const SIGNED_URL_TTL_SECONDS = 30 * 24 * 60 * 60;
+const DISPATCH_LEASE_MS = 15 * 60 * 1000;
 
 export type DispatchTrigger = "auto" | "resend_button" | "admin_retry";
 
@@ -29,6 +30,34 @@ export async function dispatchMailOrderOnce(
   orderId: string,
   triggeredBy: DispatchTrigger,
 ): Promise<DispatchOutcome> {
+  const claimedAt = new Date();
+  const staleBefore = new Date(claimedAt.getTime() - DISPATCH_LEASE_MS);
+  const dispatchClaim = await prisma.mailOrder.updateMany({
+    where: {
+      id: orderId,
+      status: "submitted",
+      OR: [
+        { emailStatus: { in: ["pending", "failed"] } },
+        {
+          emailStatus: "sending",
+          OR: [
+            { lastDispatchedAt: null },
+            { lastDispatchedAt: { lt: staleBefore } },
+          ],
+        },
+      ],
+    },
+    data: { emailStatus: "sending", lastDispatchedAt: claimedAt },
+  });
+  if (dispatchClaim.count !== 1) {
+    return {
+      success: false,
+      messageId: null,
+      error: null,
+      skipped: "order dispatch is not pending",
+    };
+  }
+
   const order = await prisma.mailOrder.findUnique({
     where: { id: orderId },
     include: {

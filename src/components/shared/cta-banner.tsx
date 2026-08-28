@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { AnimateOnScroll } from "@/components/shared/animate-on-scroll";
 import { CtaBackButton } from "@/components/shared/cta-back-button";
+import { cn } from "@/lib/utils";
 
 type PrimaryCta =
   | { label: string; href: string }
@@ -84,21 +85,28 @@ export function CtaBanner({
                 variant={primaryButtonVariant}
               />
             ) : (
-              <Link href={primaryCta.href}>
-                <Button variant={primaryButtonVariant} size="lg">
-                  {primaryCta.label}
-                </Button>
+              <Link
+                href={primaryCta.href}
+                className={buttonVariants({
+                  variant: primaryButtonVariant,
+                  size: "lg",
+                })}
+              >
+                {primaryCta.label}
               </Link>
             )}
             {secondaryCta && (
-              <Link href={secondaryCta.href}>
-                <Button
-                  variant={variant !== "light" ? "ghost" : "outline"}
-                  size="lg"
-                  className={variant !== "light" ? "text-white hover:bg-white/10" : ""}
-                >
-                  {secondaryCta.label}
-                </Button>
+              <Link
+                href={secondaryCta.href}
+                className={cn(
+                  buttonVariants({
+                    variant: variant !== "light" ? "ghost" : "outline",
+                    size: "lg",
+                  }),
+                  variant !== "light" && "text-white hover:bg-white/10",
+                )}
+              >
+                {secondaryCta.label}
               </Link>
             )}
           </div>

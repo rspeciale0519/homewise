@@ -1,22 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
+import { InvalidJsonBodyError, readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const campaignGeneratorSchema = z.object({
-  campaignType: z.string().min(1, "campaignType is required"),
-  audience: z.string().min(1, "audience is required"),
+  campaignType: z.string().trim().min(1, "campaignType is required").max(120),
+  audience: z.string().trim().min(1, "audience is required").max(4_000),
   emailCount: z.number().int().min(1).max(20).optional(),
-});
+}).strict();
 
 export async function POST(request: NextRequest) {
   const auth = await requireStaffApi();
   if (isError(auth)) return auth.error;
 
   try {
-    const raw: unknown = await request.json();
+    const raw: unknown = await readJsonBodyWithLimit(request, 8_000);
     const input = campaignGeneratorSchema.safeParse(raw);
     if (!input.success) {
       return NextResponse.json(
@@ -48,6 +50,9 @@ Return JSON:
   "summary": "<brief campaign strategy description>"
 }`;
 
+    const entitlementError = await reserveStaffFeature(auth, "ai_email_content");
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("campaign_generator", {
       feature: "campaign_generator",
       systemPrompt: "You are an email marketing specialist for real estate. Generate warm, professional drip campaigns. Output valid JSON only.",
@@ -66,6 +71,12 @@ Return JSON:
 
     return NextResponse.json(parsed);
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/campaign-generator] error:", err);
     return NextResponse.json({ error: "Failed to generate campaign" }, { status: 500 });
   }

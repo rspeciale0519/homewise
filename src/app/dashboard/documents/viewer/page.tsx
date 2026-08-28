@@ -91,7 +91,13 @@ export default async function DocumentViewerPage({
     const doc = await prisma.document.findUnique({
       where: { id: resolved.record.id },
     });
-    if (!doc || !doc.published) redirect("/dashboard/agent-hub/documents");
+    if (
+      !doc ||
+      !doc.published ||
+      !doc.platforms.includes("homewise")
+    ) {
+      redirect("/dashboard/agent-hub/documents");
+    }
     if (doc.external && doc.url) {
       redirect(doc.url);
     }
@@ -105,14 +111,17 @@ export default async function DocumentViewerPage({
     }
     // Prefer to redirect legacy path URLs to slug URLs when we can match them
     const matched = await prisma.document.findFirst({
-      where: { storageKey: docPath },
+      where: {
+        storageKey: docPath,
+        published: true,
+        platforms: { has: "homewise" },
+      },
       select: { slug: true },
     });
     if (matched) {
       redirect(`/dashboard/documents/viewer?slug=${matched.slug}`);
     }
-    documentName = docPath.split("/").pop() ?? "Document";
-    fileUrl = `/api/documents/${docPath}`;
+    redirect("/dashboard/agent-hub/documents");
   } else {
     redirect("/dashboard/agent-hub/documents");
   }

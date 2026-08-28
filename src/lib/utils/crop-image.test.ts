@@ -21,6 +21,10 @@ function createMockImage(width: number, height: number) {
   return img;
 }
 
+function MockImage() {
+  return createMockImage(400, 400);
+}
+
 describe("getCroppedBlob", () => {
   const mockCropArea: CropArea = { x: 10, y: 20, width: 200, height: 200 };
   let mockContext: Record<string, unknown>;
@@ -41,7 +45,7 @@ describe("getCroppedBlob", () => {
     vi.stubGlobal("document", {
       createElement: vi.fn(() => mockCanvas),
     });
-    vi.stubGlobal("Image", vi.fn(() => createMockImage(400, 400)));
+    vi.stubGlobal("Image", MockImage);
   });
 
   it("returns a Blob with image/webp type", async () => {

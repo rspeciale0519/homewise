@@ -3,6 +3,7 @@ import {
   duplicateKey,
   isStaleListing,
   priceDropFraction,
+  resolvedAnomalyListingIds,
 } from "./listing-anomalies";
 
 const now = new Date("2026-06-12T00:00:00Z");
@@ -38,5 +39,16 @@ describe("isStaleListing", () => {
 describe("duplicateKey", () => {
   it("normalizes case and whitespace", () => {
     expect(duplicateKey(" 123 Main St ", "Orlando")).toBe("123 main st|orlando");
+  });
+});
+
+describe("resolvedAnomalyListingIds", () => {
+  it("returns only anomalies that are no longer present", () => {
+    expect(
+      resolvedAnomalyListingIds(
+        ["listing-1", "listing-2", "listing-3"],
+        new Set(["listing-2"]),
+      ),
+    ).toEqual(["listing-1", "listing-3"]);
   });
 });

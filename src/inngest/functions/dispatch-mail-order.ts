@@ -11,7 +11,7 @@ const BACKOFF_SECONDS = [30, 120, 300];
  * each try.
  */
 export const dispatchMailOrder = inngest.createFunction(
-  { id: "dispatch-mail-order", retries: 0 },
+  { id: "dispatch-mail-order", retries: 0, concurrency: { limit: 1 } },
   { event: "direct-mail/order.submitted" },
   async ({ event, step }) => {
     const { orderId } = event.data as { orderId: string };

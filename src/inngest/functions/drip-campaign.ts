@@ -1,6 +1,13 @@
 import { inngest } from "../client";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, personalizeTemplate, buildEmailHtml } from "@/lib/email";
+import {
+  sendEmail,
+  personalizeTemplate,
+  buildEmailHtml,
+  escapeHtmlTokens,
+  escapeHttpUrl,
+  sanitizeEmailSubject,
+} from "@/lib/email";
 import {
   RECOMMENDED_LISTINGS_TOKEN,
   recommendedListingsHtmlForContact,
@@ -8,6 +15,9 @@ import {
 import { sendSms } from "@/lib/sms";
 import { pickVariant } from "@/lib/email/ab-testing";
 import { buildAgentBrandedEmailHtml, getAgentBrandTokens } from "@/lib/email/agent-branded";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
+import { createUnsubscribeToken } from "@/lib/email/action-token";
+import { canSendPreferenceEmail } from "@/lib/email/suppression";
 
 export const processDripCampaigns = inngest.createFunction(
   { id: "process-drip-campaigns", concurrency: { limit: 1 } },
@@ -62,12 +72,19 @@ export const processDripCampaigns = inngest.createFunction(
         const contact = enrollment.contact;
         const agent = contact.assignedAgent;
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://homewisefl.com";
+        const emailAllowed = contact.marketingEmailOptOutAt === null;
+        const unsubscribeUrl = emailAllowed
+          ? `${siteUrl}/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(
+              { kind: "contact", id: contact.id },
+              contact.email,
+            ))}`
+          : "";
         const tokens: Record<string, string> = {
           first_name: contact.firstName,
           last_name: contact.lastName,
           email: contact.email,
           site_url: siteUrl,
-          unsubscribe_url: `${siteUrl}/unsubscribe?id=${contact.id}`,
+          unsubscribe_url: unsubscribeUrl,
           agent_name: agent ? `${agent.firstName} ${agent.lastName}` : "Your Homewise Agent",
           area_of_interest: "",
           market_conditions: "active",
@@ -76,7 +93,7 @@ export const processDripCampaigns = inngest.createFunction(
           ...(agent ? getAgentBrandTokens(agent, siteUrl) : {}),
         };
 
-        if (email.body.includes(RECOMMENDED_LISTINGS_TOKEN)) {
+        if (emailAllowed && email.body.includes(RECOMMENDED_LISTINGS_TOKEN)) {
           tokens[RECOMMENDED_LISTINGS_TOKEN] = await recommendedListingsHtmlForContact(
             contact,
             siteUrl,
@@ -86,33 +103,63 @@ export const processDripCampaigns = inngest.createFunction(
           });
         }
 
+        let delivered = false;
         if (email.channel === "sms" && email.smsBody && contact.phone) {
           const smsText = personalizeTemplate(email.smsBody, tokens);
           await sendSms({ to: contact.phone, body: smsText });
-        } else {
+          delivered = true;
+        } else if (emailAllowed) {
           const variant = await pickVariant(email.id);
-          const subject = personalizeTemplate(variant?.subject ?? email.subject, tokens);
-          const body = personalizeTemplate(email.body, tokens);
+          const subject = sanitizeEmailSubject(
+            personalizeTemplate(variant?.subject ?? email.subject, tokens),
+          );
+          const htmlTokens = escapeHtmlTokens(tokens);
+          htmlTokens.site_url = escapeHttpUrl(siteUrl).replace(/\/$/, "");
+          htmlTokens.unsubscribe_url = escapeHttpUrl(unsubscribeUrl);
 
-          const html = agent
+          const agentPhotoUrl = tokens.agent_photo_url;
+          if (agentPhotoUrl) {
+            htmlTokens.agent_photo_url = escapeHttpUrl(agentPhotoUrl);
+          }
+
+          const recommendedListingsHtml = tokens[RECOMMENDED_LISTINGS_TOKEN];
+          if (recommendedListingsHtml !== undefined) {
+            htmlTokens[RECOMMENDED_LISTINGS_TOKEN] = recommendedListingsHtml;
+          }
+
+          const body = sanitizeRichHtml(
+            personalizeTemplate(email.body, htmlTokens),
+          );
+
+          const wrappedHtml = agent
             ? buildAgentBrandedEmailHtml(body, agent)
             : buildEmailHtml(body);
+          const html = personalizeTemplate(wrappedHtml, {
+            unsubscribe_url: htmlTokens.unsubscribe_url,
+          });
 
           const fromName = agent ? `${agent.firstName} ${agent.lastName} via Homewise FL` : undefined;
           const fromAddr = fromName ? `${fromName} <noreply@homewisefl.com>` : undefined;
 
-          await sendEmail({
-            to: contact.email,
-            subject,
-            html,
-            from: fromAddr,
-            replyTo: agent?.email ?? undefined,
-            tags: [
-              { name: "campaign_id", value: email.id },
-              ...(variant ? [{ name: "variant", value: variant.variant }] : []),
-              ...(agent ? [{ name: "agent_id", value: "branded" }] : []),
-            ],
-          });
+          if (await canSendPreferenceEmail({
+            kind: "contact",
+            id: contact.id,
+            recipientEmail: contact.email,
+          })) {
+            await sendEmail({
+              to: contact.email,
+              subject,
+              html,
+              from: fromAddr,
+              replyTo: agent?.email ?? undefined,
+              tags: [
+                { name: "campaign_id", value: email.id },
+                ...(variant ? [{ name: "variant", value: variant.variant }] : []),
+                ...(agent ? [{ name: "agent_id", value: "branded" }] : []),
+              ],
+            });
+            delivered = true;
+          }
         }
 
         const nextStep = enrollment.currentStep + 1;
@@ -131,7 +178,7 @@ export const processDripCampaigns = inngest.createFunction(
           });
         }
 
-        sent++;
+        if (delivered) sent++;
       });
     }
 
@@ -151,6 +198,12 @@ export const autoEnrollCampaign = inngest.createFunction(
     };
 
     await step.run("find-matching-campaigns", async () => {
+      const contact = await prisma.contact.findFirst({
+        where: { id: contactId, marketingEmailOptOutAt: null },
+        select: { id: true },
+      });
+      if (!contact) return;
+
       const campaigns = await prisma.campaign.findMany({
         where: {
           status: "active",

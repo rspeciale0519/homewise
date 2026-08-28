@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readFormDataBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
+import { detectRasterImageType, rasterImageExtension } from "@/lib/http/raster-image";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 8 * 1024 * 1024;
+const MAX_BODY_SIZE = MAX_SIZE + 64 * 1024;
 const BUCKET = "manual-listing-photos";
 
 export async function POST(request: NextRequest) {
@@ -14,7 +17,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Agent profile not linked" }, { status: 403 });
   }
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await readFormDataBodyWithLimit(request, MAX_BODY_SIZE);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "File too large. Maximum size is 8MB" }, { status: 413 });
+    }
+    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  }
   const file = formData.get("file") as File | null;
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -26,19 +37,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "File too large. Maximum size is 8MB" }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const detectedType = detectRasterImageType(buffer);
+  if (!detectedType || detectedType !== file.type) {
+    return NextResponse.json(
+      { error: "File content does not match its image type" },
+      { status: 400 },
+    );
+  }
+
+  const ext = rasterImageExtension(detectedType);
   const key = `${auth.agentId ?? "admin"}/${randomUUID()}.${ext}`;
 
   const supabase = createAdminClient();
-  const buffer = Buffer.from(await file.arrayBuffer());
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(key, buffer, {
-    contentType: file.type,
+    contentType: detectedType,
     upsert: false,
   });
 
   if (uploadError) {
     console.error("[manual-listings/upload] Storage upload error:", uploadError.message);
-    return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 });
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 
   const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(key);

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeAuthRedirectPath } from "@/lib/auth-redirect";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -31,19 +32,28 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  function redirectWithSessionCookies(url: URL): NextResponse {
+    const redirectResponse = NextResponse.redirect(url);
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      redirectResponse.cookies.set(cookie);
+    }
+    return redirectResponse;
+  }
+
   if (!user && (pathname.startsWith("/dashboard") || pathname.startsWith("/admin"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(url);
+    url.search = "";
+    url.searchParams.set("redirectTo", `${pathname}${request.nextUrl.search}`);
+    return redirectWithSessionCookies(url);
   }
 
   if (user && (pathname === "/login" || pathname === "/register")) {
-    const redirectTo = request.nextUrl.searchParams.get("redirectTo");
-    const url = request.nextUrl.clone();
-    url.pathname = redirectTo || "/dashboard";
-    url.searchParams.delete("redirectTo");
-    return NextResponse.redirect(url);
+    const redirectTo = safeAuthRedirectPath(
+      request.nextUrl.searchParams.get("redirectTo"),
+    );
+    const url = new URL(redirectTo, request.nextUrl.origin);
+    return redirectWithSessionCookies(url);
   }
 
   return supabaseResponse;

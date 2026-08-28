@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, isError } from "@/lib/admin-api";
+import { logApiError } from "@/lib/api-error";
 import { stripe } from "@/lib/stripe";
 import { couponCreateSchema } from "@/schemas/billing.schema";
 
@@ -12,9 +13,9 @@ export async function GET() {
 
     return NextResponse.json({ coupons: coupons.data });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    logApiError("admin/billing/coupons/list", err);
     return NextResponse.json(
-      { error: "Failed to list coupons", detail: message },
+      { error: "Failed to list coupons" },
       { status: 500 },
     );
   }
@@ -58,9 +59,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ coupon }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    logApiError("admin/billing/coupons/create", err);
     return NextResponse.json(
-      { error: "Failed to create coupon", detail: message },
+      { error: "Failed to create coupon" },
       { status: 500 },
     );
   }

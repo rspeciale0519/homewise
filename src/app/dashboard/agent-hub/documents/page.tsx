@@ -63,7 +63,11 @@ export default async function DocumentLibraryPage() {
         title: c.title,
         description: c.description,
         documents: c.documents
-          .filter((m) => m.document.published)
+          .filter(
+            (m) =>
+              m.document.published &&
+              m.document.platforms.includes("homewise"),
+          )
           .map((m): LibraryDocument => ({
             id: m.document.id,
             slug: m.document.slug,

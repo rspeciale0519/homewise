@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { CtaBanner } from "@/components/shared/cta-banner";
 import { PhotoGallery } from "@/components/properties/photo-gallery";
 import { TrackView } from "@/components/properties/track-view";
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: PropertyDetailPageProps): Pro
   return createMetadata({
     title: `${property.address}, ${property.city} — ${formatPrice(property.price)}`,
     description: `${property.beds} bed, ${property.baths} bath, ${property.sqft.toLocaleString()} sq ft ${property.propertyType.toLowerCase()} in ${property.city}, FL ${property.zip}. Listed at ${formatPrice(property.price)}.`,
-    path: `/properties/${id}`,
+    path: `/properties/${property.id}`,
   });
 }
 
@@ -56,7 +56,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
 
   if (!property) notFound();
 
-  recordListingView(id).catch(() => undefined);
+  recordListingView(property.id).catch(() => undefined);
 
   // Fetch third-party data in parallel (graceful if unavailable)
   const hasCoordinates = property.latitude != null && property.longitude != null;
@@ -69,13 +69,11 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
       ? getNearbySchools(property.latitude, property.longitude)
       : Promise.resolve(null),
     prisma.priceHistory.findMany({
-      where: { listingId: id },
+      where: { listingId: property.id },
       orderBy: { observedAt: "asc" },
       select: { observedAt: true, price: true },
     }),
   ]);
-
-  console.log("[PropertyDetailPage] Walk score result:", walkScoreResult);
 
   // Merge walk scores into property for display
   const enrichedProperty = {
@@ -97,7 +95,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
         breadcrumbJsonLd([
           { name: "Home", href: "/" },
           { name: "Properties", href: "/properties" },
-          { name: property.address, href: `/properties/${id}` },
+          { name: property.address, href: `/properties/${property.id}` },
         ]),
       ]} />
       {/* Breadcrumb bar */}
@@ -160,12 +158,18 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
               />
             </div>
             <div className="flex gap-2">
-              <Link href="/agents">
-                <Button variant="outline-white" size="md">Contact Agent</Button>
+              <Link
+                href="/agents"
+                className={buttonVariants({ variant: "outline-white", size: "md" })}
+              >
+                Contact Agent
               </Link>
-              <Link href={`tel:${PHONE.replace(/[^0-9+]/g, "")}`}>
-                <Button variant="crimson" size="md">Call {PHONE}</Button>
-              </Link>
+              <a
+                href={`tel:${PHONE.replace(/[^0-9+]/g, "")}`}
+                className={buttonVariants({ variant: "crimson", size: "md" })}
+              >
+                Call {PHONE}
+              </a>
             </div>
           </div>
         </Container>

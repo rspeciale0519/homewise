@@ -7,6 +7,7 @@ import {
   SHOULD_DISPATCH_INLINE,
   dispatchMailOrderOnce,
 } from "@/lib/direct-mail/dispatch";
+import { logApiError } from "@/lib/api-error";
 
 export async function POST(
   _req: Request,
@@ -31,6 +32,7 @@ export async function POST(
       id: true,
       userId: true,
       status: true,
+      emailStatus: true,
       lastDispatchedAt: true,
       summaryPdfKey: true,
       artworkFiles: true,
@@ -69,18 +71,60 @@ export async function POST(
     }
   }
 
-  await prisma.mailOrder.update({
-    where: { id: order.id },
-    data: { emailStatus: "pending", lastDispatchedAt: new Date() },
+  const dispatchClaimedAt = new Date();
+  const dispatchClaim = await prisma.mailOrder.updateMany({
+    where: {
+      id: order.id,
+      userId: profile.id,
+      status: "submitted",
+      emailStatus: { not: "sending" },
+      OR: [
+        { lastDispatchedAt: null },
+        { lastDispatchedAt: { lte: new Date(dispatchClaimedAt.getTime() - RESEND_RATE_LIMIT_MS) } },
+      ],
+    },
+    data: { emailStatus: "pending", lastDispatchedAt: dispatchClaimedAt },
   });
+  if (dispatchClaim.count !== 1) {
+    return NextResponse.json(
+      { error: "Please wait before resending — too many recent attempts." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(RESEND_RATE_LIMIT_MS / 1000)) },
+      },
+    );
+  }
 
-  if (SHOULD_DISPATCH_INLINE) {
-    await dispatchMailOrderOnce(order.id, "resend_button");
-  } else {
-    await inngest.send({
-      name: "direct-mail/order.submitted",
-      data: { orderId: order.id, triggeredBy: "resend_button" },
+  try {
+    if (SHOULD_DISPATCH_INLINE) {
+      await dispatchMailOrderOnce(order.id, "resend_button");
+    } else {
+      try {
+        await inngest.send({
+          name: "direct-mail/order.submitted",
+          data: { orderId: order.id, triggeredBy: "resend_button" },
+        });
+      } catch (error) {
+        logApiError("direct-mail/resend-enqueue", error);
+        await dispatchMailOrderOnce(order.id, "resend_button");
+      }
+    }
+  } catch (error) {
+    await prisma.mailOrder.updateMany({
+      where: {
+        id: order.id,
+        userId: profile.id,
+        status: "submitted",
+        emailStatus: "pending",
+        lastDispatchedAt: dispatchClaimedAt,
+      },
+      data: {
+        emailStatus: order.emailStatus,
+        lastDispatchedAt: order.lastDispatchedAt,
+      },
     });
+    logApiError("direct-mail/resend-dispatch", error);
+    return NextResponse.json({ error: "Failed to resend the order" }, { status: 502 });
   }
 
   return NextResponse.json({ ok: true });

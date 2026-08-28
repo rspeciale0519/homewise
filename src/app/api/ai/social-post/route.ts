@@ -2,16 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi, isError } from "@/lib/admin-api";
 import { prisma } from "@/lib/prisma";
 import { aiCompleteForFeature } from "@/lib/ai";
+import { reserveStaffFeature } from "@/lib/billing/require-feature";
 import { withIdx } from "@/lib/mls-visibility";
+import { InvalidJsonBodyError, readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
 const socialPostSchema = z.object({
   type: z.enum(["listing", "market_update", "engagement"]),
-  mlsId: z.string().optional(),
-  topic: z.string().optional(),
-  platform: z.string().optional(),
+  mlsId: z.string().trim().min(1).max(100).optional(),
+  topic: z.string().trim().min(1).max(2_000).optional(),
+  platform: z.enum(["instagram", "facebook", "linkedin", "x"]).optional(),
+}).strict().superRefine((value, context) => {
+  if (value.type === "listing" && !value.mlsId) {
+    context.addIssue({ code: "custom", path: ["mlsId"], message: "mlsId is required" });
+  }
+  if (value.type !== "listing" && !value.topic) {
+    context.addIssue({ code: "custom", path: ["topic"], message: "topic is required" });
+  }
 });
 
 export async function POST(request: NextRequest) {
@@ -19,7 +28,7 @@ export async function POST(request: NextRequest) {
   if (isError(auth)) return auth.error;
 
   try {
-    const raw: unknown = await request.json();
+    const raw: unknown = await readJsonBodyWithLimit(request, 5_000);
     const input = socialPostSchema.safeParse(raw);
     if (!input.success) {
       return NextResponse.json(
@@ -69,6 +78,9 @@ Return JSON:
   ]
 }`;
 
+    const entitlementError = await reserveStaffFeature(auth, "ai_social_posts");
+    if (entitlementError) return entitlementError;
+
     const result = await aiCompleteForFeature("social_post", {
       feature: "social_post",
       systemPrompt: `You are a real estate social media expert. Write engaging ${platform} posts. Output valid JSON only.`,
@@ -87,6 +99,12 @@ Return JSON:
 
     return NextResponse.json(parsed);
   } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (err instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
     console.error("[ai/social-post] error:", err);
     return NextResponse.json({ error: "Failed to generate posts" }, { status: 500 });
   }

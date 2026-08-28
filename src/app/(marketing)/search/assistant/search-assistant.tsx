@@ -8,6 +8,26 @@ interface Message {
   content: string;
 }
 
+interface ChatResponse {
+  content: string;
+  conversationId?: string;
+}
+
+function parseChatResponse(value: unknown): ChatResponse | null {
+  if (typeof value !== "object" || value === null) return null;
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.content !== "string" || !record.content.trim()) return null;
+  if (record.conversationId !== undefined && typeof record.conversationId !== "string") {
+    return null;
+  }
+
+  return {
+    content: record.content,
+    conversationId: record.conversationId,
+  };
+}
+
 export function SearchAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -17,7 +37,8 @@ export function SearchAssistant() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    messagesEndRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
   }, [messages]);
 
   const handleSend = async (text?: string) => {
@@ -35,14 +56,23 @@ export function SearchAssistant() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: msg, conversationId, config: "public", sessionId }),
       });
-      const data = (await res.json()) as { conversationId: string; content: string };
-      if (!conversationId) setConversationId(data.conversationId);
+
+      if (!res.ok) {
+        throw new Error("Search request failed");
+      }
+
+      const data = parseChatResponse(await res.json());
+      if (!data) {
+        throw new Error("Invalid search response");
+      }
+
+      if (!conversationId && data.conversationId) setConversationId(data.conversationId);
       setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: data.content }]);
     } catch {
       setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: "Sorry, something went wrong." }]);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const suggestions = [
@@ -55,7 +85,13 @@ export function SearchAssistant() {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
       {/* Messages */}
-      <div className="h-[50vh] sm:h-[55vh] lg:h-[60vh] min-h-[320px] max-h-[600px] overflow-y-auto p-4 sm:p-6 space-y-4">
+      <div
+        className="h-[50vh] sm:h-[55vh] lg:h-[60vh] min-h-[320px] max-h-[600px] overflow-y-auto p-4 sm:p-6 space-y-4"
+        role="log"
+        aria-label="Property search conversation"
+        aria-live="polite"
+        aria-relevant="additions text"
+      >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full py-8">
             <div className="h-14 w-14 rounded-full bg-navy-50 flex items-center justify-center mb-4">
@@ -71,6 +107,7 @@ export function SearchAssistant() {
               {suggestions.map((s) => (
                 <button
                   key={s}
+                  type="button"
                   onClick={() => handleSend(s)}
                   className="text-xs sm:text-sm px-3 sm:px-4 py-2 bg-navy-50 text-navy-600 rounded-full hover:bg-navy-100 transition-colors text-left"
                 >
@@ -83,6 +120,7 @@ export function SearchAssistant() {
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[90%] sm:max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${msg.role === "user" ? "bg-navy-600 text-white rounded-br-md" : "bg-slate-50 text-slate-700 rounded-bl-md border border-slate-100"}`}>
+              <span className="sr-only">{msg.role === "user" ? "You" : "Home Wise assistant"}: </span>
               {msg.content}
             </div>
           </div>
@@ -90,7 +128,8 @@ export function SearchAssistant() {
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-slate-50 rounded-2xl rounded-bl-md px-4 py-3 text-sm text-slate-500 border border-slate-100">
-              <span className="inline-flex gap-1 items-center">
+              <span className="sr-only">Searching for matching properties.</span>
+              <span className="inline-flex gap-1 items-center" aria-hidden="true">
                 <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "0ms" }} />
                 <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                 <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "300ms" }} />
@@ -109,9 +148,11 @@ export function SearchAssistant() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleSend(); }}
             placeholder="Describe what you're looking for..."
+            aria-label="Describe the property you are looking for"
             className="flex-1 h-11 sm:h-12 px-4 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-navy-600 transition-colors"
           />
           <button
+            type="button"
             onClick={() => handleSend()}
             disabled={isLoading || !input.trim()}
             className="h-11 sm:h-12 px-5 sm:px-6 bg-navy-600 text-white text-sm font-semibold rounded-xl hover:bg-navy-700 disabled:opacity-40 transition-all active:scale-[0.98] shrink-0"

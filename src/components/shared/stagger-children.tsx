@@ -1,7 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
+import { useHasMounted } from "@/hooks/use-has-mounted";
 
 const containerVariants = {
   hidden: {},
@@ -13,18 +14,33 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
 };
 
+const reducedContainerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0 } },
+};
+
+const reducedItemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0 } },
+};
+
 interface StaggerChildrenProps {
   children: ReactNode;
   className?: string;
 }
 
 export function StaggerChildren({ children, className }: StaggerChildrenProps) {
+  const hasMounted = useHasMounted();
+  const prefersReducedMotion = useReducedMotion();
+  const shouldReduceMotion = hasMounted && Boolean(prefersReducedMotion);
+
   return (
     <motion.div
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.2 }}
-      variants={containerVariants}
+      animate={shouldReduceMotion ? "visible" : undefined}
+      whileInView={shouldReduceMotion ? undefined : "visible"}
+      viewport={shouldReduceMotion ? undefined : { once: true, amount: 0.2 }}
+      variants={shouldReduceMotion ? reducedContainerVariants : containerVariants}
       className={className}
     >
       {children}
@@ -33,8 +49,12 @@ export function StaggerChildren({ children, className }: StaggerChildrenProps) {
 }
 
 export function StaggerItem({ children, className }: StaggerChildrenProps) {
+  const hasMounted = useHasMounted();
+  const prefersReducedMotion = useReducedMotion();
+  const shouldReduceMotion = hasMounted && Boolean(prefersReducedMotion);
+
   return (
-    <motion.div variants={itemVariants} className={className}>
+    <motion.div variants={shouldReduceMotion ? reducedItemVariants : itemVariants} className={className}>
       {children}
     </motion.div>
   );

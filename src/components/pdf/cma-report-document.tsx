@@ -46,6 +46,15 @@ export interface CmaComp {
   closeDate: string | null;
 }
 
+export interface CmaActiveComp {
+  address: string;
+  price: number;
+  beds: number;
+  baths: number;
+  sqft: number;
+  dom: number;
+}
+
 export interface CmaSubjectProperty {
   address: string;
   city: string;
@@ -62,6 +71,7 @@ export interface CmaReportProps {
   marketNarrative?: string;
   keyFindings?: string[];
   comps: CmaComp[];
+  activeComps?: CmaActiveComp[];
   subjectProperty: CmaSubjectProperty;
   agentName?: string;
   agentEmail?: string;
@@ -101,6 +111,7 @@ const s = StyleSheet.create({
   thCell: { fontSize: 7, fontWeight: "bold", color: WHITE },
   tdCell: { fontSize: 7.5, color: SLATE_600 },
   colAddress: { width: "28%" },
+  activeColAddress: { width: "44%" },
   colBeds: { width: "8%" },
   colBaths: { width: "8%" },
   colSqft: { width: "12%" },
@@ -144,6 +155,7 @@ export function CmaReportDocument({
   marketNarrative,
   keyFindings,
   comps,
+  activeComps,
   subjectProperty,
   agentName,
   agentEmail,
@@ -248,6 +260,30 @@ export function CmaReportDocument({
             ))
           )}
         </View>
+
+        {activeComps && activeComps.length > 0 ? (
+          <View style={s.tableSection}>
+            <Text style={[s.sectionLabel, { marginBottom: 6 }]}>Active Listings</Text>
+            <View style={s.tableHeader}>
+              <Text style={[s.thCell, s.activeColAddress]}>Address</Text>
+              <Text style={[s.thCell, s.colBeds]}>Beds</Text>
+              <Text style={[s.thCell, s.colBaths]}>Baths</Text>
+              <Text style={[s.thCell, s.colSqft]}>Sq Ft</Text>
+              <Text style={[s.thCell, s.colPrice]}>List Price</Text>
+              <Text style={[s.thCell, s.colDom]}>DOM</Text>
+            </View>
+            {activeComps.slice(0, 10).map((comp, index) => (
+              <View key={index} style={index % 2 === 1 ? s.tableRowAlt : s.tableRow}>
+                <Text style={[s.tdCell, s.activeColAddress]}>{comp.address}</Text>
+                <Text style={[s.tdCell, s.colBeds]}>{comp.beds}</Text>
+                <Text style={[s.tdCell, s.colBaths]}>{comp.baths}</Text>
+                <Text style={[s.tdCell, s.colSqft]}>{comp.sqft.toLocaleString()}</Text>
+                <Text style={[s.tdCell, s.colPrice]}>{fmt(comp.price)}</Text>
+                <Text style={[s.tdCell, s.colDom]}>{comp.dom}d</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {/* Price recommendation band */}
         {pricingRecommendation ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { BundleCard } from "./bundle-card";
@@ -29,11 +29,6 @@ const FAQ_ITEMS = [
       "Absolutely. You can upgrade or downgrade your bundle selection at any time from your billing dashboard. Changes take effect at the start of your next billing cycle.",
   },
   {
-    question: "What\u2019s the difference between Bundles and Build Your Own?",
-    answer:
-      "Bundles are curated feature packages at a discounted price. Build Your Own lets you pick individual features \u00e0 la carte, but the total will typically be higher than the equivalent bundle.",
-  },
-  {
     question: "What payment methods are accepted?",
     answer:
       "We accept all major credit and debit cards, as well as ACH bank transfers (US accounts). Payments are processed securely through Stripe.",
@@ -46,24 +41,26 @@ const FAQ_ITEMS = [
   {
     question: "Are there any setup fees?",
     answer:
-      "No setup fees. You only pay for the bundles or individual features you select.",
+      "No setup fees. You only pay for the bundles you select.",
   },
 ];
 
 export function PricingPage({
   bundles,
-  addOns: _addOns,
-  entitlements,
+  addOns,
+  entitlements: _entitlements,
 }: PricingPageProps) {
   const router = useRouter();
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("annual");
   const [planMode, setPlanMode] = useState<PlanMode>("bundles");
   const [selectedBundles, setSelectedBundles] = useState<Set<string>>(new Set());
-  const [selectedFeatures, setSelectedFeatures] = useState<Set<string>>(new Set());
+  const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const checkoutOperationIdRef = useRef<string | null>(null);
 
   const toggleBundle = useCallback((slug: string) => {
+    checkoutOperationIdRef.current = null;
     setSelectedBundles((prev) => {
       const next = new Set(prev);
       if (next.has(slug)) next.delete(slug);
@@ -72,22 +69,29 @@ export function PricingPage({
     });
   }, []);
 
-  const toggleFeature = useCallback((featureKey: string) => {
-    setSelectedFeatures((prev) => {
+  const toggleAddOn = useCallback((slug: string) => {
+    checkoutOperationIdRef.current = null;
+    setSelectedAddOns((prev) => {
       const next = new Set(prev);
-      if (next.has(featureKey)) next.delete(featureKey);
-      else next.add(featureKey);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
       return next;
     });
   }, []);
 
   const handleModeSwitch = useCallback((mode: PlanMode) => {
+    checkoutOperationIdRef.current = null;
     setPlanMode(mode);
     if (mode === "bundles") {
-      setSelectedFeatures(new Set());
+      setSelectedAddOns(new Set());
     } else {
       setSelectedBundles(new Set());
     }
+  }, []);
+
+  const handleBillingIntervalChange = useCallback((interval: BillingInterval) => {
+    checkoutOperationIdRef.current = null;
+    setBillingInterval(interval);
   }, []);
 
   const handleSubscribe = useCallback(async () => {
@@ -100,10 +104,13 @@ export function PricingPage({
         return;
       }
 
+      const operationId = checkoutOperationIdRef.current ?? crypto.randomUUID();
+      checkoutOperationIdRef.current = operationId;
+
       const body =
         planMode === "bundles"
-          ? { bundles: Array.from(selectedBundles), addOns: [], billingInterval }
-          : { bundles: [], addOns: Array.from(selectedFeatures), billingInterval };
+          ? { operationId, bundles: Array.from(selectedBundles), addOns: [], billingInterval }
+          : { operationId, bundles: [], addOns: Array.from(selectedAddOns), billingInterval };
 
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
@@ -122,7 +129,7 @@ export function PricingPage({
     } finally {
       setLoading(false);
     }
-  }, [billingInterval, planMode, selectedBundles, selectedFeatures, router]);
+  }, [billingInterval, planMode, selectedAddOns, selectedBundles, router]);
 
   const bundlesMonthlyTotal = useMemo(() => {
     return Array.from(selectedBundles).reduce((acc, slug) => {
@@ -131,6 +138,13 @@ export function PricingPage({
       return acc + (billingInterval === "annual" ? Math.round(bundle.annualAmount / 12) : bundle.monthlyAmount);
     }, 0);
   }, [selectedBundles, bundles, billingInterval]);
+
+  const addOnsMonthlyTotal = useMemo(() => {
+    return Array.from(selectedAddOns).reduce((total, slug) => {
+      const addOn = addOns.find((item) => item.slug === slug);
+      return total + (addOn?.monthlyAmount ?? 0);
+    }, 0);
+  }, [addOns, selectedAddOns]);
 
   const selectedItems = useMemo(() => {
     const items: { label: string; amount: string }[] = [];
@@ -143,17 +157,26 @@ export function PricingPage({
         items.push({ label: bundle.name, amount: `${formatDollars(price)}/mo` });
       }
     } else {
-      for (const key of selectedFeatures) {
-        const entitlement = entitlements.find((item) => item.featureKey === key);
-        if (entitlement) items.push({ label: entitlement.featureName, amount: "TBD" });
+      for (const slug of selectedAddOns) {
+        const addOn = addOns.find((item) => item.slug === slug);
+        if (addOn) {
+          items.push({
+            label: addOn.name,
+            amount: `${formatDollars(addOn.monthlyAmount)}/mo`,
+          });
+        }
       }
     }
 
     return items;
-  }, [planMode, selectedBundles, selectedFeatures, bundles, entitlements, billingInterval]);
+  }, [addOns, billingInterval, bundles, planMode, selectedAddOns, selectedBundles]);
 
-  const hasSelections = selectedBundles.size > 0 || selectedFeatures.size > 0;
-  const grandTotalMonthly = bundlesMonthlyTotal;
+  const hasSelections = planMode === "bundles"
+    ? selectedBundles.size > 0
+    : selectedAddOns.size > 0;
+  const grandTotalMonthly = planMode === "bundles"
+    ? bundlesMonthlyTotal
+    : addOnsMonthlyTotal;
 
   const recommendedProductType = "ai_power_tools";
 
@@ -181,7 +204,7 @@ export function PricingPage({
             Choose Your Plan
           </h1>
           <p className="text-slate-300 text-lg sm:text-xl max-w-3xl mx-auto leading-relaxed">
-            Pick the bundles or individual features that fit how you work.
+            Pick the bundles that fit how you work.
           </p>
         </Container>
       </div>
@@ -204,23 +227,25 @@ export function PricingPage({
               >
                 Bundles
               </button>
-              <button
-                onClick={() => handleModeSwitch("build_your_own")}
-                className={cn(
-                  "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150",
-                  planMode === "build_your_own"
-                    ? "bg-white text-navy-700 shadow-sm"
-                    : "text-slate-500 hover:text-navy-700",
-                )}
-              >
-                Build Your Own
-              </button>
+              {addOns.length > 0 && (
+                <button
+                  onClick={() => handleModeSwitch("build_your_own")}
+                  className={cn(
+                    "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150",
+                    planMode === "build_your_own"
+                      ? "bg-white text-navy-700 shadow-sm"
+                      : "text-slate-500 hover:text-navy-700",
+                  )}
+                >
+                  Build Your Own
+                </button>
+              )}
             </div>
 
             {planMode === "bundles" && (
               <div className="flex items-center gap-2.5 bg-slate-100 rounded-xl p-1.5">
                 <button
-                  onClick={() => setBillingInterval("monthly")}
+                  onClick={() => handleBillingIntervalChange("monthly")}
                   className={cn(
                     "px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150",
                     billingInterval === "monthly"
@@ -231,7 +256,7 @@ export function PricingPage({
                   Monthly
                 </button>
                 <button
-                  onClick={() => setBillingInterval("annual")}
+                  onClick={() => handleBillingIntervalChange("annual")}
                   className={cn(
                     "flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150",
                     billingInterval === "annual"
@@ -268,10 +293,9 @@ export function PricingPage({
           {/* Build Your Own Tab */}
           {planMode === "build_your_own" && (
             <FeaturePicker
-              entitlements={entitlements}
-              bundles={bundles}
-              selectedFeatures={selectedFeatures}
-              onToggleFeature={toggleFeature}
+              addOns={addOns}
+              selectedAddOns={selectedAddOns}
+              onToggleAddOn={toggleAddOn}
               loading={loading}
             />
           )}
@@ -350,7 +374,7 @@ export function PricingPage({
 
               {/* Right: total + CTA */}
               <div className="flex items-center gap-4 shrink-0">
-                {planMode === "bundles" && grandTotalMonthly > 0 && (
+                {grandTotalMonthly > 0 && (
                   <div className="text-right hidden sm:block">
                     <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Total</p>
                     <p className="text-lg font-bold text-navy-700 leading-tight">

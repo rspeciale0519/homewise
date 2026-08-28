@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { readFile } from "fs/promises";
 import path from "path";
+import {
+  resolveContainedPath,
+  resolveRealContainedPath,
+} from "@/lib/documents/safe-path";
 
 const MIME_TYPES: Record<string, string> = {
   ".pdf": "application/pdf",
@@ -32,22 +36,35 @@ export async function GET(
   const { path: segments } = await params;
   const filePath = segments.join("/");
 
-  if (filePath.includes("..") || filePath.startsWith("/")) {
-    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+  const document = await prisma.document.findFirst({
+    where: {
+      storageKey: filePath,
+      storageProvider: "local",
+      published: true,
+      platforms: { has: "homewise" },
+    },
+    select: { storageKey: true },
+  });
+  if (!document?.storageKey) {
+    return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
   const documentsDir = path.join(process.cwd(), "private", "documents");
-  const fullPath = path.resolve(documentsDir, filePath);
-
-  if (!fullPath.startsWith(documentsDir)) {
+  const fullPath = resolveContainedPath(documentsDir, document.storageKey);
+  if (!fullPath) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
   try {
-    const fileBuffer = await readFile(fullPath);
-    const ext = path.extname(fullPath).toLowerCase();
+    const realPath = await resolveRealContainedPath(documentsDir, fullPath);
+    if (!realPath) {
+      return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+    }
+
+    const fileBuffer = await readFile(realPath);
+    const ext = path.extname(realPath).toLowerCase();
     const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
-    const fileName = path.basename(fullPath);
+    const fileName = path.basename(realPath);
 
     return new NextResponse(fileBuffer, {
       headers: {

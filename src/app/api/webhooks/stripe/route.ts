@@ -1,15 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { stripe } from "@/lib/stripe";
 import { syncSubscriptionFromStripe } from "@/lib/billing/stripe-sync";
 import { prisma } from "@/lib/prisma";
+import {
+  InvalidTextBodyError,
+  readTextBodyWithLimit,
+  RequestBodyTooLargeError,
+} from "@/lib/http/request-body";
 import type Stripe from "stripe";
 
+const MAX_STRIPE_WEBHOOK_BYTES = 1_000_000;
+const SUBSCRIPTION_TRANSACTION_TIMEOUT_MS = 30_000;
+const TERMINAL_SUBSCRIPTION_STATUSES = new Set([
+  "canceled",
+  "incomplete_expired",
+]);
+
+async function lockAgentSubscription(
+  tx: Prisma.TransactionClient,
+  agentId: string,
+): Promise<void> {
+  await tx.$queryRaw`
+    SELECT pg_advisory_xact_lock(hashtextextended(${`billing-subscription:${agentId}`}, 0))
+  `;
+}
+
 export async function POST(request: NextRequest) {
-  const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  let body: string;
+  try {
+    body = await readTextBodyWithLimit(request, MAX_STRIPE_WEBHOOK_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    if (error instanceof InvalidTextBodyError) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+    throw error;
   }
 
   let event: Stripe.Event;
@@ -29,19 +63,16 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "customer.subscription.created":
       case "customer.subscription.updated":
-        await syncSubscriptionFromStripe(event.data.object as Stripe.Subscription);
+        await reconcileSubscription(event.data.object as Stripe.Subscription, true);
         break;
 
       case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        await reconcileSubscription(event.data.object as Stripe.Subscription, false);
         break;
 
       case "invoice.payment_succeeded":
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
-        break;
-
       case "invoice.payment_failed":
-        await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        await reconcileInvoiceSubscription(event.data.object as Stripe.Invoice);
         break;
 
       case "customer.subscription.trial_will_end":
@@ -59,26 +90,79 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
-  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-  const stripeCustomer = await prisma.stripeCustomer.findUnique({
-    where: { stripeCustomerId: customerId },
-  });
-  if (!stripeCustomer) return;
+function getCustomerId(
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
+): string | null {
+  if (!customer) return null;
+  return typeof customer === "string" ? customer : customer.id;
+}
 
-  await prisma.subscription.updateMany({
-    where: { agentId: stripeCustomer.agentId },
-    data: { status: "canceled" },
-  });
+async function reconcileSubscription(
+  snapshot: {
+    id: string;
+    customer: string | Stripe.Customer | Stripe.DeletedCustomer | null;
+  },
+  allowCreateOrReplacement: boolean,
+) {
+  const expectedCustomerId = getCustomerId(snapshot.customer);
 
-  const subscription = await prisma.subscription.findUnique({
-    where: { agentId: stripeCustomer.agentId },
-  });
-  if (subscription) {
-    await prisma.subscriptionItem.deleteMany({
-      where: { subscriptionId: subscription.id },
-    });
-  }
+  await prisma.$transaction(
+    async (tx) => {
+      const matchingSubscription = await tx.subscription.findUnique({
+        where: { stripeSubscriptionId: snapshot.id },
+        select: { agentId: true },
+      });
+      const stripeCustomer = matchingSubscription || !expectedCustomerId
+        ? null
+        : await tx.stripeCustomer.findUnique({
+            where: { stripeCustomerId: expectedCustomerId },
+            select: { agentId: true },
+          });
+      const agentId = matchingSubscription?.agentId ?? stripeCustomer?.agentId;
+      if (!agentId) return;
+
+      await lockAgentSubscription(tx, agentId);
+      const lockedAgent = await tx.agent.findUnique({
+        where: { id: agentId },
+        select: {
+          stripeCustomer: { select: { stripeCustomerId: true } },
+          subscription: {
+            select: { status: true, stripeSubscriptionId: true },
+          },
+        },
+      });
+      if (!lockedAgent) return;
+      if (!lockedAgent.stripeCustomer) {
+        throw new Error("Locked agent has no Stripe customer");
+      }
+
+      const localSubscription = lockedAgent.subscription;
+      if (!allowCreateOrReplacement &&
+        localSubscription?.stripeSubscriptionId !== snapshot.id) {
+        return;
+      }
+
+      const current = await stripe.subscriptions.retrieve(snapshot.id);
+      const currentCustomerId = getCustomerId(current.customer);
+      if (expectedCustomerId && currentCustomerId !== expectedCustomerId) {
+        throw new Error("Stripe subscription customer changed during reconciliation");
+      }
+      if (currentCustomerId !== lockedAgent.stripeCustomer.stripeCustomerId) {
+        throw new Error("Stripe subscription customer does not match the locked agent");
+      }
+
+      if (localSubscription?.stripeSubscriptionId !== snapshot.id) {
+        if (TERMINAL_SUBSCRIPTION_STATUSES.has(current.status)) return;
+        if (localSubscription &&
+          !TERMINAL_SUBSCRIPTION_STATUSES.has(localSubscription.status)) {
+          return;
+        }
+      }
+
+      await syncSubscriptionFromStripe(current, tx);
+    },
+    { timeout: SUBSCRIPTION_TRANSACTION_TIMEOUT_MS },
+  );
 }
 
 function extractSubscriptionId(invoice: Stripe.Invoice): string | null {
@@ -87,22 +171,14 @@ function extractSubscriptionId(invoice: Stripe.Invoice): string | null {
   return typeof sub === "string" ? sub : sub.id;
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+async function reconcileInvoiceSubscription(invoice: Stripe.Invoice) {
   const subId = extractSubscriptionId(invoice);
   if (!subId) return;
-
-  await prisma.subscription.updateMany({
-    where: { stripeSubscriptionId: subId },
-    data: { status: "active" },
-  });
-}
-
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  const subId = extractSubscriptionId(invoice);
-  if (!subId) return;
-
-  await prisma.subscription.updateMany({
-    where: { stripeSubscriptionId: subId },
-    data: { status: "past_due" },
-  });
+  await reconcileSubscription(
+    {
+      id: subId,
+      customer: invoice.customer,
+    },
+    true,
+  );
 }

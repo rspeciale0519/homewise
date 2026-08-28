@@ -2,6 +2,10 @@ import { adminFetch } from "@/lib/admin-fetch";
 
 interface SignedUploadResponse {
   uploadUrl: string;
+  pendingKey: string;
+}
+
+interface FinalizedUploadResponse {
   fileKey: string;
 }
 
@@ -26,6 +30,7 @@ export async function uploadEditorImage(file: File): Promise<string> {
       body: JSON.stringify({
         filename: file.name,
         contentType: file.type,
+        byteSize: file.size,
       }),
     },
   );
@@ -39,7 +44,19 @@ export async function uploadEditorImage(file: File): Promise<string> {
     throw new Error(`Upload failed (${put.status})`);
   }
 
-  return resolvePublicUrl(signed.fileKey);
+  const finalized = await adminFetch<FinalizedUploadResponse>(
+    "/api/admin/training/upload",
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        pendingKey: signed.pendingKey,
+        contentType: file.type,
+        byteSize: file.size,
+      }),
+    },
+  );
+
+  return resolvePublicUrl(finalized.fileKey);
 }
 
 function resolvePublicUrl(fileKey: string): string {

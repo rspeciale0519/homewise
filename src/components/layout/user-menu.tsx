@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -17,6 +18,7 @@ export function UserMenu() {
   const { user, supabase, loading } = useSupabase();
   const [isAdmin, setIsAdmin] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const router = useRouter();
   const dashboardHref = useDashboardHref(!!user);
 
   useEffect(() => {
@@ -34,7 +36,8 @@ export function UserMenu() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/";
+    router.push("/");
+    router.refresh();
   };
 
   return (

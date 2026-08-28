@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthApi, isError } from "@/lib/admin-api";
+import { logApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 
@@ -11,10 +12,8 @@ export async function POST() {
 
   const { user } = auth;
 
-  const agent = await prisma.agent.findFirst({
-    where: {
-      OR: [{ userId: user.id }, { email: user.email ?? "" }],
-    },
+  const agent = await prisma.agent.findUnique({
+    where: { userId: user.id },
     include: { stripeCustomer: true },
   });
 
@@ -37,9 +36,9 @@ export async function POST() {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    logApiError("billing/portal", err);
     return NextResponse.json(
-      { error: "Failed to create portal session", detail: message },
+      { error: "Failed to create portal session" },
       { status: 500 },
     );
   }

@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const INVITE_CODE_LENGTH = 21;
@@ -70,12 +71,36 @@ export async function validateInviteCode(code: string) {
   return { valid: true, agent } as const;
 }
 
-export async function consumeInviteCode(code: string, userId: string) {
-  return prisma.agent.update({
-    where: { inviteCode: code },
+type InviteCodeDatabase = Pick<Prisma.TransactionClient, "agent">;
+
+export async function consumeInviteCode(
+  code: string,
+  userId: string,
+  email: string,
+  database: InviteCodeDatabase = prisma,
+): Promise<boolean> {
+  const normalizedEmail = email.trim();
+  if (!normalizedEmail) return false;
+
+  const result = await database.agent.updateMany({
+    where: {
+      inviteCode: code,
+      inviteUsed: false,
+      userId: null,
+      email: {
+        equals: normalizedEmail,
+        mode: "insensitive",
+      },
+      OR: [
+        { inviteExpiresAt: null },
+        { inviteExpiresAt: { gt: new Date() } },
+      ],
+    },
     data: {
       inviteUsed: true,
       userId,
     },
   });
+
+  return result.count === 1;
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
+import { useHasMounted } from "@/hooks/use-has-mounted";
 
 interface AnimateOnScrollProps {
   children: ReactNode;
@@ -18,12 +19,17 @@ export function AnimateOnScroll({
   threshold = 0.2,
   className,
 }: AnimateOnScrollProps) {
+  const hasMounted = useHasMounted();
+  const prefersReducedMotion = useReducedMotion();
+  const shouldReduceMotion = hasMounted && Boolean(prefersReducedMotion);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: threshold }}
-      transition={{ duration, delay, ease: "easeOut" }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
+      animate={shouldReduceMotion ? { opacity: 1, y: 0 } : undefined}
+      whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+      viewport={shouldReduceMotion ? undefined : { once: true, amount: threshold }}
+      transition={shouldReduceMotion ? { duration: 0 } : { duration, delay, ease: "easeOut" }}
       className={className}
     >
       {children}

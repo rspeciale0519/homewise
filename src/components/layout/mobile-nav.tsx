@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { NAV_ITEMS } from "@/data/navigation";
 import { PHONE, EMAIL } from "@/lib/constants";
@@ -20,6 +20,7 @@ interface MobileNavProps {
 export function MobileNav({ open, onClose }: MobileNavProps) {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, supabase, loading } = useSupabase();
   const dashboardHref = useDashboardHref(!!user);
 
@@ -49,8 +50,8 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
             <Image
               src="/images/logo.png"
               alt="Home Wise Realty Group"
-              width={160}
-              height={54}
+              width={420}
+              height={220}
               className="h-10 w-auto"
             />
             <Dialog.Close asChild>
@@ -74,7 +75,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                     <button
                       className={cn(
                         "flex items-center justify-between w-full px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                        pathname.startsWith(item.href)
+                        pathname === item.href || pathname.startsWith(`${item.href}/`)
                           ? "text-navy-700 bg-navy-50"
                           : "text-slate-700 hover:bg-slate-50"
                       )}
@@ -82,6 +83,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                         setExpandedItem(expandedItem === item.label ? null : item.label)
                       }
                       aria-expanded={expandedItem === item.label}
+                      aria-controls={`mobile-nav-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
                     >
                       <span>{item.label}</span>
                       <svg
@@ -99,6 +101,9 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
 
                     {/* Sub-items */}
                     <div
+                      id={`mobile-nav-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                      aria-hidden={expandedItem !== item.label}
+                      inert={expandedItem !== item.label}
                       className={cn(
                         "overflow-hidden transition-all duration-200",
                         expandedItem === item.label ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
@@ -109,6 +114,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                           <Link
                             key={child.href}
                             href={child.href}
+                            aria-current={pathname === child.href ? "page" : undefined}
                             className={cn(
                               "block px-3 py-2.5 rounded-lg text-sm transition-colors",
                               pathname === child.href
@@ -125,6 +131,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                 ) : (
                   <Link
                     href={item.href}
+                    aria-current={pathname === item.href ? "page" : undefined}
                     className={cn(
                       "block px-3 py-3 rounded-lg text-sm font-medium transition-colors",
                       pathname === item.href
@@ -158,7 +165,8 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                     onClick={async () => {
                       onClose();
                       await supabase.auth.signOut();
-                      window.location.href = "/";
+                      router.push("/");
+                      router.refresh();
                     }}
                     className="flex items-center justify-center w-full h-10 rounded-md border border-slate-200 text-sm font-medium text-slate-600 hover:bg-white hover:text-crimson-600 transition-colors"
                   >

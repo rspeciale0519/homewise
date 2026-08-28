@@ -44,6 +44,26 @@ function escapeCsvCell(value: string): string {
   return value;
 }
 
+const SPREADSHEET_FORMULA_PREFIX = /^[\t\r ]*[=+\-@]/;
+
+export function sanitizeCsvForSpreadsheet(text: string): string {
+  let changed = false;
+  const lines = text.replace(/^﻿/, "").split(/\r?\n/);
+  const sanitized = lines.map((line) => {
+    if (!line) return line;
+
+    const cells = splitCsvRow(line).map((cell) => {
+      if (!SPREADSHEET_FORMULA_PREFIX.test(cell)) return cell;
+      changed = true;
+      return `'${cell}`;
+    });
+
+    return cells.map(escapeCsvCell).join(",");
+  });
+
+  return changed ? sanitized.join("\n") : text;
+}
+
 export function parseListPreview(text: string): ParsedListPreview {
   const warnings: string[] = [];
   const stripped = text.replace(/^﻿/, "");

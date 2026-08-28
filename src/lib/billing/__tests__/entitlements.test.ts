@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -12,7 +12,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 import { prisma } from "@/lib/prisma";
-import { checkEntitlement } from "../entitlements";
+import { checkEntitlement, incrementUsage } from "../entitlements";
 
 const mockAgent = prisma.agent as {
   findUnique: ReturnType<typeof vi.fn>;
@@ -36,6 +36,41 @@ const mockProductConfig = prisma.productConfig as {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("incrementUsage", () => {
+  it("uses the calendar month for free access when a canceled subscription exists", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 24, 12));
+    mockEntitlementConfig.findUnique.mockResolvedValue({
+      requiredProduct: "ai_power_tools",
+    });
+    mockSubscription.findUnique.mockResolvedValue({
+      status: "canceled",
+      currentPeriodStart: new Date(2025, 0, 1),
+      currentPeriodEnd: new Date(2025, 0, 31),
+      items: [{ productType: "ai_power_tools" }],
+    });
+    mockUsageRecord.upsert.mockResolvedValue({});
+
+    await incrementUsage("agent-1", "ai_cma_reports");
+
+    expect(mockUsageRecord.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          agentId_featureKey_billingPeriodStart: {
+            agentId: "agent-1",
+            featureKey: "ai_cma_reports",
+            billingPeriodStart: new Date(2026, 7, 1),
+          },
+        },
+      }),
+    );
+  });
 });
 
 describe("checkEntitlement", () => {
@@ -74,6 +109,45 @@ describe("checkEntitlement", () => {
     expect(mockSubscription.findUnique).not.toHaveBeenCalled();
   });
 
+  it("denies paid-route access when entitlement configuration is missing", async () => {
+    mockAgent.findUnique.mockResolvedValue({ platform: "homewise" });
+    mockEntitlementConfig.findUnique.mockResolvedValue(null);
+
+    const result = await checkEntitlement(
+      "agent-1",
+      "ai_cma_reports",
+      prisma,
+      { requireActiveConfig: true },
+    );
+
+    expect(result).toEqual({
+      allowed: false,
+      remaining: 0,
+      limit: null,
+      upgradeBundle: null,
+    });
+    expect(mockSubscription.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("denies paid-route access when entitlement configuration is inactive", async () => {
+    mockAgent.findUnique.mockResolvedValue({ platform: "homewise" });
+    mockEntitlementConfig.findUnique.mockResolvedValue({
+      featureKey: "ai_cma_reports",
+      isActive: false,
+      requiredProduct: "ai_power_tools",
+    });
+
+    const result = await checkEntitlement(
+      "agent-1",
+      "ai_cma_reports",
+      prisma,
+      { requireActiveConfig: true },
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(mockSubscription.findUnique).not.toHaveBeenCalled();
+  });
+
   it("returns allowed when feature config is inactive", async () => {
     mockAgent.findUnique.mockResolvedValue({ platform: "homewise" });
     mockEntitlementConfig.findUnique.mockResolvedValue({
@@ -93,7 +167,7 @@ describe("checkEntitlement", () => {
     });
   });
 
-  it("returns allowed with unlimited access when agent has the required bundle (active subscription, no limit on bundleFeature)", async () => {
+  it("returns allowed with unlimited access for an explicit null-limit product feature mapping", async () => {
     mockAgent.findUnique.mockResolvedValue({ platform: "homewise" });
     mockEntitlementConfig.findUnique.mockResolvedValue({
       featureKey: "pro_feature",
@@ -123,6 +197,115 @@ describe("checkEntitlement", () => {
       remaining: null,
       limit: null,
       upgradeBundle: null,
+    });
+    expect(mockUsageRecord.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("keeps mapped access for an inactive product already on the subscription", async () => {
+    mockAgent.findUnique.mockResolvedValue({ platform: "homewise" });
+    mockEntitlementConfig.findUnique.mockResolvedValue({
+      featureKey: "pro_feature",
+      isActive: true,
+      requiredProduct: "pro",
+      freeLimit: null,
+      platforms: ["homewise"],
+    });
+    mockSubscription.findUnique.mockResolvedValue({
+      agentId: "agent-1",
+      status: "active",
+      currentPeriodStart: new Date("2026-03-01"),
+      currentPeriodEnd: new Date("2026-04-01"),
+      items: [{
+        productType: "pro",
+        stripePriceId: "price_archived_pro",
+      }],
+    });
+    mockProductFeature.findFirst.mockResolvedValue({ limit: null });
+
+    const result = await checkEntitlement("agent-1", "pro_feature");
+
+    expect(result.allowed).toBe(true);
+    expect(mockProductFeature.findFirst).toHaveBeenCalledWith({
+      where: {
+        featureKey: "pro_feature",
+        product: {
+          productType: "pro",
+          OR: [
+            { monthlyPriceId: { in: ["price_archived_pro"] } },
+            { annualPriceId: { in: ["price_archived_pro"] } },
+          ],
+        },
+      },
+    });
+  });
+
+  it("denies an active matching product when its feature mapping is missing", async () => {
+    mockAgent.findUnique.mockResolvedValue({ platform: "homewise" });
+    mockEntitlementConfig.findUnique.mockResolvedValue({
+      featureKey: "pro_feature",
+      isActive: true,
+      requiredProduct: "pro",
+      freeLimit: null,
+      platforms: ["homewise"],
+    });
+    mockSubscription.findUnique.mockResolvedValue({
+      agentId: "agent-1",
+      status: "active",
+      currentPeriodStart: new Date("2026-03-01"),
+      currentPeriodEnd: new Date("2026-04-01"),
+      items: [{ productType: "pro" }],
+    });
+    mockProductFeature.findFirst.mockResolvedValue(null);
+    mockProductConfig.findFirst.mockResolvedValue({ slug: "pro-bundle" });
+
+    const result = await checkEntitlement("agent-1", "pro_feature");
+
+    expect(result).toEqual({
+      allowed: false,
+      remaining: 0,
+      limit: null,
+      upgradeBundle: "pro-bundle",
+    });
+    expect(mockUsageRecord.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("uses only the free limit when an active product feature mapping is missing", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 24, 12));
+    mockAgent.findUnique.mockResolvedValue({ platform: "homewise" });
+    mockEntitlementConfig.findUnique.mockResolvedValue({
+      featureKey: "pro_feature",
+      isActive: true,
+      requiredProduct: "pro",
+      freeLimit: 2,
+      platforms: ["homewise"],
+    });
+    mockSubscription.findUnique.mockResolvedValue({
+      agentId: "agent-1",
+      status: "active",
+      currentPeriodStart: new Date("2026-03-01"),
+      currentPeriodEnd: new Date("2026-04-01"),
+      items: [{ productType: "pro" }],
+    });
+    mockProductFeature.findFirst.mockResolvedValue(null);
+    mockUsageRecord.findUnique.mockResolvedValue({ usageCount: 1 });
+
+    const result = await checkEntitlement("agent-1", "pro_feature");
+
+    expect(result).toEqual({
+      allowed: true,
+      remaining: 1,
+      limit: 2,
+      upgradeBundle: null,
+    });
+    expect(mockUsageRecord.findUnique).toHaveBeenCalledWith({
+      where: {
+        agentId_featureKey_billingPeriodStart: {
+          agentId: "agent-1",
+          featureKey: "pro_feature",
+          billingPeriodStart: new Date(2026, 7, 1),
+        },
+      },
     });
   });
 

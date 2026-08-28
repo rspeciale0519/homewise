@@ -16,13 +16,15 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const pathname = usePathname();
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export function Header() {
   };
 
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
@@ -64,17 +66,22 @@ export function Header() {
 
             {/* Left: Logo + Phone */}
             <div className="flex items-center gap-4 lg:gap-6 lg:flex-1 min-w-0">
-              <Link href="/" className="-ml-2.5 shrink-0 flex items-center" aria-label="Home Wise Realty Group — Home">
+              <Link
+                href="/"
+                className="-ml-2.5 shrink-0 flex items-center"
+                aria-label="Home Wise Realty Group — Home"
+                aria-current={pathname === "/" ? "page" : undefined}
+              >
                 <Image
                   src="/images/logo.png"
                   alt="Home Wise Realty Group"
-                  width={220}
-                  height={72}
+                  width={420}
+                  height={220}
                   className={cn(
                     "w-auto transition-all duration-500",
                     scrolled ? "h-12 md:h-14" : "h-16 md:h-[72px]"
                   )}
-                  priority
+                  loading="eager"
                 />
               </Link>
               <a
@@ -91,90 +98,159 @@ export function Header() {
             {/* Desktop Navigation */}
             <nav
               className="hidden lg:flex items-center gap-0.5"
-              ref={dropdownRef}
               aria-label="Main navigation"
             >
-              {NAV_ITEMS.map((item) => (
-                <div
-                  key={item.label}
-                  className="relative"
-                  onMouseEnter={() => item.children && handleMouseEnter(item.label)}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium tracking-wide transition-colors duration-200",
-                      isActive(item.href)
-                        ? "text-navy-600"
-                        : "text-slate-600 hover:text-navy-600 hover:bg-slate-50"
-                    )}
-                  >
-                    {item.label}
-                    {item.children && (
-                      <svg
-                        className={cn(
-                          "h-3.5 w-3.5 transition-transform duration-200",
-                          openDropdown === item.label && "rotate-180"
-                        )}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    )}
-                  </Link>
+              {NAV_ITEMS.map((item) => {
+                const isDropdownOpen = openDropdown === item.label;
+                const dropdownId = `desktop-nav-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+                const itemIsActive = isActive(item.href);
 
-                  {/* Dropdown */}
-                  {item.children && openDropdown === item.label && (
-                    <div
-                      className="absolute top-full left-1/2 -translate-x-1/2 pt-2"
-                      onMouseEnter={() => handleMouseEnter(item.label)}
-                      onMouseLeave={handleMouseLeave}
-                    >
-                      <div className="animate-slide-down">
-                      <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-dropdown border border-slate-100 p-2 min-w-[240px]">
-                        <div className="h-0.5 w-8 bg-crimson-600 rounded-full mx-3 mb-2" />
-                        {item.children.map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
+                return (
+                  <div
+                    key={item.label}
+                    className="relative"
+                    onMouseEnter={() => item.children && handleMouseEnter(item.label)}
+                    onMouseLeave={(event) => {
+                      if (!event.currentTarget.contains(document.activeElement)) {
+                        handleMouseLeave();
+                      }
+                    }}
+                    onBlur={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setOpenDropdown(null);
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape" && isDropdownOpen) {
+                        event.preventDefault();
+                        setOpenDropdown(null);
+                        event.currentTarget
+                          .querySelector<HTMLButtonElement>("[data-dropdown-trigger]")
+                          ?.focus();
+                      }
+                    }}
+                  >
+                    {item.children ? (
+                      <div className="flex items-center">
+                        <Link
+                          href={item.href}
+                          aria-current={pathname === item.href ? "page" : undefined}
+                          className={cn(
+                            "flex items-center rounded-l-md py-2 pl-3 pr-1 text-sm font-medium tracking-wide transition-colors duration-200",
+                            itemIsActive
+                              ? "text-navy-600"
+                              : "text-slate-600 hover:bg-slate-50 hover:text-navy-600"
+                          )}
+                        >
+                          {item.label}
+                        </Link>
+                        <button
+                          type="button"
+                          data-dropdown-trigger
+                          aria-expanded={isDropdownOpen}
+                          aria-controls={dropdownId}
+                          onClick={(event) => {
+                            if (closeTimer.current) clearTimeout(closeTimer.current);
+                            setOpenDropdown(
+                              event.detail > 0
+                                ? item.label
+                                : isDropdownOpen
+                                  ? null
+                                  : item.label,
+                            );
+                          }}
+                          className={cn(
+                            "flex items-center rounded-r-md py-2 pl-1 pr-3 transition-colors duration-200",
+                            itemIsActive
+                              ? "text-navy-600"
+                              : "text-slate-600 hover:bg-slate-50 hover:text-navy-600"
+                          )}
+                        >
+                          <span className="sr-only">
+                            {isDropdownOpen ? "Close" : "Open"} {item.label} submenu
+                          </span>
+                          <svg
                             className={cn(
-                              "block px-3 py-2.5 rounded-lg transition-colors duration-150 group",
-                              pathname === child.href
-                                ? "bg-navy-50 text-navy-700"
-                                : "hover:bg-slate-50"
+                              "h-3.5 w-3.5 transition-transform duration-200",
+                              isDropdownOpen && "rotate-180"
                             )}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            aria-hidden="true"
                           >
-                            <span className={cn(
-                              "block text-sm font-medium transition-colors",
-                              pathname === child.href
-                                ? "text-navy-700"
-                                : "text-slate-700 group-hover:text-navy-700"
-                            )}>
-                              {child.label}
-                            </span>
-                            {child.description && (
-                              <span className="block text-xs text-slate-400 mt-0.5 group-hover:text-slate-500 transition-colors">
-                                {child.description}
-                              </span>
-                            )}
-                          </Link>
-                        ))}
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
                       </div>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        aria-current={pathname === item.href ? "page" : undefined}
+                        className={cn(
+                          "flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wide transition-colors duration-200",
+                          itemIsActive
+                            ? "text-navy-600"
+                            : "text-slate-600 hover:text-navy-600 hover:bg-slate-50"
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    )}
+
+                    {item.children && isDropdownOpen && (
+                      <div
+                        id={dropdownId}
+                        className="absolute top-full left-1/2 -translate-x-1/2 pt-2"
+                        onMouseEnter={() => handleMouseEnter(item.label)}
+                      >
+                        <div className="animate-slide-down">
+                          <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-dropdown border border-slate-100 p-2 min-w-[240px]">
+                            <div className="h-0.5 w-8 bg-crimson-600 rounded-full mx-3 mb-2" />
+                            <ul>
+                              {item.children.map((child) => (
+                                <li key={child.href}>
+                                  <Link
+                                    href={child.href}
+                                    aria-current={pathname === child.href && child.href !== item.href ? "page" : undefined}
+                                    className={cn(
+                                      "block px-3 py-2.5 rounded-lg transition-colors duration-150 group",
+                                      pathname === child.href
+                                        ? "bg-navy-50 text-navy-700"
+                                        : "hover:bg-slate-50"
+                                    )}
+                                  >
+                                    <span className={cn(
+                                      "block text-sm font-medium transition-colors",
+                                      pathname === child.href
+                                        ? "text-navy-700"
+                                        : "text-slate-700 group-hover:text-navy-700"
+                                    )}>
+                                      {child.label}
+                                    </span>
+                                    {child.description && (
+                                      <span className="block text-xs text-slate-400 mt-0.5 group-hover:text-slate-500 transition-colors">
+                                        {child.description}
+                                      </span>
+                                    )}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
             </nav>
 
             {/* Right Side: CTA + Auth */}
             <div className="hidden lg:flex items-center gap-4 lg:flex-1 justify-end">
               <Link
                 href="/home-evaluation"
+                aria-current={pathname === "/home-evaluation" ? "page" : undefined}
                 className="inline-flex items-center px-4 py-2 rounded-md bg-crimson-600 text-white text-sm font-medium tracking-wide hover:bg-crimson-700 transition-colors duration-200 shadow-sm"
               >
                 Free Home Evaluation
