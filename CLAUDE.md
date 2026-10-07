@@ -452,6 +452,9 @@ This CLAUDE.md file is intentionally concise to maximize instruction-following q
 
 When working on complex tasks, use the TodoWrite tool frequently to track progress and maintain context across tool calls.
 
+Before MLS work, read the canonical [MLS live integration status](homewisebrain/STATE.md#mls-live-integration-status-2026-10-07).
+It records the verified agreement scope, outstanding entitlement/provisioning checks, and technical activation blockers.
+
 <!-- brain:pointer -->
 ## homewise Brain (homewisebrain/) — mandatory protocol
 
