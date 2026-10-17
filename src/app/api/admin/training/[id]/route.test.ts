@@ -86,6 +86,29 @@ describe("PATCH /api/admin/training/[id]", () => {
     expect(res.status).toBe(200);
     expect(updateMock).toHaveBeenCalled();
   });
+
+  it("sanitizes stored HTML so scripts never reach the public learn page", async () => {
+    findUniqueMock.mockResolvedValue({
+      id: "c1",
+      slug: "s",
+      status: "draft",
+      publishedAt: null,
+    });
+    updateMock.mockResolvedValue({ id: "c1" });
+
+    const res = await PATCH(
+      patchReq({
+        body: '<p>Hello</p><script>alert("xss")</script><img src="javascript:alert(1)">',
+      }),
+      ctx("c1"),
+    );
+
+    expect(res.status).toBe(200);
+    const data = updateMock.mock.calls[0]?.[0]?.data as { body?: string };
+    expect(data.body).toContain("<p>Hello</p>");
+    expect(data.body).not.toContain("<script");
+    expect(data.body).not.toContain("javascript:");
+  });
 });
 
 describe("DELETE /api/admin/training/[id]", () => {

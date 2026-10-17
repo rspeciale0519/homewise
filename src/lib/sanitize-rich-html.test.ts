@@ -15,10 +15,22 @@ describe("sanitizeRichHtml", () => {
     expect(out).toContain("<blockquote>quote</blockquote>");
   });
 
-  it("keeps images with https/data src", () => {
+  it("keeps https images and strips data URLs", () => {
     expect(sanitizeRichHtml('<img src="https://cdn.example.com/a.jpg" alt="a">')).toContain(
       'src="https://cdn.example.com/a.jpg"',
     );
+    expect(sanitizeRichHtml('<img src="data:image/gif;base64,AAAA" alt="x">')).not.toContain(
+      "data:",
+    );
+  });
+
+  it("strips javascript-style CSS while keeping simple colors", () => {
+    const out = sanitizeRichHtml(
+      '<p style="color:#123456;background-color:expression(alert(1));width:10px">x</p>',
+    );
+    expect(out).toContain("color:#123456");
+    expect(out).toContain("width:10px");
+    expect(out).not.toContain("expression");
   });
 
   it("strips script tags and event handlers", () => {

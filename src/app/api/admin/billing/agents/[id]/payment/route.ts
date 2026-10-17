@@ -11,6 +11,13 @@ import {
 } from "@/schemas/billing.schema";
 import { readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 
+function stripeCustomerId(
+  customer: string | { id: string } | null | undefined,
+): string | null {
+  if (!customer) return null;
+  return typeof customer === "string" ? customer : customer.id;
+}
+
 function operationRecordId(agentId: string, operationId: string): string {
   const digest = createHash("sha256")
     .update(`${agentId}:${operationId}`)
@@ -173,6 +180,13 @@ export async function POST(
       }
 
       const customerId = await getOrCreateStripeCustomer(id);
+      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+      if (stripeCustomerId(paymentMethod.customer) !== customerId) {
+        return NextResponse.json(
+          { error: "Payment method not found" },
+          { status: 404 },
+        );
+      }
 
       const paymentIntent = await stripe.paymentIntents.create(
         {

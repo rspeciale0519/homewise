@@ -219,6 +219,9 @@ function fromBase64Url(value: string): string {
   return Buffer.from(value, "base64url").toString("utf8");
 }
 
+export const MLS_PHOTO_URL_TTL_SECONDS = 24 * 60 * 60;
+const EXPIRY_PATTERN = /^\d{10,12}$/;
+
 function signPayload(payload: string): string {
   const secret = signingSecret();
   if (!secret) {
@@ -226,6 +229,11 @@ function signPayload(payload: string): string {
   }
 
   return createHmac("sha256", secret).update(payload).digest("hex");
+}
+
+export function mlsPhotoExpiryUnix(nowMs = Date.now()): number {
+  const ttl = MLS_PHOTO_URL_TTL_SECONDS;
+  return Math.ceil((nowMs / 1000 + ttl) / ttl) * ttl;
 }
 
 export function canonicalMediaIdentity(sourceUrl: string): string {
@@ -252,26 +260,39 @@ export function proxyPhotoUrl(sourceUrl: string): string {
   }
 
   const payload = toBase64Url(approvedUrl);
-  const sig = signPayload(payload);
-  return `/api/mls-photo?u=${payload}&sig=${sig}`;
+  const exp = mlsPhotoExpiryUnix();
+  const sig = signPayload(`${payload}.${exp}`);
+  return `/api/mls-photo?u=${payload}&exp=${exp}&sig=${sig}`;
 }
 
 export function parseAndVerify(params: URLSearchParams): VerifiedMlsPhoto | null {
   const payload = params.get("u");
   const sig = params.get("sig");
+  const exp = params.get("exp");
   const secret = signingSecret();
 
   if (
     !payload ||
     !sig ||
+    !exp ||
     !secret ||
     payload.length > 11_000 ||
-    !SIGNATURE_PATTERN.test(sig)
+    !SIGNATURE_PATTERN.test(sig) ||
+    !EXPIRY_PATTERN.test(exp)
   ) {
     return null;
   }
 
-  const expected = createHmac("sha256", secret).update(payload).digest("hex");
+  const expiresAt = Number(exp);
+  if (
+    !Number.isSafeInteger(expiresAt) ||
+    expiresAt <= Math.floor(Date.now() / 1000) ||
+    expiresAt > mlsPhotoExpiryUnix() + MLS_PHOTO_URL_TTL_SECONDS
+  ) {
+    return null;
+  }
+
+  const expected = createHmac("sha256", secret).update(`${payload}.${exp}`).digest("hex");
   const actualBuffer = Buffer.from(sig, "hex");
   const expectedBuffer = Buffer.from(expected, "hex");
 

@@ -9,6 +9,8 @@ import {
   recordTrainingSlugChange,
 } from "@/lib/slug/resolve";
 import { isFinalAdminUploadKey } from "@/lib/http/admin-upload";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
+import { readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -43,7 +45,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
 
-  const rawBody = await request.json();
+  let rawBody: unknown;
+  try {
+    rawBody = await readJsonBodyWithLimit(request, 200_000);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
   const parsed = updateSchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json(
@@ -68,6 +78,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const data: Record<string, unknown> = { ...parsed.data };
+  if (typeof data.body === "string") {
+    data.body = sanitizeRichHtml(data.body);
+  }
   let previousSlug: string | null = null;
 
   // Keep the legacy `published` boolean in sync with `status` until v2
