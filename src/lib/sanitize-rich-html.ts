@@ -24,17 +24,23 @@ const OPTIONS: sanitizeHtml.IOptions = {
     "*": ["class", "style", "id", "align", "colspan", "rowspan"],
   },
   allowedSchemes: ["http", "https", "mailto", "tel"],
-  allowedSchemesByTag: { img: ["http", "https", "data"] },
+  allowedSchemesByTag: { img: ["http", "https"] },
   allowedStyles: {
     "*": {
-      color: [/.*/],
-      "background-color": [/.*/],
+      color: [
+        /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+)$/,
+      ],
+      "background-color": [
+        /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+)$/,
+      ],
       "text-align": [/^(left|right|center|justify)$/],
-      "font-weight": [/.*/],
-      "font-style": [/.*/],
-      "text-decoration": [/.*/],
-      width: [/.*/],
-      height: [/.*/],
+      "font-weight": [/^(normal|bold|bolder|lighter|[1-9]00)$/],
+      "font-style": [/^(normal|italic|oblique)$/],
+      "text-decoration": [
+        /^(none|underline|line-through|overline)(\s+(none|underline|line-through|overline))*$/,
+      ],
+      width: [/^\d+(\.\d+)?(px|%|em|rem)$/],
+      height: [/^\d+(\.\d+)?(px|%|em|rem)$/],
     },
   },
   // Add a safe rel to links (merge=true keeps href and other attributes).

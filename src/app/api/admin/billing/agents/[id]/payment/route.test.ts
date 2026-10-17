@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   paymentCreate: vi.fn(),
   paymentFindUnique: vi.fn(),
   paymentIntentCreate: vi.fn(),
+  paymentMethodRetrieve: vi.fn(),
   requireAdmin: vi.fn(),
 }));
 
@@ -32,7 +33,10 @@ vi.mock("@/lib/billing/stripe-sync", () => ({
 }));
 
 vi.mock("@/lib/stripe", () => ({
-  stripe: { paymentIntents: { create: mocks.paymentIntentCreate } },
+  stripe: {
+    paymentIntents: { create: mocks.paymentIntentCreate },
+    paymentMethods: { retrieve: mocks.paymentMethodRetrieve },
+  },
 }));
 
 vi.mock("@/lib/api-error", () => ({ logApiError: vi.fn() }));
@@ -60,6 +64,10 @@ describe("POST admin payment", () => {
     mocks.agentFindUnique.mockResolvedValue({ id: "agent-1" });
     mocks.paymentFindUnique.mockResolvedValue(null);
     mocks.customer.mockResolvedValue("cus_agent");
+    mocks.paymentMethodRetrieve.mockResolvedValue({
+      id: "pm_1",
+      customer: "cus_agent",
+    });
     mocks.paymentIntentCreate.mockResolvedValue({ id: "pi_1", status: "succeeded" });
     mocks.paymentCreate.mockResolvedValue({ id: "record-1", status: "succeeded" });
   });
@@ -305,6 +313,23 @@ describe("POST admin payment", () => {
     }), context);
 
     expect(response.status).toBe(400);
+    expect(mocks.paymentCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a payment method that belongs to another Stripe customer", async () => {
+    mocks.paymentMethodRetrieve.mockResolvedValueOnce({
+      id: "pm_other",
+      customer: "cus_other_agent",
+    });
+
+    const response = await POST(request({
+      amount: 5_000,
+      paymentMethodId: "pm_other",
+      operationId,
+    }), context);
+
+    expect(response.status).toBe(404);
+    expect(mocks.paymentIntentCreate).not.toHaveBeenCalled();
     expect(mocks.paymentCreate).not.toHaveBeenCalled();
   });
 });

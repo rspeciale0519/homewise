@@ -1,5 +1,8 @@
 # homewise brain — STATE
-Updated: 2026-10-07
+Updated: 2026-10-17
+
+## Last session (2026-10-17)
+Full security scan on `cursor/security-scan-2026-10-17-990b`. Report: `SECURITY_SCAN_2026-10-17.md`. Code fixes: AI distributed rate limit, training/campaign HTML sanitize-on-write, MLS photo URL expiry, CSP, cookie Secure + lead-source allowlist, admin payment-method customer check. Owner follow-ups: Next.js CVE bump, Supabase RLS dashboard, training-files bucket public URL mismatch, home-valuation entitlement.
 
 ## MLS live integration status (2026-10-07)
 

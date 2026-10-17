@@ -9,6 +9,8 @@ import {
 } from "@/lib/slug/slugify";
 import { isSlugTakenForTraining } from "@/lib/slug/resolve";
 import { isFinalAdminUploadKey } from "@/lib/http/admin-upload";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
+import { readJsonBodyWithLimit, RequestBodyTooLargeError } from "@/lib/http/request-body";
 
 const createSchema = z.object({
   title: z.string().min(1),
@@ -58,7 +60,15 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdminApi();
   if (isError(auth)) return auth.error;
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await readJsonBodyWithLimit(request, 200_000);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: "Request is too large" }, { status: 413 });
+    }
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -104,7 +114,9 @@ export async function POST(request: NextRequest) {
       title: parsed.data.title,
       slug,
       description: parsed.data.description,
-      body: parsed.data.body,
+      body: parsed.data.body === undefined
+        ? undefined
+        : sanitizeRichHtml(parsed.data.body),
       category: parsed.data.category,
       categoryId: parsed.data.categoryId,
       audience: parsed.data.audience ?? "agent_only",

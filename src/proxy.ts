@@ -1,9 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isSafeLeadSource } from "@/lib/crm/lead-source-value";
 import { updateSession } from "@/lib/supabase/middleware";
 
 const LEAD_SOURCE_COOKIE = "hw_lead_source";
 const LISTING_VIEW_COOKIE = "hw_listing_views";
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
+
+function trackingCookieOptions(httpOnly: boolean) {
+  return {
+    maxAge: COOKIE_MAX_AGE,
+    httpOnly,
+    sameSite: "lax" as const,
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+  };
+}
 
 export async function proxy(request: NextRequest) {
   const { searchParams, pathname } = request.nextUrl;
@@ -18,13 +29,8 @@ export async function proxy(request: NextRequest) {
     const response = await updateSession(request);
 
     const source = searchParams.get("source");
-    if (source) {
-      response.cookies.set(LEAD_SOURCE_COOKIE, source, {
-        maxAge: COOKIE_MAX_AGE,
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-      });
+    if (isSafeLeadSource(source)) {
+      response.cookies.set(LEAD_SOURCE_COOKIE, source, trackingCookieOptions(true));
     }
 
     return response;
@@ -34,22 +40,14 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
 
   const source = searchParams.get("source");
-  if (source) {
-    response.cookies.set(LEAD_SOURCE_COOKIE, source, {
-      maxAge: COOKIE_MAX_AGE,
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    });
+  if (isSafeLeadSource(source)) {
+    response.cookies.set(LEAD_SOURCE_COOKIE, source, trackingCookieOptions(true));
   }
 
   if (pathname.match(/^\/properties\/[^/]+$/) && !pathname.endsWith("/properties")) {
     const current = parseInt(request.cookies.get(LISTING_VIEW_COOKIE)?.value ?? "0", 10);
     response.cookies.set(LISTING_VIEW_COOKIE, String(current + 1), {
-      maxAge: COOKIE_MAX_AGE,
-      httpOnly: false,
-      sameSite: "lax",
-      path: "/",
+      ...trackingCookieOptions(false),
     });
   }
 

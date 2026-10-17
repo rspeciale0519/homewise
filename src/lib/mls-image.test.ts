@@ -69,7 +69,9 @@ describe("MLS image proxy helpers", () => {
 
     const url = proxyPhotoUrl("https://media.mlsgrid.com/photo.jpg");
 
-    expect(url).toMatch(/^\/api\/mls-photo\?u=[A-Za-z0-9_-]+&sig=[a-f0-9]{64}$/);
+    expect(url).toMatch(
+      /^\/api\/mls-photo\?u=[A-Za-z0-9_-]+&exp=\d{10,12}&sig=[a-f0-9]{64}$/,
+    );
   });
 
   it("round-trips signed URLs", () => {
@@ -82,6 +84,19 @@ describe("MLS image proxy helpers", () => {
       sourceUrl,
       storageKey: storageKeyFor(sourceUrl),
     });
+  });
+
+  it("rejects expired or unsigned photo URLs", () => {
+    process.env.MLS_IMAGE_SIGNING_SECRET = "secret";
+    const proxyUrl = proxyPhotoUrl("https://media.mlsgrid.com/photo.jpg");
+    const params = new URLSearchParams(proxyUrl.split("?")[1]);
+
+    params.delete("exp");
+    expect(parseAndVerify(params)).toBeNull();
+
+    const fresh = new URLSearchParams(proxyUrl.split("?")[1]);
+    fresh.set("exp", String(Math.floor(Date.now() / 1000) - 10));
+    expect(parseAndVerify(fresh)).toBeNull();
   });
 
   it("rejects tampered signatures", () => {

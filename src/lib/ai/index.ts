@@ -1,13 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { enforceAiRateLimit } from "@/lib/ai/rate-limit";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY ?? "",
 });
-
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 30;
-const requestLog: number[] = [];
 
 interface AiCompletionInput {
   feature: string;
@@ -26,14 +23,6 @@ interface AiCompletionResult {
   cached: boolean;
 }
 
-function checkRateLimit(): boolean {
-  const now = Date.now();
-  while (requestLog.length > 0 && requestLog[0]! < now - RATE_LIMIT_WINDOW_MS) {
-    requestLog.shift();
-  }
-  return requestLog.length < RATE_LIMIT_MAX_REQUESTS;
-}
-
 export async function aiComplete({
   feature,
   systemPrompt,
@@ -43,12 +32,9 @@ export async function aiComplete({
   maxTokens = 2048,
   temperature = 0.7,
 }: AiCompletionInput): Promise<AiCompletionResult> {
-  if (!checkRateLimit()) {
-    throw new Error("AI rate limit exceeded. Please try again in a moment.");
-  }
+  await enforceAiRateLimit(userId);
 
   const start = Date.now();
-  requestLog.push(start);
 
   const response = await anthropic.messages.create({
     model,
@@ -85,15 +71,12 @@ export async function aiComplete({
 export async function aiStream({
   systemPrompt,
   userMessage,
+  userId,
   model = "claude-sonnet-4-20250514",
   maxTokens = 2048,
   temperature = 0.7,
-}: Omit<AiCompletionInput, "userId">) {
-  if (!checkRateLimit()) {
-    throw new Error("AI rate limit exceeded.");
-  }
-
-  requestLog.push(Date.now());
+}: Omit<AiCompletionInput, "feature">) {
+  await enforceAiRateLimit(userId);
 
   return anthropic.messages.stream({
     model,
@@ -117,15 +100,12 @@ async function openAiComplete({
   maxTokens = 2048,
   temperature = 0.7,
 }: AiCompletionInput): Promise<AiCompletionResult> {
-  if (!checkRateLimit()) {
-    throw new Error("AI rate limit exceeded. Please try again in a moment.");
-  }
+  await enforceAiRateLimit(userId);
 
   const { OpenAI } = await import("openai");
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
 
   const start = Date.now();
-  requestLog.push(start);
 
   const response = await openai.chat.completions.create({
     model: model ?? "gpt-4o-mini",
